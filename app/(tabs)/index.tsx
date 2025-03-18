@@ -1,4 +1,4 @@
-import { Image, StyleSheet, Platform, Pressable } from 'react-native';
+import { Image, StyleSheet, Platform, Pressable, Text } from 'react-native';
 import { Link } from 'expo-router';
 
 import { HelloWave } from '@/components/HelloWave';
@@ -23,7 +23,7 @@ export default function HomeScreen() {
 
       <Link href="/valuations" asChild>
         <Pressable style={styles.valuationButton}>
-          <ThemedText type="title">Valuations</ThemedText>
+          <Text className="text-black text-2xl font-bold">Valuations</Text>
         </Pressable>
       </Link>
       <ThemedView style={styles.stepContainer}>
