@@ -112,7 +112,6 @@ function ActionButton({
       <View className="w-12 h-12 rounded-full bg-[#FFA500] justify-center items-center mb-2">
         <Text className="text-2xl text-black">{icon}</Text>
       </View>
-      <Text className="text-xs text-white">{icon}</Text>
     </TouchableOpacity>
   );
 }
