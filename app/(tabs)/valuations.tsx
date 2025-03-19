@@ -20,7 +20,7 @@ const segmentSpacing = 15; // Space between tick marks
 const snapSegment = segmentWidth + segmentSpacing; // Total width of one segment
 const spacerWidth = (width - segmentWidth) / 2; // Space at beginning and end
 const totalWidth = spacerWidth * 2 + visibleRange * snapSegment; // Total ruler width
-const indicatorWidth = 3; // Width of the position indicator
+const indicatorWidth = 2; // Width of the position indicator
 
 // Token type definition
 interface Token {
@@ -83,6 +83,7 @@ function CircularRuler({ currentValue, onValueChange }: { currentValue: number; 
     
     if (newValue !== undefined && newValue !== value) {
       setValue(newValue);
+      // Ensure we're passing the value to the parent component
       onValueChange(newValue);
     }
   };
@@ -102,12 +103,7 @@ function CircularRuler({ currentValue, onValueChange }: { currentValue: number; 
       setTicks(generateTicks(value));
       
       // Reset scroll position to center (with animation turned off)
-      if (scrollViewRef.current) {
-        scrollViewRef.current.scrollTo({
-          x: centerPosition * snapSegment,
-          animated: false
-        });
-      }
+      centerRuler();
     }
   };
   
@@ -121,15 +117,23 @@ function CircularRuler({ currentValue, onValueChange }: { currentValue: number; 
   // Ensure values are centered when component mounts
   useEffect(() => {
     // Center the ruler on initial load with a slight delay to ensure rendering is complete
-    setTimeout(centerRuler, 100);
+    setTimeout(() => {
+      setTicks(generateTicks(0)); // Always start at 0
+      setValue(0);
+      centerRuler();
+      // Force the initial value to be correct
+      onValueChange(0);
+    }, 100);
   }, []);
   
   useEffect(() => {
-    // Initial setup when component mounts or currentValue changes
-    setTicks(generateTicks(currentValue));
-    setValue(currentValue);
-    // Ensure we center the ruler after a brief delay to allow rendering
-    setTimeout(centerRuler, 50);
+    // Only update when currentValue changes and it's not the initial render
+    if (currentValue !== value) {
+      setTicks(generateTicks(currentValue));
+      setValue(currentValue);
+      // Ensure we center the ruler after a brief delay to allow rendering
+      setTimeout(centerRuler, 50);
+    }
   }, [currentValue]);
 
   return (
@@ -163,19 +167,25 @@ function CircularRuler({ currentValue, onValueChange }: { currentValue: number; 
               <View key={i} style={styles.tickContainer}>
                 <View
                   style={[
-                    styles.segment,
                     {
-                      backgroundColor: isCenter ? '#FFFFFF' : (tickValue > 0 ? '#4287f5' : '#f5d442'),
-                      height: isCenter ? 50 : (isMajor ? 30 : 15),
+                      width: segmentWidth,
+                      height: isCenter ? 40 : (isMajor ? 20 : 10),
+                      backgroundColor: isCenter ? '#FFFFFF' : (tickValue > 0 ? '#FDE68A' : '#60A5FA'),
                       marginRight: i === ticks.length - 1 ? 0 : segmentSpacing
                     }
                   ]}
                 />
                 {isMajor && (
-                  <Text style={[
-                    styles.tickLabel, 
-                    { color: isCenter ? '#FFFFFF' : (tickValue > 0 ? '#4287f5' : '#f5d442') }
-                  ]}>
+                  <Text style={{
+                    fontSize: 10,
+                    marginTop: 2,
+                    color: isCenter ? '#FFFFFF' : (tickValue > 0 ? '#FEF3C7' : '#93C5FD'),
+                    position: 'absolute',
+                    top: 42,
+                    width: 20,
+                    textAlign: 'center',
+                    left: -9
+                  }}>
                     {Math.abs(tickValue)}
                   </Text>
                 )}
@@ -189,7 +199,6 @@ function CircularRuler({ currentValue, onValueChange }: { currentValue: number; 
       {/* Center indicator line */}
       <View style={styles.indicatorWrapper}>
         <View style={styles.indicatorLine} />
-        <Text style={styles.centerText}>1</Text>
       </View>
     </View>
   );
@@ -206,13 +215,13 @@ export function PremiumDiscountSlider({ token, onUpdateValuation }: { token: Tok
   
   // Handle value changes from the slider
   const handleValueChange = (newValue: number) => {
-    // Reverse the sign for our UI convention: 
-    // Negative values = Premium (left), Positive values = Discount (right)
-    const newAdjustment = -newValue;
-    
-    if (newAdjustment !== adjustment) {
-      setAdjustment(newAdjustment);
-      onUpdateValuation(token.symbol, newAdjustment);
+    // Since we're now passing adjustment directly to CircularRuler,
+    // we don't need to negate it here anymore
+    if (newValue !== adjustment) {
+      // For UI purposes, we'll show premium (blue) on the left (negative values)
+      // and discount (yellow) on the right (positive values)
+      setAdjustment(newValue);
+      onUpdateValuation(token.symbol, newValue);
     }
   };
   
@@ -220,21 +229,14 @@ export function PremiumDiscountSlider({ token, onUpdateValuation }: { token: Tok
     <View style={styles.sliderContainer}>
       {/* Premium/Discount Labels */}
       <View style={styles.labelContainer}>
-        <Text style={[styles.labelText, styles.premiumText]}>Premium</Text>
-        <Text style={[styles.labelText, styles.discountText]}>Discount</Text>
+        <Text style={{ fontSize: 14, color: '#93C5FD' }}>Premium</Text>
+        <Text style={{ fontSize: 14, color: '#FEF3C7' }}>Discount</Text>
       </View>
       
-      {/* Current adjustment display */}
-      <View style={styles.currentValueContainer}>
-        <Text style={styles.currentValueText}>
-          {adjustment === 0 ? '' : 
-           `${adjustment > 0 ? '+' : ''}$${adjustment.toFixed(2)}`}
-        </Text>
-      </View>
       
       {/* Circular scrolling ruler */}
       <CircularRuler 
-        currentValue={-adjustment} // Negate for UI convention
+        currentValue={adjustment} 
         onValueChange={handleValueChange}
       />
     </View>
@@ -248,15 +250,20 @@ export function Valuations({
   return (
     <ThemedView
       className="flex-1 bg-[#000000] p-4 rounded-2xl pt-16"
-      style={{ backgroundColor: '#000000' }}
+      style={{ backgroundColor: '#000000', flex: 1 }}
     >
       {/* Header section */}
       <View className="flex flex-row justify-center items-center mb-4">
         <Text className="text-xl font-semibold text-white">Valuations</Text>
       </View>
       
-      {/* Token list */}
-      <View className="flex-1">
+      {/* Token list - wrapped in ScrollView to make it scrollable */}
+      <ScrollView 
+        className="flex-1" 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 40 }}
+        bounces={true}
+      >
         {tokens.map((token, index) => (
           <TokenRow 
             key={index} 
@@ -264,7 +271,7 @@ export function Valuations({
             onUpdateValuation={onUpdateValuation} 
           />
         ))}
-      </View>
+      </ScrollView>
     </ThemedView>
   );
 }
@@ -298,8 +305,8 @@ function TokenRow({ token, onUpdateValuation }: { token: Token; onUpdateValuatio
               currency: 'USD',
             }).format(token.value)}
           </Text>
-          <Text className={`text-sm ${token.adjustment >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-            {token.adjustment >= 0 ? 'Premium' : 'Discount'} ${Math.abs(token.adjustment).toFixed(2)}
+          <Text className={`text-sm text-gray-400`}>
+            {token.adjustment <= 0 ? 'Premium' : 'Discount'} ${Math.abs(token.adjustment).toFixed(2)}
           </Text>
         </View>
       </View>
@@ -335,7 +342,7 @@ const mockTokens = [
     symbol: 'TREE',
     amount: '30',
     value: 40.55,
-    adjustment: 4,  // $4 premium as shown in the image
+    adjustment: 0,  // $4 premium as shown in the image
     change: 0,
     iconUrl: 'https://cryptologos.cc/logos/polygon-matic-logo.png',
   },
@@ -344,7 +351,7 @@ const mockTokens = [
     symbol: 'FOUNTAIN',
     amount: '5',
     value: 8.37,
-    adjustment: 4,  // $4 premium as shown in the image
+    adjustment: 0,  // $4 premium as shown in the image
     change: 0,
     iconUrl: 'https://cryptologos.cc/logos/ethereum-eth-logo.png',
   },
@@ -356,6 +363,33 @@ const mockTokens = [
     adjustment: 0,
     change: 0,
     iconUrl: 'https://cryptologos.cc/logos/optimism-ethereum-op-logo.png',
+  },
+  {
+    name: 'Solar Panel',
+    symbol: 'SOLAR',
+    amount: '12.5',
+    value: 18.75,
+    adjustment: 0,  // $2 discount
+    change: 0,
+    iconUrl: 'https://cryptologos.cc/logos/solana-sol-logo.png',
+  },
+  {
+    name: 'Wind Farm',
+    symbol: 'WIND',
+    amount: '3.25',
+    value: 6.50,
+    adjustment: 0,  // $1 premium
+    change: 0,
+    iconUrl: 'https://cryptologos.cc/logos/avalanche-avax-logo.png',
+  },
+  {
+    name: 'Ocean Cleanup',
+    symbol: 'OCEAN',
+    amount: '15',
+    value: 22.50,
+    adjustment: 0,  // $3 discount
+    change: 0,
+    iconUrl: 'https://cryptologos.cc/logos/ocean-protocol-ocean-logo.png',
   },
 ];
 
@@ -393,9 +427,11 @@ export default function ValuationsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#000000',
+    paddingBottom: 40,
   },
   sliderContainer: {
-    height: 140,
+    height: 100,
     width: '100%',
   },
   labelContainer: {
@@ -407,12 +443,6 @@ const styles = StyleSheet.create({
   labelText: {
     fontSize: 14,
     fontWeight: '500',
-  },
-  premiumText: {
-    color: '#4287f5', // Blue for premium
-  },
-  discountText: {
-    color: '#f5d442', // Yellow for discount
   },
   currentValueContainer: {
     alignItems: 'flex-end',
@@ -447,13 +477,14 @@ const styles = StyleSheet.create({
     fontSize: 10,
     marginTop: 2,
     color: '#AAAAAA',
+    textAlign: 'left',
   },
   scrollViewContainerStyle: {
     justifyContent: 'flex-end',
   },
   indicatorWrapper: {
     position: 'absolute',
-    left: width / 2,
+    left: width / 2 - (indicatorWidth / 2),
     top: 0,
     bottom: 0,
     alignItems: 'center',
@@ -462,7 +493,7 @@ const styles = StyleSheet.create({
   },
   indicatorLine: {
     width: indicatorWidth,
-    height: 70,
+    height: 50,
     backgroundColor: 'white',
     borderRadius: 1.5,
   },
@@ -471,6 +502,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginTop: 2,
+    textAlign: 'center',
   },
   spacer: {
     width: spacerWidth,
