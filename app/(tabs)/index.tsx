@@ -1,89 +1,80 @@
-import { Image, StyleSheet, Platform, Pressable, Text } from 'react-native';
-import { Link } from 'expo-router';
-
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
+import { StyleSheet, View, Alert } from 'react-native';
+import { WalletIndex } from '@/components/WalletIndex';
 import { ThemedView } from '@/components/ThemedView';
 
-export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
+// Mock data for the wallet
+const mockTokens = [
+  {
+    name: 'USD ',
+    symbol: 'USD',
+    amount: '10.93',
+    value: 10.93,
+    change: 0.14,
+    iconUrl: 'https://cryptologos.cc/logos/usd-coin-usdc-logo.png',
+  },
+  {
+    name: 'Wikipedia',
+    symbol: 'WIKI',
+    amount: '30',
+    value: 40.55,
+    change: 2.12,
+    iconUrl: 'https://cryptologos.cc/logos/polygon-matic-logo.png',
+  },
+  {
+    name: 'Library',
+    symbol: 'LIB',
+    amount: '5',
+    value: 8.37,
+    change: 0.72,
+    iconUrl: 'https://cryptologos.cc/logos/ethereum-eth-logo.png',
+  },
+  {
+    name: 'River Cleanup',
+    symbol: 'RIVER',
+    amount: '0.79',
+    value: 1.09,
+    change: 1.20,
+    iconUrl: 'https://cryptologos.cc/logos/optimism-ethereum-op-logo.png',
+  },
+];
 
-      <Link href="/valuations" asChild>
-        <Pressable style={styles.valuationButton}>
-          <Text className="text-black text-2xl font-bold">Valuations</Text>
-        </Pressable>
-      </Link>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12'
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+export default function HomeScreen() {
+  // Calculate total value from all tokens
+  const totalValue = mockTokens.reduce((sum, token) => sum + token.value, 0);
+
+  // Action handlers
+  const handleBuy = () => {
+    Alert.alert('Buy', 'Trigger Stripe flow');
+  }; 
+
+  const handleSwap = () => {
+    return;
+  };
+
+  const handleSend = () => {
+    Alert.alert('Send', 'Trigger Payment flow');
+  };
+
+  const handleCopy = () => {
+    Alert.alert('Copy', 'Address copied to clipboard!');
+  };
+
+  return (
+    <ThemedView style={styles.container}>
+      <WalletIndex 
+        totalValue={totalValue}
+        tokens={mockTokens}
+        onBuyPress={handleBuy}
+        onSwapPress={handleSwap}
+        onSendPress={handleSend}
+        onCopyPress={handleCopy}
+      />
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
-  valuationButton: {
-    backgroundColor: '#A1CEDC',
-    padding: 15,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginVertical: 20,
-    width: '100%',
+  container: {
+    flex: 1,
   },
 });
