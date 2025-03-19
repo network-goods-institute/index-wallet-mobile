@@ -57,12 +57,7 @@ function CircularRuler({ currentValue, onValueChange }: { currentValue: number; 
     return Array.from({ length: visibleRange }, (_, i) => i + start);
   };
   
-  // Determine if a tick value should show a label
-  const shouldShowLabel = (value: number) => {
-    // Show labels for multiples of 5, but not for every tick to avoid crowding
-    return value % 5 === 0;
-  };
-  
+
   // Helper function to ensure the ruler is centered
   const centerRuler = () => {
     if (scrollViewRef.current) {
@@ -123,13 +118,7 @@ function CircularRuler({ currentValue, onValueChange }: { currentValue: number; 
   // Ensure values are centered when component mounts
   useEffect(() => {
     // Center the ruler on initial load with a slight delay to ensure rendering is complete
-    setTimeout(() => {
-      setTicks(generateTicks(0)); // Always start at 0
-      setValue(0);
-      centerRuler();
-      // Force the initial value to be correct
-      onValueChange(0);
-    }, 100);
+    setTimeout(centerRuler, 100);
   }, []);
   
   useEffect(() => {
@@ -166,41 +155,32 @@ function CircularRuler({ currentValue, onValueChange }: { currentValue: number; 
         <View style={styles.ruler}>
           <View style={styles.spacer} />
           {ticks.map((tickValue, i) => {
-  const isMajor = shouldShowLabel(tickValue); // Major tick marks at multiples of 5
-  const isCenter = tickValue === 0; // Center (no adjustment) position
-  
-  return (
-    <View key={i} style={styles.tickContainer}>
-      <View
-        style={[
-          {
-            width: segmentWidth,
-            height: isCenter ? 40 : (isMajor ? 20 : 10),
-            backgroundColor: isCenter ? '#FFFFFF' : (tickValue > 0 ? '#87CEEB' : '#F7DC6F'),
-            marginRight: i === ticks.length - 1 ? 0 : segmentSpacing
-          }
-        ]}
-      />
-      {isMajor && (
-        <Text style={{
-          position: 'absolute',
-          top: 45,
-          left: -10,
-          fontSize: 11,
-          fontWeight: '600',
-          color: isCenter ? '#FFFFFF' : (tickValue > 0 ? '#93C5FD' : '#FEF3C7'),
-          textShadowColor: 'rgba(0, 0, 0, 0.75)',
-          textShadowOffset: { width: 0, height: 1 },
-          textShadowRadius: 1,
-          width: 24,
-          textAlign: 'center'
-        }}>
-          {Math.abs(tickValue)}
-        </Text>
-      )}
-    </View>
-  );
-})} 
+            const isMajor = tickValue % 5 === 0; // Major tick marks at multiples of 5
+            const isCenter = tickValue === 0; // Center (no adjustment) position
+            
+            return (
+              <View key={i} style={styles.tickContainer}>
+                <View
+                  style={[
+                    styles.segment,
+                    {
+                      backgroundColor: isCenter ? '#FFFFFF' : (tickValue > 0 ? '#F7DC6F' : '#87CEEB'),
+                      height: isCenter ? 30 : (isMajor ? 20 : 10),
+                      marginRight: i === ticks.length - 1 ? 0 : segmentSpacing
+                    }
+                  ]}
+                />
+                {isMajor && (
+                  <Text style={[
+                    styles.tickLabel, 
+                    { color: isCenter ? '#FFFFFF' : (tickValue > 0 ? '#F7DC6F' : '#87CEEB') }
+                  ]}>
+                    {Math.abs(tickValue)}
+                  </Text>
+                )}
+              </View>
+            );
+          })}
           <View style={styles.spacer} />
         </View>
       </Animated.ScrollView>
@@ -430,7 +410,7 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   sliderContainer: {
-    height: 70,
+    height: 80,
     width: '100%',
   },
   labelContainer: {
@@ -466,7 +446,6 @@ const styles = StyleSheet.create({
   },
   tickContainer: {
     alignItems: 'center',
-    position: 'relative',
   },
   segment: {
     width: segmentWidth,
@@ -475,7 +454,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     marginTop: 2,
     color: '#AAAAAA',
-    textAlign: 'left',
   },
   scrollViewContainerStyle: {
     justifyContent: 'flex-end',
