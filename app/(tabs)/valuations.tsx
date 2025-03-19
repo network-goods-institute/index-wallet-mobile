@@ -16,7 +16,7 @@ import { ThemedView } from '@/components/ThemedView';
 const { width } = Dimensions.get('screen');
 const visibleRange = 40; // Number of visible segments
 const segmentWidth = 2; // Width of each tick mark
-const segmentSpacing = 15; // Space between tick marks
+const segmentSpacing = 13; // Space between tick marks
 const snapSegment = segmentWidth + segmentSpacing; // Total width of one segment
 const spacerWidth = (width - segmentWidth) / 2; // Space at beginning and end
 const totalWidth = spacerWidth * 2 + visibleRange * snapSegment; // Total ruler width
@@ -55,6 +55,12 @@ function CircularRuler({ currentValue, onValueChange }: { currentValue: number; 
     const halfRange = Math.floor(visibleRange / 2);
     const start = centerValue - halfRange;
     return Array.from({ length: visibleRange }, (_, i) => i + start);
+  };
+  
+  // Determine if a tick value should show a label
+  const shouldShowLabel = (value: number) => {
+    // Show labels for multiples of 5, but not for every tick to avoid crowding
+    return value % 5 === 0;
   };
   
   // Helper function to ensure the ruler is centered
@@ -160,38 +166,41 @@ function CircularRuler({ currentValue, onValueChange }: { currentValue: number; 
         <View style={styles.ruler}>
           <View style={styles.spacer} />
           {ticks.map((tickValue, i) => {
-            const isMajor = tickValue % 5 === 0; // Major tick marks at multiples of 5
-            const isCenter = tickValue === 0; // Center (no adjustment) position
-            
-            return (
-              <View key={i} style={styles.tickContainer}>
-                <View
-                  style={[
-                    {
-                      width: segmentWidth,
-                      height: isCenter ? 40 : (isMajor ? 20 : 10),
-                      backgroundColor: isCenter ? '#FFFFFF' : (tickValue > 0 ? '#FDE68A' : '#60A5FA'),
-                      marginRight: i === ticks.length - 1 ? 0 : segmentSpacing
-                    }
-                  ]}
-                />
-                {isMajor && (
-                  <Text style={{
-                    fontSize: 10,
-                    marginTop: 2,
-                    color: isCenter ? '#FFFFFF' : (tickValue > 0 ? '#FEF3C7' : '#93C5FD'),
-                    position: 'absolute',
-                    top: 42,
-                    width: 20,
-                    textAlign: 'center',
-                    left: -9
-                  }}>
-                    {Math.abs(tickValue)}
-                  </Text>
-                )}
-              </View>
-            );
-          })}
+  const isMajor = shouldShowLabel(tickValue); // Major tick marks at multiples of 5
+  const isCenter = tickValue === 0; // Center (no adjustment) position
+  
+  return (
+    <View key={i} style={styles.tickContainer}>
+      <View
+        style={[
+          {
+            width: segmentWidth,
+            height: isCenter ? 40 : (isMajor ? 20 : 10),
+            backgroundColor: isCenter ? '#FFFFFF' : (tickValue > 0 ? '#87CEEB' : '#F7DC6F'),
+            marginRight: i === ticks.length - 1 ? 0 : segmentSpacing
+          }
+        ]}
+      />
+      {isMajor && (
+        <Text style={{
+          position: 'absolute',
+          top: 45,
+          left: -10,
+          fontSize: 11,
+          fontWeight: '600',
+          color: isCenter ? '#FFFFFF' : (tickValue > 0 ? '#93C5FD' : '#FEF3C7'),
+          textShadowColor: 'rgba(0, 0, 0, 0.75)',
+          textShadowOffset: { width: 0, height: 1 },
+          textShadowRadius: 1,
+          width: 24,
+          textAlign: 'center'
+        }}>
+          {Math.abs(tickValue)}
+        </Text>
+      )}
+    </View>
+  );
+})} 
           <View style={styles.spacer} />
         </View>
       </Animated.ScrollView>
@@ -229,8 +238,8 @@ export function PremiumDiscountSlider({ token, onUpdateValuation }: { token: Tok
     <View style={styles.sliderContainer}>
       {/* Premium/Discount Labels */}
       <View style={styles.labelContainer}>
-        <Text style={{ fontSize: 14, color: '#93C5FD' }}>Premium</Text>
-        <Text style={{ fontSize: 14, color: '#FEF3C7' }}>Discount</Text>
+        <Text style={{ fontSize: 12, color: '#93C5FD', fontWeight: '500' }}>Premium</Text>
+        <Text style={{ fontSize: 12, color: '#FEF3C7', fontWeight: '500' }}>Discount</Text>
       </View>
       
       
@@ -306,7 +315,7 @@ function TokenRow({ token, onUpdateValuation }: { token: Token; onUpdateValuatio
             }).format(token.value)}
           </Text>
           <Text className={`text-sm text-gray-400`}>
-            {token.adjustment <= 0 ? 'Premium' : 'Discount'} ${Math.abs(token.adjustment).toFixed(2)}
+            {token.adjustment !== 0 ? (token.adjustment < 0 ? 'Premium' : 'Discount') + ` ${Math.abs(token.adjustment).toFixed(2)}` : ''}
           </Text>
         </View>
       </View>
@@ -317,9 +326,7 @@ function TokenRow({ token, onUpdateValuation }: { token: Token; onUpdateValuatio
           token={token}
           onUpdateValuation={onUpdateValuation}
         />
-      ) : (
-        <Text style={styles.usdText}>USD is the reference currency</Text>
-      )}
+      ) : null}
     </View>
   );
 }
@@ -328,15 +335,7 @@ function TokenRow({ token, onUpdateValuation }: { token: Token; onUpdateValuatio
 
 // Initial mock data
 const mockTokens = [
-  {
-    name: 'USD',
-    symbol: 'USD',
-    amount: '10.93',
-    value: 10.93,
-    adjustment: 0,  // No adjustment for USD
-    change: 0,
-    iconUrl: 'https://cryptologos.cc/logos/usd-coin-usdc-logo.png',
-  },
+
   {
     name: 'Tree',
     symbol: 'TREE',
@@ -358,7 +357,7 @@ const mockTokens = [
   {
     name: 'River Cleanup',
     symbol: 'RIVER',
-    amount: '0.79',
+    amount: '1',
     value: 1.09,
     adjustment: 0,
     change: 0,
@@ -367,7 +366,7 @@ const mockTokens = [
   {
     name: 'Solar Panel',
     symbol: 'SOLAR',
-    amount: '12.5',
+    amount: '12',
     value: 18.75,
     adjustment: 0,  // $2 discount
     change: 0,
@@ -376,7 +375,7 @@ const mockTokens = [
   {
     name: 'Wind Farm',
     symbol: 'WIND',
-    amount: '3.25',
+    amount: '3',
     value: 6.50,
     adjustment: 0,  // $1 premium
     change: 0,
@@ -431,14 +430,13 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   sliderContainer: {
-    height: 100,
+    height: 70,
     width: '100%',
   },
   labelContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: 10,
-    marginBottom: 5,
   },
   labelText: {
     fontSize: 14,
@@ -456,19 +454,19 @@ const styles = StyleSheet.create({
     color: 'white',
   },
   rulerContainer: {
-    height: 80,
+    height: 50,
     width: '100%',
     position: 'relative',
   },
   ruler: {
     width: totalWidth,
-    height: 80,
     alignItems: 'flex-end',
     justifyContent: 'flex-start',
     flexDirection: 'row',
   },
   tickContainer: {
     alignItems: 'center',
+    position: 'relative',
   },
   segment: {
     width: segmentWidth,
