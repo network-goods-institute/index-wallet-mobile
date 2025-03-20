@@ -204,11 +204,7 @@ export function PremiumDiscountSlider({ token, onUpdateValuation }: { token: Tok
   
   // Handle value changes from the slider
   const handleValueChange = (newValue: number) => {
-    // Since we're now passing adjustment directly to CircularRuler,
-    // we don't need to negate it here anymore
     if (newValue !== adjustment) {
-      // For UI purposes, we'll show premium (blue) on the left (negative values)
-      // and discount (yellow) on the right (positive values)
       setAdjustment(newValue);
       onUpdateValuation(token.symbol, newValue);
     }
