@@ -18,7 +18,7 @@ const mockTokens = [
     amount: '30',
     value: 40.55,
     change: 2.12,
-    iconUrl: 'https://cryptologos.cc/logos/polygon-matic-logo.png',
+    iconUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/80/Wikipedia-logo-v2.svg/1200px-Wikipedia-logo-v2.svg.png',
   },
   {
     name: 'Library',
@@ -26,7 +26,7 @@ const mockTokens = [
     amount: '5',
     value: 8.37,
     change: 0.72,
-    iconUrl: 'https://cryptologos.cc/logos/ethereum-eth-logo.png',
+    iconUrl: 'https://images.emojiterra.com/google/noto-emoji/unicode-15/color/512px/1f4da.png',
   },
   {
     name: 'River Cleanup',
@@ -34,7 +34,7 @@ const mockTokens = [
     amount: '0.79',
     value: 1.09,
     change: 1.20,
-    iconUrl: 'https://cryptologos.cc/logos/optimism-ethereum-op-logo.png',
+    iconUrl: 'https://cdn-icons-png.flaticon.com/512/119/119573.png',
   },
 ];
 

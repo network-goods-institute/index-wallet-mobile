@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity } from 'react-native';
 import { ThemedView } from './ThemedView';
+import { Plus, ArrowUpRight, Copy, ChevronDown, Coins } from 'lucide-react-native';
 
 // Token type definition
 interface Token {
@@ -60,7 +61,7 @@ function WalletHeader() {
       <View className="w-8 h-8 rounded-full bg-green-300 mr-4" />
       <View className="flex flex-row items-center">
         <Text className="text-base font-semibold text-white">Wallet 1</Text>
-        <Text className="text-xs text-white ml-1"></Text>
+        <ChevronDown size={16} color="white" className="ml-1" />
       </View>
     </View>
   );
@@ -92,9 +93,9 @@ function ActionButtonRow({
 }) {
   return (
     <View className="flex-row px-24 justify-center gap-4 space-between mb-8">
-      <ActionButton icon="+" onPress={onBuyPress} />
-      <ActionButton icon="↗" onPress={onSendPress} />
-      <ActionButton icon="⎘" onPress={onCopyPress} />
+      <ActionButton icon={<Plus size={18} color="black" />} onPress={onBuyPress} />
+      <ActionButton icon={<ArrowUpRight size={18} color="black" />} onPress={onSendPress} />
+      <ActionButton icon={<Copy size={18} color="black" />} onPress={onCopyPress} />
     </View>
   );
 }
@@ -103,13 +104,13 @@ function ActionButton({
   icon,
   onPress,
 }: {
-  icon: string;
+  icon: React.ReactNode;
   onPress?: () => void;
 }) {
   return (
     <TouchableOpacity className="items-center" onPress={onPress}>
       <View className="w-12 h-12 rounded-full bg-[#FFA500] justify-center items-center mb-2">
-        <Text className="text-2xl text-black">{icon}</Text>
+        {icon}
       </View>
     </TouchableOpacity>
   );
@@ -137,7 +138,7 @@ function TokenRow({ token }: { token: Token }) {
             <Image source={{ uri: token.iconUrl }} className="w-9 h-9 rounded-full" />
           ) : (
             <View className="w-9 h-9 rounded-full bg-[#4A4A4A] justify-center items-center">
-              <Text className="text-base font-bold text-white">{token.symbol.charAt(0)}</Text>
+              <Coins size={18} color="white" />
             </View>
           )}
         </View>

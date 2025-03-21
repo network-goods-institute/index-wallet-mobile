@@ -1,7 +1,6 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity } from 'react-native';
+import { View, Text, Image } from 'react-native';
 import { ThemedView } from './ThemedView';
-import { ThemedText } from './ThemedText';
 
 // Token type definition
 interface Token {

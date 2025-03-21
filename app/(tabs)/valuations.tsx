@@ -15,12 +15,12 @@ import { ThemedView } from '@/components/ThemedView';
 // Constants for slider configuration
 const { width } = Dimensions.get('screen');
 const visibleRange = 40; // Number of visible segments
-const segmentWidth = 2; // Width of each tick mark
+const segmentWidth = 1; // Width of each tick mark
 const segmentSpacing = 13; // Space between tick marks
 const snapSegment = segmentWidth + segmentSpacing; // Total width of one segment
 const spacerWidth = (width - segmentWidth) / 2; // Space at beginning and end
 const totalWidth = spacerWidth * 2 + visibleRange * snapSegment; // Total ruler width
-const indicatorWidth = 2; // Width of the position indicator
+const indicatorWidth = 3; // Width of the position indicator
 
 // Token type definition
 interface Token {
@@ -164,8 +164,8 @@ function CircularRuler({ currentValue, onValueChange }: { currentValue: number; 
                   style={[
                     styles.segment,
                     {
-                      backgroundColor: isCenter ? '#FFFFFF' : (tickValue > 0 ? '#F7DC6F' : '#87CEEB'),
-                      height: isCenter ? 30 : (isMajor ? 20 : 10),
+                      backgroundColor: isCenter ? '#FFFFFF' : (tickValue > 0 ? '#F2C464' : '#68D6E4'),
+                      height: isCenter ? 22 : (isMajor ? 14 : 6),
                       marginRight: i === ticks.length - 1 ? 0 : segmentSpacing
                     }
                   ]}
@@ -280,7 +280,7 @@ function TokenRow({ token, onUpdateValuation }: { token: Token; onUpdateValuatio
           </View>
           <View className="justify-center">
             <Text className="text-base font-medium text-white mb-1">{token.name}</Text>
-            <Text className="text-sm text-[#AAAAAA]">{token.amount} {token.symbol}</Text>
+            <Text className="text-sm text-[#AAAAAA]">{token.symbol}</Text>
           </View>
         </View>
         <View className="items-end">
@@ -319,7 +319,7 @@ const mockTokens = [
     value: 40.55,
     adjustment: 0,  // $4 premium as shown in the image
     change: 0,
-    iconUrl: 'https://cryptologos.cc/logos/polygon-matic-logo.png',
+    iconUrl: 'https://cdn-icons-png.flaticon.com/512/189/189503.png',
   },
   {
     name: 'Fountain',
@@ -328,7 +328,7 @@ const mockTokens = [
     value: 8.37,
     adjustment: 0,  // $4 premium as shown in the image
     change: 0,
-    iconUrl: 'https://cryptologos.cc/logos/ethereum-eth-logo.png',
+    iconUrl: 'https://cdn-icons-png.flaticon.com/512/3464/3464446.png',
   },
   {
     name: 'River Cleanup',
@@ -337,7 +337,7 @@ const mockTokens = [
     value: 1.09,
     adjustment: 0,
     change: 0,
-    iconUrl: 'https://cryptologos.cc/logos/optimism-ethereum-op-logo.png',
+    iconUrl: 'https://cdn-icons-png.flaticon.com/512/119/119573.png',
   },
   {
     name: 'Solar Panel',
@@ -346,7 +346,7 @@ const mockTokens = [
     value: 18.75,
     adjustment: 0,  // $2 discount
     change: 0,
-    iconUrl: 'https://cryptologos.cc/logos/solana-sol-logo.png',
+    iconUrl: 'https://cdn-icons-png.flaticon.com/512/196/196695.png',
   },
   {
     name: 'Wind Farm',
@@ -355,7 +355,7 @@ const mockTokens = [
     value: 6.50,
     adjustment: 0,  // $1 premium
     change: 0,
-    iconUrl: 'https://cryptologos.cc/logos/avalanche-avax-logo.png',
+    iconUrl: 'https://cdn1.iconfinder.com/data/icons/environment-and-ecology-icons/137/Ecology_24-18-512.png',
   },
   {
     name: 'Ocean Cleanup',
@@ -364,7 +364,7 @@ const mockTokens = [
     value: 22.50,
     adjustment: 0,  // $3 discount
     change: 0,
-    iconUrl: 'https://cryptologos.cc/logos/ocean-protocol-ocean-logo.png',
+    iconUrl: 'https://cdn4.iconfinder.com/data/icons/marine-3/64/C_Sea-512.png',
   },
 ];
 
@@ -464,10 +464,10 @@ const styles = StyleSheet.create({
     width: indicatorWidth,
   },
   indicatorLine: {
-    width: indicatorWidth,
+    width: 3, // Increased from 2 to 3 for thickness
     height: 50,
     backgroundColor: 'white',
-    borderRadius: 1.5,
+    borderRadius: 2, // Increased from 1.5 to 2 for roundness
   },
   centerText: {
     color: 'white',
