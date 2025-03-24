@@ -13,14 +13,20 @@ const MAPPING = {
   'paperplane.fill': 'send',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
-} as Partial<
-  Record<
-    import('expo-symbols').SymbolViewProps['name'],
-    React.ComponentProps<typeof MaterialIcons>['name']
-  >
->;
+  'gearshape.fill': 'settings',
+  'sun.max.fill': 'light_mode',
+  'moon.fill': 'dark_mode',
+  'faceid': 'face',
+  'lock.fill': 'lock',
+  'bell.fill': 'notifications',
+  'info.circle.fill': 'info',
+  'doc.text.fill': 'description',
+  'shield.fill': 'shield',
+  'chart.line.uptrend.xyaxis': 'trending_up',
+};
 
 export type IconSymbolName = keyof typeof MAPPING;
+type MaterialIconName = React.ComponentProps<typeof MaterialIcons>['name'];
 
 /**
  * An icon component that uses native SFSymbols on iOS, and MaterialIcons on Android and web. This ensures a consistent look across platforms, and optimal resource usage.
@@ -39,5 +45,7 @@ export function IconSymbol({
   style?: StyleProp<ViewStyle>;
   weight?: SymbolWeight;
 }) {
-  return <MaterialIcons color={color} size={size} name={MAPPING[name]} style={style} />;
+  // Type assertion to handle the mapping safely
+  const materialIconName = MAPPING[name] as MaterialIconName;
+  return <MaterialIcons color={color} size={size} name={materialIconName} style={style as any} />;
 }

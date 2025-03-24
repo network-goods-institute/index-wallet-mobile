@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Image, TouchableOpacity } from 'react-native';
 import { ThemedView } from './ThemedView';
 import { Plus, ArrowUpRight, Copy, ChevronDown, Coins } from 'lucide-react-native';
+import { useTheme } from '@/contexts/ThemeContext';
 
 // Token type definition
 interface Token {
@@ -30,10 +31,10 @@ export function WalletIndex({
   onSendPress,
   onCopyPress,
 }: WalletIndexProps) {
+  const { colorScheme } = useTheme();
   return (
     <ThemedView
-      className="flex-1 bg-[#000000] p-4 rounded-2xl pt-16"
-      style={{ backgroundColor: '#000000' }}
+      className="flex-1 p-4 rounded-2xl pt-16 bg-white dark:bg-black"
     >
       {/* Top section with wallet name and dropdown */}
       <WalletHeader />
@@ -56,12 +57,14 @@ export function WalletIndex({
 }
 
 function WalletHeader() {
+  const { colorScheme } = useTheme();
+  
   return (
     <View className="flex flex-row justify-center items-center mb-4">
       <View className="w-8 h-8 rounded-full bg-green-300 mr-4" />
       <View className="flex flex-row items-center">
-        <Text className="text-base font-semibold text-white">Wallet 1</Text>
-        <ChevronDown size={16} color="white" className="ml-1" />
+        <Text className="text-black dark:text-white text-base font-semibold">Wallet 1</Text>
+        <ChevronDown size={16} className="text-black dark:text-white ml-1" />
       </View>
     </View>
   );
@@ -70,7 +73,7 @@ function WalletHeader() {
 function TotalValueDisplay({ totalValue }: { totalValue: number }) {
   return (
     <View className="items-center my-6">
-      <Text className="text-8xl font-bold text-white">
+      <Text className="text-6xl font-bold text-black dark:text-white">
         {Intl.NumberFormat('en-US', {
           style: 'currency',
           currency: 'USD',
@@ -92,10 +95,10 @@ function ActionButtonRow({
   onCopyPress?: () => void;
 }) {
   return (
-    <View className="flex-row px-24 justify-center gap-4 space-between mb-8">
-      <ActionButton icon={<Plus size={18} color="black" />} onPress={onBuyPress} />
-      <ActionButton icon={<ArrowUpRight size={18} color="black" />} onPress={onSendPress} />
-      <ActionButton icon={<Copy size={18} color="black" />} onPress={onCopyPress} />
+    <View className="flex-row px-24 justify-center gap-4 mb-8">
+      <ActionButton icon={<Plus size={18} className="text-black" />} onPress={onBuyPress} />
+      <ActionButton icon={<ArrowUpRight size={18} className="text-black" />} onPress={onSendPress} />
+      <ActionButton icon={<Copy size={18} className="text-black" />} onPress={onCopyPress} />
     </View>
   );
 }
@@ -109,7 +112,7 @@ function ActionButton({
 }) {
   return (
     <TouchableOpacity className="items-center" onPress={onPress}>
-      <View className="w-12 h-12 rounded-full bg-[#FFA500] justify-center items-center mb-2">
+      <View className="w-12 h-12 rounded-full bg-amber-500 justify-center items-center mb-2">
         {icon}
       </View>
     </TouchableOpacity>
@@ -129,7 +132,7 @@ function TokenList({ tokens }: { tokens: Token[] }) {
 function TokenRow({ token }: { token: Token }) {
   return (
     <View
-      className="flex-row justify-between items-center py-3 border-b border-white/10"
+      className="flex-row justify-between items-center py-3 border-b border-black/10 dark:border-white/10"
       key={token.symbol}
     >
       <View className="flex-row items-center">
@@ -137,22 +140,28 @@ function TokenRow({ token }: { token: Token }) {
           {token.iconUrl ? (
             <Image source={{ uri: token.iconUrl }} className="w-9 h-9 rounded-full" />
           ) : (
-            <View className="w-9 h-9 rounded-full bg-[#4A4A4A] justify-center items-center">
-              <Coins size={18} color="white" />
+            <View className="w-9 h-9 rounded-full bg-gray-200 dark:bg-gray-700 justify-center items-center">
+              <Coins size={18} className="text-black dark:text-white" />
             </View>
           )}
         </View>
         <View className="justify-center">
-          <Text className="text-base font-medium text-white mb-1">{token.name}</Text>
-          <Text className="text-sm text-[#AAAAAA]">{token.amount} {token.symbol}</Text>
+          <Text className="text-base font-medium text-black dark:text-white mb-1">{token.name}</Text>
+          <Text className="text-sm text-gray-600 dark:text-gray-400">{token.amount} {token.symbol}</Text>
         </View>
       </View>
       <View className="items-end">
-        <Text className="text-base font-medium text-white mb-1">
+        <Text className="text-base font-medium text-black dark:text-white mb-1">
           {Intl.NumberFormat('en-US', {
             style: 'currency',
             currency: 'USD',
           }).format(token.value)}
+        </Text>
+        <Text
+          className={`text-sm ${token.change >= 0 ? 'text-green-500' : 'text-red-500'}`}
+        >
+          {token.change >= 0 ? '+' : ''}
+          {token.change.toFixed(2)}%
         </Text>
       </View>
     </View>

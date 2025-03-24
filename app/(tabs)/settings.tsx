@@ -1,13 +1,47 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, Text, Switch, TouchableOpacity, ScrollView, Platform } from 'react-native';
-import { useColorScheme } from 'react-native';
+import { useTheme } from '@/contexts/ThemeContext';
+
+// Define types for settings items
+type ToggleSettingItem = {
+  title: string;
+  description?: string;
+  type: 'toggle';
+  value: boolean;
+  onValueChange: (value: boolean) => void;
+  icon: IconSymbolName;
+  iconDark?: IconSymbolName;
+};
+
+type LinkSettingItem = {
+  title: string;
+  description?: string;
+  type: 'link';
+  onPress: () => void;
+  icon: IconSymbolName;
+};
+
+type InfoSettingItem = {
+  title: string;
+  description?: string;
+  type: 'info';
+  icon: IconSymbolName;
+};
+
+type SettingItem = ToggleSettingItem | LinkSettingItem | InfoSettingItem;
+
+type SettingsSection = {
+  title: string;
+  items: SettingItem[];
+};
 import { ThemedView } from '@/components/ThemedView';
-import { IconSymbol } from '@/components/ui/IconSymbol';
+import { IconSymbol, IconSymbolName } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
 
 export default function SettingsScreen() {
-  const colorScheme = useColorScheme();
+  const { colorScheme, toggleTheme, setTheme, theme } = useTheme();
   const isDarkMode = colorScheme === 'dark';
+  const isSystemTheme = theme === 'system';
   
   // These would be connected to actual functionality in a real implementation
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -15,7 +49,7 @@ export default function SettingsScreen() {
   const [autoLockEnabled, setAutoLockEnabled] = useState(true);
   
   // Setting sections
-  const sections = [
+  const sections: SettingsSection[] = [
     {
       title: 'Appearance',
       items: [
@@ -24,13 +58,17 @@ export default function SettingsScreen() {
           description: 'Switch between light and dark theme',
           type: 'toggle',
           value: isDarkMode,
-          // In a real app, this would be connected to a theme context
-          onValueChange: () => {
-            // This is a placeholder - actual implementation would use a theme context
-            console.log('Theme toggle pressed');
-          },
+          onValueChange: () => toggleTheme(),
           icon: 'sun.max.fill',
           iconDark: 'moon.fill',
+        },
+        {
+          title: 'Use System Theme',
+          description: 'Automatically match your device settings',
+          type: 'toggle',
+          value: isSystemTheme,
+          onValueChange: (value: boolean) => setTheme(value ? 'system' : isDarkMode ? 'dark' : 'light'),
+          icon: 'gearshape.fill',
         },
       ],
     },
@@ -94,40 +132,38 @@ export default function SettingsScreen() {
   ];
 
   return (
-    <ThemedView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={[styles.headerText, { color: Colors[colorScheme ?? 'light'].text }]}>Settings</Text>
+    <ThemedView className="flex-1">
+      <View className="pt-16 pb-5 px-5">
+        <Text className="text-3xl font-bold text-black dark:text-white">Settings</Text>
       </View>
       
-      <ScrollView style={styles.scrollView}>
+      <ScrollView className="flex-1">
         {sections.map((section, sectionIndex) => (
-          <View key={`section-${sectionIndex}`} style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: Colors[colorScheme ?? 'light'].tint }]}>
+          <View key={`section-${sectionIndex}`} className="mb-6">
+            <Text className="text-lg font-semibold mb-2 px-5 text-blue-600 dark:text-blue-400">
               {section.title}
             </Text>
             
-            <View style={[styles.sectionContent, { backgroundColor: colorScheme === 'dark' ? '#1E1E1E' : '#F5F5F5' }]}>
+            <View className="mx-4 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800">
               {section.items.map((item, itemIndex) => (
                 <View 
                   key={`item-${sectionIndex}-${itemIndex}`} 
-                  style={[
-                    styles.settingItem,
-                    itemIndex < section.items.length - 1 && styles.settingItemBorder,
-                    { borderBottomColor: colorScheme === 'dark' ? '#333' : '#E0E0E0' }
-                  ]}
+                  className={`flex-row items-center justify-between py-4 px-4 ${itemIndex < section.items.length - 1 ? 'border-b border-gray-200 dark:border-gray-700' : ''}`}
                 >
-                  <View style={styles.settingItemLeft}>
+                  <View className="flex-row items-center flex-1">
                     <IconSymbol 
-                      name={item.type === 'toggle' && item.value && item.iconDark ? item.iconDark : item.icon} 
+                      name={item.type === 'toggle' && (item as ToggleSettingItem).value && (item as ToggleSettingItem).iconDark 
+                        ? (item as ToggleSettingItem).iconDark! 
+                        : item.icon} 
                       size={24} 
-                      color={Colors[colorScheme ?? 'light'].tint} 
+                      color={isDarkMode ? '#60A5FA' : '#2563EB'} 
                     />
-                    <View style={styles.settingItemTextContainer}>
-                      <Text style={[styles.settingItemTitle, { color: Colors[colorScheme ?? 'light'].text }]}>
+                    <View className="ml-4 flex-1">
+                      <Text className="text-base font-medium text-black dark:text-white">
                         {item.title}
                       </Text>
                       {item.description && (
-                        <Text style={[styles.settingItemDescription, { color: Colors[colorScheme ?? 'light'].icon }]}>
+                        <Text className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                           {item.description}
                         </Text>
                       )}
@@ -136,20 +172,20 @@ export default function SettingsScreen() {
                   
                   {item.type === 'toggle' && (
                     <Switch
-                      value={item.value}
-                      onValueChange={item.onValueChange}
-                      trackColor={{ false: '#767577', true: Colors[colorScheme ?? 'light'].tint }}
-                      thumbColor={Platform.OS === 'ios' ? undefined : item.value ? '#fff' : '#f4f3f4'}
+                      value={(item as ToggleSettingItem).value}
+                      onValueChange={(item as ToggleSettingItem).onValueChange}
+                      trackColor={{ false: '#767577', true: isDarkMode ? '#60A5FA' : '#2563EB' }}
+                      thumbColor={Platform.OS === 'ios' ? undefined : (item as ToggleSettingItem).value ? '#fff' : '#f4f3f4'}
                       ios_backgroundColor="#3e3e3e"
                     />
                   )}
                   
                   {item.type === 'link' && (
-                    <TouchableOpacity onPress={item.onPress}>
+                    <TouchableOpacity onPress={(item as LinkSettingItem).onPress}>
                       <IconSymbol 
                         name="chevron.right" 
                         size={20} 
-                        color={Colors[colorScheme ?? 'light'].icon} 
+                        color={isDarkMode ? '#9CA3AF' : '#6B7280'} 
                       />
                     </TouchableOpacity>
                   )}
@@ -163,61 +199,4 @@ export default function SettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    paddingTop: 60,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-  },
-  headerText: {
-    fontSize: 34,
-    fontWeight: 'bold',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 8,
-    paddingHorizontal: 20,
-  },
-  sectionContent: {
-    borderRadius: 12,
-    marginHorizontal: 16,
-    overflow: 'hidden',
-  },
-  settingItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-  },
-  settingItemBorder: {
-    borderBottomWidth: 1,
-  },
-  settingItemLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  settingItemTextContainer: {
-    marginLeft: 16,
-    flex: 1,
-  },
-  settingItemTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  settingItemDescription: {
-    fontSize: 14,
-    marginTop: 4,
-  },
-});
+// Styles removed in favor of Tailwind classes

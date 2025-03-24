@@ -23,8 +23,7 @@ export function Valuations({
 }: ValuationsProps) {
   return (
     <ThemedView
-      className="flex-1 bg-[#000000] p-4 rounded-2xl pt-16"
-      style={{ backgroundColor: '#000000' }}
+      className="flex-1 p-4 rounded-2xl pt-16 bg-white dark:bg-black"
     >
       {/* Header section */}
       <ValuationsHeader />
@@ -39,8 +38,8 @@ export function Valuations({
 
 function ValuationsHeader() {
   return (
-    <View className="flex flex-row justify-center items-center mb-4">
-      <Text className="text-xl font-semibold text-white">Set Valuations</Text>
+    <View className="flex-row justify-center items-center mb-4">
+      <Text className="text-xl font-semibold text-black dark:text-white">Set Valuations</Text>
     </View>
   );
 }
@@ -48,7 +47,7 @@ function ValuationsHeader() {
 function TotalValueDisplay({ totalValue }: { totalValue: number }) {
   return (
     <View className="items-center my-6">
-      <Text className="text-8xl font-bold text-white">
+      <Text className="text-7xl font-bold text-black dark:text-white">
         {Intl.NumberFormat('en-US', {
           style: 'currency',
           currency: 'USD',
@@ -71,7 +70,7 @@ function TokenList({ tokens }: { tokens: Token[] }) {
 function TokenRow({ token }: { token: Token }) {
   return (
     <View
-      className="flex-row justify-between items-center py-3 border-b border-white/10"
+      className="flex-row justify-between items-center py-3 border-b border-black/10 dark:border-white/10"
       key={token.symbol}
     >
       <View className="flex-row items-center">
@@ -79,18 +78,18 @@ function TokenRow({ token }: { token: Token }) {
           {token.iconUrl ? (
             <Image source={{ uri: token.iconUrl }} className="w-9 h-9 rounded-full" />
           ) : (
-            <View className="w-9 h-9 rounded-full bg-[#4A4A4A] justify-center items-center">
-              <Text className="text-base font-bold text-white">{token.symbol.charAt(0)}</Text>
+            <View className="w-9 h-9 rounded-full bg-gray-200 dark:bg-gray-700 justify-center items-center">
+              <Text className="text-base font-bold text-black dark:text-white">{token.symbol.charAt(0)}</Text>
             </View>
           )}
         </View>
         <View className="justify-center">
-          <Text className="text-base font-medium text-white mb-1">{token.name}</Text>
-          <Text className="text-sm text-[#AAAAAA]">{token.amount} {token.symbol}</Text>
+          <Text className="text-base font-medium text-black dark:text-white mb-1">{token.name}</Text>
+          <Text className="text-sm text-gray-600 dark:text-gray-400">{token.amount} {token.symbol}</Text>
         </View>
       </View>
       <View className="items-end">
-        <Text className="text-base font-medium text-white mb-1">
+        <Text className="text-base font-medium text-black dark:text-white mb-1">
           {Intl.NumberFormat('en-US', {
             style: 'currency',
             currency: 'USD',

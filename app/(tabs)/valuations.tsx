@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
+import { useTheme } from '@/contexts/ThemeContext';
 import {
   Text,
   Animated,
@@ -46,6 +47,7 @@ function CircularRuler({ currentValue, onValueChange }: { currentValue: number; 
   const scrollX = useRef(new Animated.Value(0)).current;
   const lastScrollPosition = useRef(0);
   const accumulatedOffset = useRef(currentValue);
+  const { colorScheme } = useTheme();
   
   // Calculate center position
   const centerPosition = visibleRange / 2;
@@ -164,7 +166,8 @@ function CircularRuler({ currentValue, onValueChange }: { currentValue: number; 
                   style={[
                     styles.segment,
                     {
-                      backgroundColor: isCenter ? '#FFFFFF' : (tickValue > 0 ? '#F2C464' : '#68D6E4'),
+                      backgroundColor: isCenter ? (colorScheme === 'dark' ? '#FFFFFF' : '#000000') : 
+                                       (tickValue > 0 ? '#F2C464' : '#68D6E4'),
                       height: isCenter ? 22 : (isMajor ? 14 : 6),
                       marginRight: i === ticks.length - 1 ? 0 : segmentSpacing
                     }
@@ -173,7 +176,8 @@ function CircularRuler({ currentValue, onValueChange }: { currentValue: number; 
                 {isMajor && (
                   <Text style={[
                     styles.tickLabel, 
-                    { color: isCenter ? '#FFFFFF' : (tickValue > 0 ? '#F7DC6F' : '#87CEEB') }
+                    { color: isCenter ? (colorScheme === 'dark' ? '#FFFFFF' : '#000000') : 
+                              (tickValue > 0 ? '#F7DC6F' : '#87CEEB') }
                   ]}>
                     {Math.abs(tickValue)}
                   </Text>
@@ -214,8 +218,8 @@ export function PremiumDiscountSlider({ token, onUpdateValuation }: { token: Tok
     <View style={styles.sliderContainer}>
       {/* Premium/Discount Labels */}
       <View style={styles.labelContainer}>
-        <Text style={{ fontSize: 12, color: '#93C5FD', fontWeight: '500' }}>Premium</Text>
-        <Text style={{ fontSize: 12, color: '#FEF3C7', fontWeight: '500' }}>Discount</Text>
+        <Text className="text-xs font-medium text-blue-300 dark:text-blue-300">Premium</Text>
+        <Text className="text-xs font-medium text-amber-100 dark:text-amber-100">Discount</Text>
       </View>
       
       
@@ -234,12 +238,11 @@ export function Valuations({
 }: ValuationsProps) {
   return (
     <ThemedView
-      className="flex-1 bg-[#000000] p-4 rounded-2xl pt-16"
-      style={{ backgroundColor: '#000000', flex: 1 }}
+      className="flex-1 bg-white dark:bg-black p-4 rounded-2xl pt-16"
     >
       {/* Header section */}
       <View className="flex flex-row justify-center items-center mb-4">
-        <Text className="text-xl font-semibold text-white">Valuations</Text>
+        <Text className="text-xl font-semibold text-black dark:text-white">Valuations</Text>
       </View>
       
       {/* Token list - wrapped in ScrollView to make it scrollable */}
@@ -264,7 +267,7 @@ export function Valuations({
 function TokenRow({ token, onUpdateValuation }: { token: Token; onUpdateValuation: (symbol: string, newAdjustment: number) => void }) {
   return (
     <View
-      className="py-6 border-b border-white/10"
+      className="py-6 border-b border-gray-200 dark:border-white/10"
       key={token.symbol}
     >
       <View className="flex-row justify-between items-center mb-4">
@@ -273,18 +276,18 @@ function TokenRow({ token, onUpdateValuation }: { token: Token; onUpdateValuatio
             {token.iconUrl ? (
               <Image source={{ uri: token.iconUrl }} className="w-9 h-9 rounded-full" />
             ) : (
-              <View className="w-9 h-9 rounded-full bg-[#4A4A4A] justify-center items-center">
-                <Text className="text-base font-bold text-white">{token.symbol.charAt(0)}</Text>
+              <View className="w-9 h-9 rounded-full bg-gray-200 dark:bg-gray-700 justify-center items-center">
+                <Text className="text-base font-bold text-black dark:text-white">{token.symbol.charAt(0)}</Text>
               </View>
             )}
           </View>
           <View className="justify-center">
-            <Text className="text-base font-medium text-white mb-1">{token.name}</Text>
-            <Text className="text-sm text-[#AAAAAA]">{token.symbol}</Text>
+            <Text className="text-base font-medium text-black dark:text-white mb-1">{token.name}</Text>
+            <Text className="text-sm text-gray-500 dark:text-gray-400">{token.symbol}</Text>
           </View>
         </View>
         <View className="items-end">
-          <Text className="text-base font-medium text-white mb-1">
+          <Text className="text-base font-medium text-black dark:text-white mb-1">
             {Intl.NumberFormat('en-US', {
               style: 'currency',
               currency: 'USD',
@@ -390,7 +393,7 @@ export default function ValuationsScreen() {
   };
   
   return (
-    <ThemedView style={styles.container}>
+    <ThemedView className="flex-1 bg-white dark:bg-black pb-10">
       <Valuations 
         tokens={tokens}
         onUpdateValuation={updateTokenValuation}
@@ -402,7 +405,6 @@ export default function ValuationsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
     paddingBottom: 40,
   },
   sliderContainer: {
@@ -427,7 +429,6 @@ const styles = StyleSheet.create({
   currentValueText: {
     fontSize: 16,
     fontWeight: '600',
-    color: 'white',
   },
   rulerContainer: {
     height: 50,
@@ -449,7 +450,6 @@ const styles = StyleSheet.create({
   tickLabel: {
     fontSize: 10,
     marginTop: 2,
-    color: '#AAAAAA',
   },
   scrollViewContainerStyle: {
     justifyContent: 'flex-end',
@@ -466,11 +466,10 @@ const styles = StyleSheet.create({
   indicatorLine: {
     width: 3, // Increased from 2 to 3 for thickness
     height: 50,
-    backgroundColor: 'white',
+    backgroundColor: '#000000',
     borderRadius: 2, // Increased from 1.5 to 2 for roundness
   },
   centerText: {
-    color: 'white',
     fontSize: 14,
     fontWeight: '600',
     marginTop: 2,
@@ -481,7 +480,6 @@ const styles = StyleSheet.create({
   },
   usdText: {
     textAlign: 'center',
-    color: '#AAAAAA',
     fontSize: 14,
     marginTop: 10,
   }
