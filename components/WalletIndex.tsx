@@ -96,9 +96,9 @@ function ActionButtonRow({
 }) {
   return (
     <View className="flex-row px-24 justify-center gap-4 mb-8">
-      <ActionButton icon={<Plus size={18} className="text-black" />} onPress={onBuyPress} />
-      <ActionButton icon={<ArrowUpRight size={18} className="text-black" />} onPress={onSendPress} />
-      <ActionButton icon={<Copy size={18} className="text-black" />} onPress={onCopyPress} />
+      <ActionButton icon={<Plus size={18} className="text-black dark:text-white" />} onPress={onBuyPress} />
+      <ActionButton icon={<ArrowUpRight size={18} className="text-black dark:text-white" />} onPress={onSendPress} />
+      <ActionButton icon={<Copy size={18} className="text-black dark:text-white" />} onPress={onCopyPress} />
     </View>
   );
 }
