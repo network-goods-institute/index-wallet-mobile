@@ -23,6 +23,8 @@ const MAPPING = {
   'doc.text.fill': 'description',
   'shield.fill': 'shield',
   'chart.line.uptrend.xyaxis': 'trending_up',
+  'key.fill': 'key',
+  'arrow.right.square.fill': 'logout',
 };
 
 export type IconSymbolName = keyof typeof MAPPING;

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, Switch, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import { StyleSheet, View, Text, Switch, TouchableOpacity, ScrollView, Platform, Alert } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'expo-router';
 
 // Define types for settings items
 type ToggleSettingItem = {
@@ -40,16 +42,66 @@ import { Colors } from '@/constants/Colors';
 
 export default function SettingsScreen() {
   const { colorScheme, toggleTheme, setTheme, theme } = useTheme();
+  const { status, logout, hasPasskey, seedPhrase } = useAuth();
+  const router = useRouter();
   const isDarkMode = colorScheme === 'dark';
   const isSystemTheme = theme === 'system';
   
   // These would be connected to actual functionality in a real implementation
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [biometricsEnabled, setBiometricsEnabled] = useState(false);
+  const [biometricsEnabled, setBiometricsEnabled] = useState(hasPasskey);
   const [autoLockEnabled, setAutoLockEnabled] = useState(true);
+  
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout? You will need your seed phrase to log back in.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            await logout();
+            router.replace('/auth/welcome');
+          },
+        },
+      ]
+    );
+  };
+  
+  const handleViewSeedPhrase = () => {
+    Alert.alert(
+      'View Seed Phrase',
+      'Your seed phrase is: \n\n' + seedPhrase + '\n\nKeep this safe and never share it with anyone.',
+      [{ text: 'OK' }]
+    );
+  };
   
   // Setting sections
   const sections: SettingsSection[] = [
+    {
+      title: 'Wallet',
+      items: [
+        {
+          title: 'View Seed Phrase',
+          description: 'View your wallet recovery phrase',
+          type: 'link',
+          onPress: handleViewSeedPhrase,
+          icon: 'key.fill',
+        },
+        {
+          title: 'Logout',
+          description: 'Sign out of your wallet',
+          type: 'link',
+          onPress: handleLogout,
+          icon: 'arrow.right.square.fill',
+        },
+      ],
+    },
     {
       title: 'Appearance',
       items: [
@@ -80,7 +132,15 @@ export default function SettingsScreen() {
           description: 'Use Face ID or Touch ID to unlock the app',
           type: 'toggle',
           value: biometricsEnabled,
-          onValueChange: (value: boolean) => setBiometricsEnabled(value),
+          onValueChange: (value: boolean) => {
+            setBiometricsEnabled(value);
+            // In a real implementation, we would update the auth context
+            // and store the preference
+            Alert.alert(
+              'Biometric Authentication',
+              value ? 'Biometric authentication enabled' : 'Biometric authentication disabled'
+            );
+          },
           icon: 'faceid',
         },
         {
