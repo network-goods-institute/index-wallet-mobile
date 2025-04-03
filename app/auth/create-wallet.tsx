@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Copy, CheckCircle, ArrowLeft } from 'lucide-react-native';
 
 export default function CreateWalletScreen() {
-  const { generateSeedPhrase, completeOnboarding, setOnboardingStep } = useAuth();
+  const { generateSeedPhrase, completeOnboarding, setOnboardingStep, setSeedPhraseForOnboarding } = useAuth();
   const [seedPhrase, setSeedPhrase] = useState<string>('');
   const [seedWords, setSeedWords] = useState<string[]>([]);
   const [copied, setCopied] = useState<boolean>(false);
@@ -36,8 +36,16 @@ export default function CreateWalletScreen() {
         {
           text: 'Yes, I have backed it up',
           onPress: async () => {
-            const success = await completeOnboarding(seedPhrase, false);
-            // Navigation will be handled by the app layout based on auth status
+            try {
+              // Save the seed phrase for use in the verification screen
+              await setSeedPhraseForOnboarding(seedPhrase);
+              
+              // Proceed to verification screen
+              setOnboardingStep('verify-seed');
+            } catch (error) {
+              console.error('Failed to store seed phrase:', error);
+              Alert.alert('Error', 'Failed to proceed to verification. Please try again.');
+            }
           },
         },
       ]

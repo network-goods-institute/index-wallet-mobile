@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { ArrowLeft, Clipboard as ClipboardIcon } from 'lucide-react-native';
 
 export default function ImportWalletScreen() {
-  const { validateSeedPhrase, login, setOnboardingStep } = useAuth();
+  const { validateSeedPhrase, login, setOnboardingStep, setSeedPhraseForOnboarding } = useAuth();
   const [seedWords, setSeedWords] = useState<string[]>(Array(12).fill(''));
   const [error, setError] = useState<string | null>(null);
   const [focusedIndex, setFocusedIndex] = useState<number>(-1);
@@ -76,13 +76,18 @@ export default function ImportWalletScreen() {
       return;
     }
     
-    // Attempt to login with the seed phrase
-    const success = await login(completeSeedPhrase, false);
-    
-    if (!success) {
+    // Store the seed phrase in the context but don't complete onboarding yet
+    // We'll redirect to the security settings screen first
+    try {
+      // Save the seed phrase for use in the security settings screen
+      await setSeedPhraseForOnboarding(completeSeedPhrase);
+      
+      // Proceed to security settings screen
+      setOnboardingStep('create-passkey');
+    } catch (error) {
+      console.error('Failed to store seed phrase:', error);
       setError('Failed to import wallet. Please try again.');
     }
-    // Navigation will be handled by the app layout based on auth status
   };
 
   return (

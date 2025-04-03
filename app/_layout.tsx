@@ -57,6 +57,7 @@ function AppContent() {
       const WelcomeScreen = require('../app/auth/welcome').default;
       const CreateWalletScreen = require('../app/auth/create-wallet').default;
       const ImportWalletScreen = require('../app/auth/import-wallet').default;
+      const SecuritySettingsScreen = require('../app/auth/security-settings').default;
       
       // Show auth screens based on the current step
       if (status === 'onboarding') {
@@ -64,13 +65,14 @@ function AppContent() {
           case 'create-seed':
             return <CreateWalletScreen />;
           case 'verify-seed':
-            // This would be implemented as needed
-            return <CreateWalletScreen />;
+            const VerifySeedScreen = require('../app/auth/verify-seed').default;
+            return <VerifySeedScreen />;
           case 'import-seed':
             return <ImportWalletScreen />;
           case 'create-passkey':
+            return <SecuritySettingsScreen />;
           case 'complete':
-            // These would be implemented as needed
+            // This would be implemented as needed
             return <CreateWalletScreen />;
           default:
             return <WelcomeScreen />;
