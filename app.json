@@ -8,6 +8,20 @@
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "fonts": [
+      {
+        "asset": "assets/fonts/SF-Pro-Display-Regular.otf",
+        "family": "SF-Pro-Display"
+      },
+      {
+        "asset": "assets/fonts/SF-Pro-Display-Medium.otf",
+        "family": "SF-Pro-Display-Medium"
+      },
+      {
+        "asset": "assets/fonts/SF-Pro-Display-Bold.otf",
+        "family": "SF-Pro-Display-Bold"
+      }
+    ],
     "ios": {
       "supportsTablet": true
     },

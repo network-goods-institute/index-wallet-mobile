@@ -1,11 +1,28 @@
+import 'react-native-get-random-values'; // This polyfill must be imported first
 import * as bip39 from 'bip39';
 import * as ed from '@noble/ed25519';
 import { sha512 } from '@noble/hashes/sha512';
-import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
+import { bytesToHex, hexToBytes, concatBytes } from '@noble/hashes/utils';
 
 // Configure ed25519 to use the proper hash function
-// @ts-ignore - The Noble ed25519 library types are incomplete
-ed.utils.sha512Sync = (...m: Uint8Array[]) => sha512(ed.utils.concatBytes(...m));
+// Noble ed25519 library configuration
+// We need to use 'any' type casting to configure the library properly
+
+// First ensure the required objects exist
+if (!(ed as any).utils) {
+  (ed as any).utils = {};
+}
+
+if (!(ed as any).etc) {
+  (ed as any).etc = {};
+}
+
+// Set up the hash functions
+(ed as any).utils.sha512Sync = (...messages: Uint8Array[]) => {
+  return sha512(concatBytes(...messages));
+};
+
+(ed as any).etc.sha512Sync = (message: Uint8Array) => sha512(message);
 
 /**
  * Generates a new BIP39 mnemonic (seed phrase) with 128 bits of entropy (12 words)

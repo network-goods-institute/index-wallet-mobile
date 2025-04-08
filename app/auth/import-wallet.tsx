@@ -63,7 +63,7 @@ export default function ImportWalletScreen() {
     
     // Join words to create the seed phrase
     const completeSeedPhrase = seedWords.join(' ');
-    
+
     // Basic validation
     if (seedWords.some(word => !word)) {
       setError('Please enter all 12 words of your seed phrase');
@@ -76,6 +76,9 @@ export default function ImportWalletScreen() {
       return;
     }
     
+    // Validate seed phrase: 
+
+
     // Store the seed phrase in the context but don't complete onboarding yet
     // We'll redirect to the security settings screen first
     try {
@@ -172,12 +175,6 @@ export default function ImportWalletScreen() {
         >
           <Text className="text-white font-semibold text-lg">Import Wallet</Text>
         </TouchableOpacity>
-
-        <Text className="text-center text-gray-500 dark:text-gray-400 mb-6 mx-2 text-sm">
-          For testing, use one of these seed phrases:{'\n'}
-          "abandon ability able about above absent absorb abstract absurd abuse access accident"{'\n'}
-          "above absent absorb abstract absurd abuse access accident account accuse achieve"
-        </Text>
       </SafeAreaView>
     </ThemedView>
   );

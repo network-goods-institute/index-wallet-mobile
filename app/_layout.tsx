@@ -1,3 +1,5 @@
+import '../polyfills'; // Import Buffer polyfill
+
 import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
@@ -9,16 +11,28 @@ import 'react-native-reanimated';
 
 import { useTheme } from '@/contexts/ThemeContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
-import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { AuthProvider, useAuth, AuthStatus, OnboardingStep } from '@/contexts/AuthContext';
 import '../global.css';
+
+import WelcomeScreen from '../app/auth/welcome';
+import OnboardingFlow from '@/components/OnboardingFlow';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const [loaded] = useFonts({
+  const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+    'SF-Pro-Display': require('../assets/fonts/SF-Pro-Display-Regular.otf'),
+    'SF-Pro-Display-Medium': require('../assets/fonts/SF-Pro-Display-Medium.otf'),
+    'SF-Pro-Display-Bold': require('../assets/fonts/SF-Pro-Display-Bold.otf'),
   });
+  
+  useEffect(() => {
+    if (error) {
+      console.error('Error loading fonts:', error);
+    }
+  }, [error]);
 
   useEffect(() => {
     if (loaded) {
@@ -39,62 +53,51 @@ export default function RootLayout() {
   );
 }
 
+// Loading screen component
+function LoadingScreen() {
+  const { colorScheme } = useTheme();
+  
+  return (
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <Text style={{ color: colorScheme === 'dark' ? '#fff' : '#000' }}>Loading...</Text>
+    </View>
+  );
+}
+
+
+
+// Authenticated app component
+function AuthenticatedApp() {
+  return (
+    <Stack>
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="+not-found" />
+    </Stack>
+  );
+}
+
+// Main app content component
 function AppContent() {
   const { colorScheme } = useTheme();
   const { status, onboardingStep } = useAuth();
   
-  // Render different content based on authentication status
-  const renderContent = () => {
-    if (status === 'loading') {
-      // Show a loading screen while checking auth status
-      return (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <Text style={{ color: colorScheme === 'dark' ? '#fff' : '#000' }}>Loading...</Text>
-        </View>
-      );
-    } else if (status === 'unauthenticated' || status === 'onboarding') {
-      // Import auth screens dynamically to avoid circular dependencies
-      const WelcomeScreen = require('../app/auth/welcome').default;
-      const CreateWalletScreen = require('../app/auth/create-wallet').default;
-      const ImportWalletScreen = require('../app/auth/import-wallet').default;
-      const SecuritySettingsScreen = require('../app/auth/security-settings').default;
-      
-      // Show auth screens based on the current step
-      if (status === 'onboarding') {
-        switch (onboardingStep) {
-          case 'create-seed':
-            return <CreateWalletScreen />;
-          case 'verify-seed':
-            const VerifySeedScreen = require('../app/auth/verify-seed').default;
-            return <VerifySeedScreen />;
-          case 'import-seed':
-            return <ImportWalletScreen />;
-          case 'create-passkey':
-            return <SecuritySettingsScreen />;
-          case 'complete':
-            // This would be implemented as needed
-            return <CreateWalletScreen />;
-          default:
-            return <WelcomeScreen />;
-        }
-      } else {
-        // Default to welcome screen for unauthenticated users
+  // Render the appropriate component based on auth status
+  function renderByAuthStatus(status: AuthStatus) {
+    switch (status) {
+      case 'loading':
+        return <LoadingScreen />;
+      case 'onboarding':
+        return <OnboardingFlow step={onboardingStep} />;
+      case 'unauthenticated':
         return <WelcomeScreen />;
-      }
-    } else {
-      // User is authenticated, show the main app
-      return (
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="+not-found" />
-        </Stack>
-      );
+      case 'authenticated':
+        return <AuthenticatedApp />;
     }
-  };
+  }
   
   return (
     <NavigationThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      {renderContent()}
+      {renderByAuthStatus(status)}
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
     </NavigationThemeProvider>
   );

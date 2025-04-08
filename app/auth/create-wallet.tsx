@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Alert, SafeAreaView } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import { useAuth } from '@/contexts/AuthContext';
-import { Copy, CheckCircle, ArrowLeft } from 'lucide-react-native';
+import { Copy, CheckCircle, ArrowLeft, Store, Wallet } from 'lucide-react-native';
 
 export default function CreateWalletScreen() {
-  const { generateSeedPhrase, completeOnboarding, setOnboardingStep, setSeedPhraseForOnboarding } = useAuth();
+  const { generateSeedPhrase, setOnboardingStep, setSeedPhraseForOnboarding, userType } = useAuth();
   const [seedPhrase, setSeedPhrase] = useState<string>('');
   const [seedWords, setSeedWords] = useState<string[]>([]);
   const [copied, setCopied] = useState<boolean>(false);
@@ -56,10 +56,39 @@ export default function CreateWalletScreen() {
     <ThemedView className="flex-1 m-4">
       <SafeAreaView className="flex-1 p-8">
       <View className="flex-row items-center mb-8">
-        <TouchableOpacity onPress={() => setOnboardingStep('welcome')} className="mr-4">
+        <TouchableOpacity onPress={() => setOnboardingStep('user-type')} className="mr-4">
           <ArrowLeft size={24} className="text-black dark:text-white" />
         </TouchableOpacity>
         <Text className="text-2xl font-bold text-black dark:text-white">Create Wallet</Text>
+      </View>
+      
+      {/* Educational content based on user type */}
+      <View className="mb-6 bg-blue-50 dark:bg-blue-900 p-4 rounded-xl">
+        {userType === 'vendor' ? (
+          <View className="flex-row items-center">
+            <View className="bg-blue-100 dark:bg-blue-800 rounded-full p-2 mr-3">
+              <Store size={24} className="text-blue-600 dark:text-blue-300" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-lg font-semibold text-black dark:text-white">Vendor Wallet</Text>
+              <Text className="text-gray-600 dark:text-gray-400">
+                This wallet will help you accept payments from customers securely and efficiently.
+              </Text>
+            </View>
+          </View>
+        ) : (
+          <View className="flex-row items-center">
+            <View className="bg-green-100 dark:bg-green-800 rounded-full p-2 mr-3">
+              <Wallet size={24} className="text-green-600 dark:text-green-300" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-lg font-semibold text-black dark:text-white">Customer Wallet</Text>
+              <Text className="text-gray-600 dark:text-gray-400">
+                This wallet will let you make payments to vendors quickly and securely.
+              </Text>
+            </View>
+          </View>
+        )}
       </View>
 
       <ScrollView className="flex-1 mx-2">

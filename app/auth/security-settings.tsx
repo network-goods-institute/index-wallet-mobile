@@ -77,10 +77,9 @@ export default function SecuritySettingsScreen() {
         // but we'll explicitly set it here based on the toggle to ensure consistency
         await enableiCloudBackup(useICloudBackup);
         
-        // If iCloud backup is enabled, trigger an immediate backup
-        if (useICloudBackup) {
-          await backupToiCloud();
-        }
+        // Don't immediately trigger backup - it will happen automatically
+        // when the state is properly updated
+        // The backup is already handled in enableiCloudBackup if enabled is true
       }
       
       // Navigation will be handled by the app layout based on auth status

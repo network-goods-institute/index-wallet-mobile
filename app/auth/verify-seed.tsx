@@ -9,8 +9,7 @@ export default function VerifySeedScreen() {
   const [selectedWords, setSelectedWords] = useState<{word: string, originalIndex: number}[]>([]);
   const [availableWords, setAvailableWords] = useState<{word: string, index: number}[]>([]);
   const [isVerified, setIsVerified] = useState(false);
-  
-  // Prepare the verification challenge
+
   useEffect(() => {
     if (seedPhrase) {
       const words = seedPhrase.split(' ');
@@ -26,6 +25,7 @@ export default function VerifySeedScreen() {
     }
   }, [seedPhrase]);
 
+
   // Generate n random unique indices between 0 and max-1
   const generateRandomIndices = (n: number, max: number): number[] => {
     const indices: number[] = [];
@@ -38,6 +38,7 @@ export default function VerifySeedScreen() {
     return indices.sort((a, b) => a - b); // Sort in ascending order
   };
 
+
   // Fisher-Yates shuffle algorithm
   const shuffleArray = (array: any[]) => {
     for (let i = array.length - 1; i > 0; i--) {
@@ -46,6 +47,7 @@ export default function VerifySeedScreen() {
     }
   };
 
+  
   const handleWordSelect = (word: string, index: number) => {
     // Add word to selected words
     const newSelected = [...selectedWords, { word, originalIndex: index }];
@@ -59,6 +61,7 @@ export default function VerifySeedScreen() {
       verifySelection(newSelected);
     }
   };
+
 
   const verifySelection = (selected: {word: string, originalIndex: number}[]) => {
     if (!seedPhrase) return;
@@ -82,6 +85,7 @@ export default function VerifySeedScreen() {
     }
   };
 
+
   const resetVerification = () => {
     if (seedPhrase) {
       const words = seedPhrase.split(' ');
@@ -94,6 +98,7 @@ export default function VerifySeedScreen() {
     }
   };
 
+  
   const handleContinue = async () => {
     if (isVerified && seedPhrase) {
       setOnboardingStep('create-passkey');

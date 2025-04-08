@@ -4,19 +4,23 @@ import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
 import * as Crypto from 'expo-crypto';
 import * as Device from 'expo-device';
+import { Platform } from 'react-native';
 import { 
   generateSeedPhrase as generateSeedPhraseUtil, 
   validateSeedPhrase as validateSeedPhraseUtil, 
   createKeyPairFromSeedPhrase,
   signMessageWithPrivateKey
 } from '@/utils/cryptoUtils';
+import { registerUser, registerWallet } from '@/services/registerUser';
+
 
 // Define types
 export type AuthStatus = 'loading' | 'unauthenticated' | 'authenticated' | 'onboarding';
-export type OnboardingStep = 'welcome' | 'create-seed' | 'verify-seed' | 'import-seed' | 'create-passkey' | 'complete';
+export type OnboardingStep = 'welcome' | 'user-type' | 'vendor-slides' | 'customer-slides' | 'create-seed' | 'verify-seed' | 'import-seed' | 'create-passkey' | 'complete';
 export type BackupStatus = 'none' | 'pending' | 'completed' | 'failed';
 export type PlatformOS = 'ios' | 'android' | 'web' | 'unknown';
 export type BackupProvider = 'iCloud' | 'Google Drive' | 'None' | 'Local';
+export type UserType = 'vendor' | 'payee' | null;
 
 interface AuthContextType {
   status: AuthStatus;
@@ -29,7 +33,9 @@ interface AuthContextType {
   biometricsAvailable: boolean;
   platformOS: PlatformOS;
   backupProvider: BackupProvider;
+  userType: UserType;
   setSeedPhraseForOnboarding: (seedPhrase: string) => Promise<void>;
+  setUserType: (type: UserType) => void;
   
   // Authentication methods
   login: (seedPhrase: string, usePasskey?: boolean) => Promise<boolean>;
@@ -64,6 +70,7 @@ const HAS_PASSKEY_KEY = 'has-passkey';
 const ICLOUD_BACKUP_ENABLED_KEY = 'icloud-backup-enabled';
 const BACKUP_STATUS_KEY = 'backup-status';
 const BIOMETRIC_ENABLED_KEY = 'biometric-enabled';
+const USER_TYPE_KEY = 'user-type';
 
 // Mock seed phrases
 const MOCK_SEED_PHRASES = [
@@ -94,6 +101,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [biometricsAvailable, setBiometricsAvailable] = useState<boolean>(false);
   const [platformOS, setPlatformOS] = useState<PlatformOS>('unknown');
   const [backupProvider, setBackupProvider] = useState<BackupProvider>('None');
+  const [userType, setUserType] = useState<UserType>(null);
 
   // Initialize auth state
   useEffect(() => {
@@ -129,6 +137,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const storedHasPasskey = await AsyncStorage.getItem(HAS_PASSKEY_KEY);
         const storedICloudBackup = await AsyncStorage.getItem(ICLOUD_BACKUP_ENABLED_KEY);
         const storedBackupStatus = await AsyncStorage.getItem(BACKUP_STATUS_KEY) as BackupStatus || 'none';
+        const storedUserType = await AsyncStorage.getItem(USER_TYPE_KEY) as UserType;
         
         // Check if biometrics are available on the device
         const biometricsCheck = await LocalAuthentication.hasHardwareAsync();
@@ -139,6 +148,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setHasPasskey(storedHasPasskey === 'true');
           setICloudBackupEnabled(storedICloudBackup === 'true');
           setBackupStatus(storedBackupStatus);
+          if (storedUserType) setUserType(storedUserType);
         } else if (storedStatus === 'onboarding') {
           setStatus('onboarding');
         } else {
@@ -153,16 +163,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initializeAuth();
   }, []);
 
-  // Generate a new seed phrase (mocked)
+  // Generate a new seed phrase using cryptoUtils
   const generateSeedPhrase = (): string => {
-    // Return a random mock seed phrase
-    return MOCK_SEED_PHRASES[Math.floor(Math.random() * MOCK_SEED_PHRASES.length)];
+    // Use the real implementation from cryptoUtils
+    return generateSeedPhraseUtil();
   };
 
-  // Validate a seed phrase (mocked)
+  // Validate a seed phrase using cryptoUtils
   const validateSeedPhrase = (phrase: string): boolean => {
-    // Check if the phrase is in our mock list
-    return MOCK_SEED_PHRASES.includes(phrase);
+    // Use the real implementation from cryptoUtils
+    return validateSeedPhraseUtil(phrase);
   };
 
   // Start the onboarding process
@@ -242,10 +252,80 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setStatus('authenticated');
       setBackupStatus('none');
       setICloudBackupEnabled(true);
+      
+      // Generate wallet address from public key (in a real app, this would be a proper derivation)
+      const walletAddress = `0x${keyPair.publicKey.substring(0, 40)}`;
+      
+      var username = "test / index wallets goated"
+      // Get unique device ID (or generate one if not available)
+      const deviceId = await getUniqueDeviceId();
+      
+      // Register user with backend
+      try {
+        // Register the user account
+        const userData = await registerUser({
+          walletAddress,
+          username, 
+          valuations: {}
+        });
+        
+        console.log('User registered successfully:', userData);
+        
+        // Register the wallet
+        // Store user ID for future API calls
+        if (userData.userId) {
+          await AsyncStorage.setItem('USER_ID', userData.userId);
+        }
+      } catch (apiError) {
+        // Log error but don't fail onboarding - user can still use the app locally
+        console.error('Error registering with backend:', apiError);
+        // We could add a retry mechanism here or queue for later sync
+      }
+      
       return true;
     } catch (error) {
       console.error('Error completing onboarding:', error);
       return false;
+    }
+  };
+  
+  // Get or generate a unique device ID
+  const getUniqueDeviceId = async (): Promise<string> => {
+    try {
+      // Try to get stored device ID
+      const storedDeviceId = await AsyncStorage.getItem('DEVICE_ID');
+      if (storedDeviceId) {
+        return storedDeviceId;
+      }
+      
+      // Generate a new device ID
+      let deviceId = '';
+      
+      // Try to use device-specific identifiers
+      if (Device.isDevice) {
+        deviceId = Device.deviceName + '-' + 
+                  Device.modelName + '-' + 
+                  await Crypto.digestStringAsync(
+                    Crypto.CryptoDigestAlgorithm.SHA256,
+                    Device.modelId + Device.totalMemory
+                  );
+      } else {
+        // Fallback for simulators or web
+        deviceId = 'web-' + await Crypto.digestStringAsync(
+          Crypto.CryptoDigestAlgorithm.SHA256,
+          Date.now().toString() + Math.random().toString()
+        );
+      }
+      
+      // Store the device ID for future use
+      await AsyncStorage.setItem('DEVICE_ID', deviceId);
+      return deviceId;
+    } catch (error) {
+      console.error('Error getting device ID:', error);
+      // Fallback
+      const fallbackId = 'fallback-' + Date.now().toString();
+      await AsyncStorage.setItem('DEVICE_ID', fallbackId);
+      return fallbackId;
     }
   };
 
@@ -412,9 +492,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await AsyncStorage.setItem(ICLOUD_BACKUP_ENABLED_KEY, enabled ? 'true' : 'false');
       setICloudBackupEnabled(enabled);
       
-      // If enabling backup, trigger an immediate backup
-      if (enabled && seedPhrase) {
-        return await backupToiCloud();
+      // If enabling backup, trigger a backup after a short delay to ensure state is updated
+      if (enabled) {
+        // Skip backup if we're still in onboarding to avoid errors
+        if (status !== 'authenticated') {
+          console.log('Skipping backup during onboarding - will backup after authentication completes');
+          return true;
+        }
+        
+        // Add a small delay to ensure state is properly updated
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Only attempt backup if we have a seed phrase
+        if (seedPhrase) {
+          return await backupToiCloud();
+        } else {
+          console.log('Backup enabled but no seed phrase available yet - backup will occur when available');
+        }
       }
       
       return true;
@@ -431,7 +525,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setBackupStatus('pending');
       await AsyncStorage.setItem(BACKUP_STATUS_KEY, 'pending');
       
-      console.log(`Backing up to ${backupProvider}...`);
       
       // Ensure we have the seed phrase and key pair
       if (!seedPhrase || !keyPair) {
@@ -528,7 +621,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Sign a message using the private key (placeholder implementation for now)
+  // Sign a message using the private key with cryptoUtils
   const signMessage = async (message: string): Promise<string | null> => {
     try {
       if (!keyPair?.privateKey) {
@@ -536,9 +629,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return null;
       }
       
-      // For now, just return a mock signature
-      console.log(`Would sign message with private key: ${keyPair.privateKey.substring(0, 10)}...`);
-      return `mock-signature-for-${message}`;
+      // Use the real implementation from cryptoUtils
+      const signature = await signMessageWithPrivateKey(message, keyPair.privateKey);
+      return signature;
     } catch (error) {
       console.error('Error signing message:', error);
       return null;
@@ -556,6 +649,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     biometricsAvailable,
     platformOS,
     backupProvider,
+    userType,
+    setUserType: (type: UserType) => {
+      setUserType(type);
+      AsyncStorage.setItem(USER_TYPE_KEY, type || '');
+    },
     login,
     logout,
     authenticateWithPasskey,
