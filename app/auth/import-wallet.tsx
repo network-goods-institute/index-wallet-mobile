@@ -1,14 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, TextInput, Alert, ScrollView, SafeAreaView, Clipboard, Keyboard } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, Alert, ScrollView, SafeAreaView, Clipboard, Keyboard, ActivityIndicator } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import { useAuth } from '@/contexts/AuthContext';
 import { ArrowLeft, Clipboard as ClipboardIcon } from 'lucide-react-native';
+import { validateAndFetchWallet } from '@/services/walletService';
 
 export default function ImportWalletScreen() {
   const { validateSeedPhrase, login, setOnboardingStep, setSeedPhraseForOnboarding } = useAuth();
   const [seedWords, setSeedWords] = useState<string[]>(Array(12).fill(''));
   const [error, setError] = useState<string | null>(null);
   const [focusedIndex, setFocusedIndex] = useState<number>(-1);
+  const [isValidating, setIsValidating] = useState<boolean>(false);
+  const [existingWallet, setExistingWallet] = useState<any>(null);
   const inputRefs = useRef<Array<TextInput | null>>(Array(12).fill(null));
 
   // Focus next input after entering a word
@@ -60,36 +63,84 @@ export default function ImportWalletScreen() {
 
   const handleImport = async () => {
     setError(null);
+    setIsValidating(true);
     
-    // Join words to create the seed phrase
-    const completeSeedPhrase = seedWords.join(' ');
-
-    // Basic validation
-    if (seedWords.some(word => !word)) {
-      setError('Please enter all 12 words of your seed phrase');
-      return;
-    }
-    
-    // Check if it's a valid seed phrase
-    if (!validateSeedPhrase(completeSeedPhrase)) {
-      setError('Invalid seed phrase. Please check and try again.');
-      return;
-    }
-    
-    // Validate seed phrase: 
-
-
-    // Store the seed phrase in the context but don't complete onboarding yet
-    // We'll redirect to the security settings screen first
     try {
-      // Save the seed phrase for use in the security settings screen
-      await setSeedPhraseForOnboarding(completeSeedPhrase);
+      // Join words to create the seed phrase
+      const completeSeedPhrase = seedWords.join(' ');
+
+      // Basic validation
+      if (seedWords.some(word => !word)) {
+        setError('Please enter all 12 words of your seed phrase');
+        setIsValidating(false);
+        return;
+      }
       
-      // Proceed to security settings screen
-      setOnboardingStep('create-passkey');
-    } catch (error) {
-      console.error('Failed to store seed phrase:', error);
-      setError('Failed to import wallet. Please try again.');
+      // Check if it's a valid BIP39 seed phrase
+      if (!validateSeedPhrase(completeSeedPhrase)) {
+        setError('Invalid seed phrase format. Please check and try again.');
+        setIsValidating(false);
+        return;
+      }
+      
+      // Validate the seed phrase with the backend and check if a wallet already exists
+      const wallet = await validateAndFetchWallet(completeSeedPhrase);
+      
+      // If a wallet was found, store it for later use
+      if (wallet) {
+        setExistingWallet(wallet);
+        console.log('Found existing wallet:', wallet.wallet_address);
+        
+        // Show confirmation to the user
+        Alert.alert(
+          'Existing Wallet Found',
+          'We found an existing wallet associated with this seed phrase. Would you like to restore it?',
+          [
+            {
+              text: 'Cancel',
+              style: 'cancel',
+              onPress: () => setIsValidating(false)
+            },
+            {
+              text: 'Restore',
+              onPress: async () => {
+                try {
+                  // Save the seed phrase and existing wallet info for use in the security settings screen
+                  await setSeedPhraseForOnboarding(completeSeedPhrase);
+                  
+                  // Proceed to security settings screen
+                  setOnboardingStep('create-passkey');
+                } catch (error) {
+                  console.error('Failed to store seed phrase:', error);
+                  setError('Failed to import wallet. Please try again.');
+                  setIsValidating(false);
+                }
+              }
+            }
+          ]
+        );
+      } else {
+        // No existing wallet found, proceed with creating a new one
+        console.log('No existing wallet found, will create a new one');
+        
+        // Store the seed phrase in the context but don't complete onboarding yet
+        // We'll redirect to the security settings screen first
+        try {
+          // Save the seed phrase for use in the security settings screen
+          await setSeedPhraseForOnboarding(completeSeedPhrase);
+          
+          // Proceed to security settings screen
+          setOnboardingStep('create-passkey');
+        } catch (error) {
+          console.error('Failed to store seed phrase:', error);
+          setError('Failed to import wallet. Please try again.');
+        }
+      }
+    } catch (error: any) {
+      console.error('Error during wallet import:', error);
+      setError(error.message || 'Failed to import wallet. Please try again.');
+    } finally {
+      setIsValidating(false);
     }
   };
 
@@ -172,8 +223,13 @@ export default function ImportWalletScreen() {
         <TouchableOpacity 
           className="bg-blue-600 py-4 rounded-xl items-center mb-6 mx-2"
           onPress={handleImport}
+          disabled={isValidating}
         >
-          <Text className="text-white font-semibold text-lg">Import Wallet</Text>
+          {isValidating ? (
+            <ActivityIndicator color="white" size="small" />
+          ) : (
+            <Text className="text-white font-semibold text-lg">Import Wallet</Text>
+          )}
         </TouchableOpacity>
       </SafeAreaView>
     </ThemedView>

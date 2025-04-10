@@ -4,6 +4,7 @@ import Constants from 'expo-constants';
 import { LOCAL_BACKEND_SERVER_URL } from '@/config';
 
 // Get the API URL from environment variables
+// 
 const API_URL = LOCAL_BACKEND_SERVER_URL || 'https://api.indexwallets.com';
 
 // Create axios instance with default config

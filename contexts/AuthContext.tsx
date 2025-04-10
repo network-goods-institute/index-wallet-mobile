@@ -12,11 +12,12 @@ import {
   signMessageWithPrivateKey
 } from '@/utils/cryptoUtils';
 import { registerUser, registerWallet } from '@/services/registerUser';
+import { validateAndFetchWallet, createWallet } from '@/services/walletService';
 
 
 // Define types
 export type AuthStatus = 'loading' | 'unauthenticated' | 'authenticated' | 'onboarding';
-export type OnboardingStep = 'welcome' | 'user-type' | 'vendor-slides' | 'customer-slides' | 'create-seed' | 'verify-seed' | 'import-seed' | 'create-passkey' | 'complete';
+export type OnboardingStep = 'welcome' | 'user-type' | 'user-name' | 'vendor-slides' | 'customer-slides' | 'create-seed' | 'verify-seed' | 'import-seed' | 'create-passkey' | 'complete';
 export type BackupStatus = 'none' | 'pending' | 'completed' | 'failed';
 export type PlatformOS = 'ios' | 'android' | 'web' | 'unknown';
 export type BackupProvider = 'iCloud' | 'Google Drive' | 'None' | 'Local';
@@ -34,8 +35,12 @@ interface AuthContextType {
   platformOS: PlatformOS;
   backupProvider: BackupProvider;
   userType: UserType;
+  userName: string | null;
+  existingWallet: any | null;
   setSeedPhraseForOnboarding: (seedPhrase: string) => Promise<void>;
   setUserType: (type: UserType) => void;
+  setUserName: (name: string) => void;
+  validateSeedAndCheckWallet: (seedPhrase: string) => Promise<any | null>;
   
   // Authentication methods
   login: (seedPhrase: string, usePasskey?: boolean) => Promise<boolean>;
@@ -71,6 +76,7 @@ const ICLOUD_BACKUP_ENABLED_KEY = 'icloud-backup-enabled';
 const BACKUP_STATUS_KEY = 'backup-status';
 const BIOMETRIC_ENABLED_KEY = 'biometric-enabled';
 const USER_TYPE_KEY = 'user-type';
+const USER_NAME_KEY = 'user-name';
 
 // Mock seed phrases
 const MOCK_SEED_PHRASES = [
@@ -102,6 +108,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [platformOS, setPlatformOS] = useState<PlatformOS>('unknown');
   const [backupProvider, setBackupProvider] = useState<BackupProvider>('None');
   const [userType, setUserType] = useState<UserType>(null);
+  const [userName, setUserName] = useState<string | null>(null);
+  const [existingWallet, setExistingWallet] = useState<any | null>(null);
 
   // Initialize auth state
   useEffect(() => {
@@ -138,6 +146,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const storedICloudBackup = await AsyncStorage.getItem(ICLOUD_BACKUP_ENABLED_KEY);
         const storedBackupStatus = await AsyncStorage.getItem(BACKUP_STATUS_KEY) as BackupStatus || 'none';
         const storedUserType = await AsyncStorage.getItem(USER_TYPE_KEY) as UserType;
+        const storedUserName = await AsyncStorage.getItem(USER_NAME_KEY);
         
         // Check if biometrics are available on the device
         const biometricsCheck = await LocalAuthentication.hasHardwareAsync();
@@ -256,7 +265,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Generate wallet address from public key (in a real app, this would be a proper derivation)
       const walletAddress = `0x${keyPair.publicKey.substring(0, 40)}`;
       
-      var username = "test / index wallets goated"
+      // Use the user's name if available, otherwise use a default
+      const displayName = userName || "Index Wallet User";
+      
       // Get unique device ID (or generate one if not available)
       const deviceId = await getUniqueDeviceId();
       
@@ -265,7 +276,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Register the user account
         const userData = await registerUser({
           walletAddress,
-          username, 
+          username: displayName, 
           valuations: {}
         });
         
@@ -638,6 +649,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Validate seed phrase and check if wallet exists
+  const validateSeedAndCheckWallet = async (phrase: string): Promise<any | null> => {
+    try {
+      // First validate the seed phrase format
+      if (!validateSeedPhrase(phrase)) {
+        throw new Error('Invalid seed phrase format');
+      }
+      
+      // Check if a wallet with this seed phrase exists
+      const wallet = await validateAndFetchWallet(phrase);
+      
+      if (wallet) {
+        setExistingWallet(wallet);
+        return wallet;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error validating seed phrase:', error);
+      throw error;
+    }
+  };
+
   const value = {
     status,
     onboardingStep,
@@ -654,6 +688,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUserType(type);
       AsyncStorage.setItem(USER_TYPE_KEY, type || '');
     },
+    userName,
+    setUserName: (name: string) => {
+      setUserName(name);
+      AsyncStorage.setItem(USER_NAME_KEY, name);
+    },
     login,
     logout,
     authenticateWithPasskey,
@@ -668,6 +707,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     backupToiCloud,
     restoreFromiCloud,
     signMessage,
+    existingWallet,
+    validateSeedAndCheckWallet,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

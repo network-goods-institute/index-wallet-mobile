@@ -25,6 +25,8 @@ const MAPPING = {
   'chart.line.uptrend.xyaxis': 'trending_up',
   'key.fill': 'key',
   'arrow.right.square.fill': 'logout',
+  'arrow.left.arrow.right': 'swap_horiz',
+  'clock.arrow.circlepath': 'history',
 };
 
 export type IconSymbolName = keyof typeof MAPPING;

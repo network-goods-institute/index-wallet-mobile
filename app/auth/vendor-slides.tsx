@@ -57,8 +57,8 @@ export default function VendorSlidesScreen() {
       });
       setCurrentIndex(currentIndex + 1);
     } else {
-      // Move to seed phrase creation
-      setOnboardingStep('create-seed');
+      // Move to name input
+      setOnboardingStep('user-name');
     }
   };
 
@@ -70,14 +70,14 @@ export default function VendorSlidesScreen() {
       });
       setCurrentIndex(currentIndex - 1);
     } else {
-      // Go back to user type selection
-      setOnboardingStep('user-type');
+      // Go back to user name input
+      setOnboardingStep('user-name');
     }
   };
 
   const handleSkip = () => {
-    // Skip directly to seed phrase creation
-    setOnboardingStep('create-seed');
+    // Skip directly to name input
+    setOnboardingStep('user-name');
   };
 
   const renderItem = ({ item }: { item: typeof slides[0] }) => (
