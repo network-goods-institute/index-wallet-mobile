@@ -1,7 +1,7 @@
 import React from 'react';
-import { Image, TouchableOpacity, SafeAreaView } from 'react-native';
-import { View, Text } from '@/components/Themed';
+import { Image, TouchableOpacity, SafeAreaView, Text, View } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
+import { StyledText } from '@/components/StyledText';
 import { useAuth } from '@/contexts/AuthContext';
 
 const WelcomeScreen = () => {
@@ -20,12 +20,12 @@ const WelcomeScreen = () => {
   return (
     <ThemedView className="flex-1">
       <SafeAreaView className="flex-1 mx-12 p-6 justify-center">
+      <View className="my-48 items-center">
         <Image
           source={require('@/assets/images/Logo.png')}
-          style={{ resizeMode: 'contain', width: 200, height: 200 }}
+          className="w-50 h-50 my-12"
         />
 
-      <View className="my-24 items-center">
         <Text 
           className="text-5xl font-bold text-center text-yellow-900 dark:text-yellow-400"
         >
@@ -34,7 +34,7 @@ const WelcomeScreen = () => {
       </View>
 
       <View className="flex-1 justify-end">
-        <View className="gap-8">
+        <View className="gap-4">
           <TouchableOpacity 
             className="bg-blue-600 py-4 px-6 rounded-xl items-center"
             onPress={handleCreateWallet}

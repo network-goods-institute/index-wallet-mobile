@@ -9,9 +9,10 @@ export default function UserNameScreen() {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
 
+  const isVendor = userType === 'vendor';
+
   const handleBack = () => {
-    // Go back to the appropriate slides based on user type
-    if (userType === 'vendor') {
+    if (isVendor) {
       setOnboardingStep('vendor-slides');
     } else {
       setOnboardingStep('customer-slides');
@@ -25,50 +26,56 @@ export default function UserNameScreen() {
     }
     
     setUserName(name.trim());
-    
-    // Proceed to seed phrase creation
     setOnboardingStep('create-seed');
   };
 
   return (
-    <ThemedView className="flex-1">
+    <ThemedView className="flex-1 bg-black">
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         className="flex-1"
       >
-        <SafeAreaView className="flex-1 p-6">
-          <View className="flex-row items-center mb-8">
-            <TouchableOpacity onPress={handleBack} className="mr-4">
-              <ArrowLeft size={24} className="text-black dark:text-white" />
+        <SafeAreaView className="flex-1">
+          <View className="px-6 pt-6">
+            <TouchableOpacity onPress={handleBack} className="mb-16">
+              <ArrowLeft size={32} color={isVendor ? '#2196F3' : '#9C27B0'} />
             </TouchableOpacity>
-            <Text className="text-2xl font-bold text-black dark:text-white">What's your name?</Text>
+
+            <Text className="text-5xl font-bold text-white leading-tight">
+              {isVendor 
+                ? "What is your\nvendor name?"
+                : "What is your\nname?"
+              }
+            </Text>
           </View>
 
-          <View className="flex-1 justify-center space-y-6">
-            <Text className="text-base text-gray-700 dark:text-gray-300">
-              Please enter your name so we can personalize your experience
-            </Text>
-
+          <View className="flex-1 px-6 pt-16">
             <TextInput
-              className="bg-gray-100 dark:bg-gray-800 p-4 rounded-xl text-black dark:text-white text-lg"
-              placeholder="Your name"
-              placeholderTextColor="#9CA3AF"
+              className="text-white text-3xl font-medium py-4"
+              placeholder={isVendor ? "Enter business name" : "Enter your name"}
+              placeholderTextColor="#666"
               value={name}
-              onChangeText={setName}
+              onChangeText={(text) => {
+                setName(text);
+                if (error) setError('');
+              }}
               autoFocus
               autoCapitalize="words"
+              selectionColor={isVendor ? '#2196F3' : '#9C27B0'}
             />
 
             {error ? (
-              <Text className="text-red-500">{error}</Text>
+              <Text className="text-red-500 text-lg mt-4">{error}</Text>
             ) : null}
 
-            <TouchableOpacity
-              onPress={handleContinue}
-              className="bg-blue-600 p-4 rounded-xl mt-6"
-            >
-              <Text className="text-white font-bold text-center text-lg">Continue</Text>
-            </TouchableOpacity>
+            <View className="absolute bottom-12 left-6 right-6">
+              <TouchableOpacity
+                onPress={handleContinue}
+                className={`${isVendor ? 'bg-blue-600' : 'bg-purple-600'} p-5 rounded-2xl`}
+              >
+                <Text className="text-white font-bold text-center text-xl">Continue</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </SafeAreaView>
       </KeyboardAvoidingView>

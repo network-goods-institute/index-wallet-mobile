@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, TouchableOpacity, FlatList, StyleSheet, Dimensions, SafeAreaView } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, Dimensions, SafeAreaView } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import { useAuth } from '@/contexts/AuthContext';
 import { ArrowLeft, ArrowRight, Wallet, Zap, Lock } from 'lucide-react-native';
@@ -7,40 +7,27 @@ import EducationalSlide from '@/components/EducationalSlide';
 
 const { width } = Dimensions.get('window');
 
-// Mock images - in a real app, you would import actual images
-const mockImages = {
-  slide1: { uri: 'https://via.placeholder.com/300' },
-  slide2: { uri: 'https://via.placeholder.com/300' },
-  slide3: { uri: 'https://via.placeholder.com/300' },
-};
-
 const slides = [
   {
     key: '1',
     title: 'Pay Anywhere, Anytime',
     description: 'With Index Wallet, you can make payments to any vendor quickly and securely using cryptocurrency.',
-    image: mockImages.slide1,
-    backgroundColor: '#E8EAF6',
-    textColor: '#303F9F',
-    icon: <Wallet size={40} color="#303F9F" />
+    image: <Wallet size={120} color="#7B1FA2" />,
+    textColor: '#7B1FA2'
   },
   {
     key: '2',
     title: 'Lightning Fast Transactions',
     description: 'Send payments in seconds without the delays of traditional banking systems.',
-    image: mockImages.slide2,
-    backgroundColor: '#F3E5F5',
-    textColor: '#7B1FA2',
-    icon: <Zap size={40} color="#7B1FA2" />
+    image: <Zap size={120} color="#7B1FA2" />,
+    textColor: '#7B1FA2'
   },
   {
     key: '3',
     title: 'Your Money, Your Control',
     description: 'Take full control of your finances with a wallet that only you can access.',
-    image: mockImages.slide3,
-    backgroundColor: '#E0F7FA',
-    textColor: '#006064',
-    icon: <Lock size={40} color="#006064" />
+    image: <Lock size={120} color="#7B1FA2" />,
+    textColor: '#7B1FA2'
   },
 ];
 
@@ -57,39 +44,24 @@ export default function CustomerSlidesScreen() {
       });
       setCurrentIndex(currentIndex + 1);
     } else {
-      // Move to name input
       setOnboardingStep('user-name');
     }
   };
 
   const handleBack = () => {
-    if (currentIndex > 0) {
-      flatListRef.current?.scrollToIndex({
-        index: currentIndex - 1,
-        animated: true,
-      });
-      setCurrentIndex(currentIndex - 1);
-    } else {
-      // Go back to user name input
-      setOnboardingStep('user-name');
-    }
+    setOnboardingStep('user-type');
   };
 
   const handleSkip = () => {
-    // Skip directly to name input
     setOnboardingStep('user-name');
   };
 
   const renderItem = ({ item }: { item: typeof slides[0] }) => (
-    <View style={styles.slideContainer}>
-      <View style={[styles.iconContainer, { backgroundColor: item.backgroundColor }]}>
-        {item.icon}
-      </View>
+    <View className="w-screen flex-1 justify-center items-center">
       <EducationalSlide
         title={item.title}
         description={item.description}
         image={item.image}
-        backgroundColor={item.backgroundColor}
         textColor={item.textColor}
       />
     </View>
@@ -97,14 +69,13 @@ export default function CustomerSlidesScreen() {
 
   const renderDotIndicator = () => {
     return (
-      <View style={styles.paginationContainer}>
+      <View className="flex-row justify-center items-center mb-5">
         {slides.map((_, index) => (
           <View
             key={index}
-            style={[
-              styles.dot,
-              { backgroundColor: index === currentIndex ? '#7B1FA2' : '#E1BEE7' }
-            ]}
+            className={`w-2.5 h-2.5 rounded-full mx-1 ${
+              index === currentIndex ? 'bg-purple-700 dark:bg-purple-500' : 'bg-purple-200 dark:bg-purple-800'
+            }`}
           />
         ))}
       </View>
@@ -113,13 +84,18 @@ export default function CustomerSlidesScreen() {
 
   return (
     <ThemedView className="flex-1">
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={handleBack}>
-            <ArrowLeft size={24} color="#000" />
+      <SafeAreaView className="flex-1">
+        <View className="flex-row items-center justify-between px-4 py-4">
+          <TouchableOpacity onPress={handleBack} className="flex-row items-center">
+            <ArrowLeft size={32} color="#7B1FA2" />
+            <Text className="text-purple-700 dark:text-purple-500 font-semibold text-base ml-2">
+              Back
+            </Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleSkip}>
-            <Text style={styles.skipText}>Skip</Text>
+          <TouchableOpacity onPress={handleSkip} className="flex-row items-center">
+            <Text className="text-purple-700 dark:text-purple-500 font-semibold text-base">
+              Skip
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -140,12 +116,12 @@ export default function CustomerSlidesScreen() {
 
         {renderDotIndicator()}
 
-        <View style={styles.footer}>
+        <View className="px-5 pb-5">
           <TouchableOpacity
-            style={[styles.button, styles.nextButton]}
+            className="w-full bg-purple-700 dark:bg-purple-500 py-3 px-6 rounded-full flex-row justify-center items-center"
             onPress={handleNext}
           >
-            <Text style={styles.nextButtonText}>
+            <Text className="text-white font-bold text-base mr-2">
               {currentIndex === slides.length - 1 ? 'Get Started' : 'Next'}
             </Text>
             <ArrowRight size={20} color="#FFF" />
@@ -155,68 +131,3 @@ export default function CustomerSlidesScreen() {
     </ThemedView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-  },
-  skipText: {
-    fontSize: 16,
-    color: '#7B1FA2',
-    fontWeight: '600',
-  },
-  slideContainer: {
-    width,
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  paginationContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  dot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginHorizontal: 5,
-  },
-  footer: {
-    padding: 20,
-    alignItems: 'center',
-  },
-  button: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 25,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  nextButton: {
-    backgroundColor: '#7B1FA2',
-    width: '100%',
-  },
-  nextButtonText: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginRight: 8,
-  },
-});

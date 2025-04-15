@@ -1,64 +1,44 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet, Dimensions, ImageSourcePropType } from 'react-native';
-
+import { View, Text, Image, ImageSourcePropType } from 'react-native';
 
 interface EducationalSlideProps {
   title: string;
   description: string;
-  image: ImageSourcePropType;
-  backgroundColor?: string;
+  image: ImageSourcePropType | React.ReactElement;
   textColor?: string;
 }
-
-const { width } = Dimensions.get('window');
 
 export default function EducationalSlide({ 
   title, 
   description, 
   image, 
-  backgroundColor = '#ffffff',
   textColor = '#000000'
 }: EducationalSlideProps) {
   return (
-    <View style={[styles.slide, { backgroundColor }]}>
-      <View style={styles.imageContainer}>
-        <Image source={image} style={styles.image} resizeMode="contain" />
+    <View className="flex-1 justify-center items-center p-5 w-full">
+      <View className="w-3/5 aspect-square justify-center items-center mb-10">
+        {React.isValidElement(image) ? (
+          image
+        ) : (
+          <Image 
+            source={image as ImageSourcePropType} 
+            className="w-full h-full"
+            resizeMode="contain" 
+          />
+        )}
       </View>
-      <Text style={[styles.title, { color: textColor }]}>{title}</Text>
-      <Text style={[styles.description, { color: textColor }]}>{description}</Text>
+      <Text 
+        className="text-2xl font-bold mb-2.5 text-center"
+        style={{ color: textColor }}
+      >
+        {title}
+      </Text>
+      <Text 
+        className="text-base text-center px-5 leading-6"
+        style={{ color: textColor }}
+      >
+        {description}
+      </Text>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  slide: {
-    width,
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  imageContainer: {
-    width: width * 0.6,
-    height: width * 0.6,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  image: {
-    width: '100%',
-    height: '100%',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  description: {
-    fontSize: 16,
-    textAlign: 'center',
-    paddingHorizontal: 20,
-    lineHeight: 24,
-  },
-});

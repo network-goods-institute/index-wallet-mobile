@@ -1,155 +1,97 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, SafeAreaView } from 'react-native';
+import { View, Text, TouchableOpacity, SafeAreaView, ScrollView } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { ThemedView } from '@/components/ThemedView';
 import { useAuth } from '@/contexts/AuthContext';
-import { Copy, CheckCircle, ArrowLeft, Store, Wallet } from 'lucide-react-native';
+import { ArrowLeft, Copy, CheckCircle, ArrowRight } from 'lucide-react-native';
 
 export default function CreateWalletScreen() {
-  const { generateSeedPhrase, setOnboardingStep, setSeedPhraseForOnboarding, userType } = useAuth();
-  const [seedPhrase, setSeedPhrase] = useState<string>('');
-  const [seedWords, setSeedWords] = useState<string[]>([]);
-  const [copied, setCopied] = useState<boolean>(false);
+  const { setOnboardingStep, userType, generateSeedPhrase, setSeedPhraseForOnboarding } = useAuth();
+  const [seedPhrase, setSeedPhrase] = useState('');
+  const [copied, setCopied] = useState(false);
 
-  // Generate a seed phrase when the component mounts
   useEffect(() => {
     const phrase = generateSeedPhrase();
     setSeedPhrase(phrase);
-    setSeedWords(phrase.split(' '));
+    setSeedPhraseForOnboarding(phrase);
   }, []);
 
-  const handleCopy = () => {
-    // In a real app, we would use Clipboard.setString(seedPhrase)
-    setCopied(true);
-    setTimeout(() => setCopied(false), 3000);
+  const handleCopy = async () => {
+    try {
+      await Clipboard.setStringAsync(seedPhrase);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 3000);
+    } catch (error) {
+      console.error('Failed to copy to clipboard:', error);
+    }
   };
 
-  const handleContinue = async () => {
-    // In a real app, we would verify that the user has backed up their seed phrase
-    Alert.alert(
-      'Important',
-      'Have you securely backed up your seed phrase? You will not be able to recover your wallet without it.',
-      [
-        {
-          text: 'No, I need to back it up',
-          style: 'cancel',
-        },
-        {
-          text: 'Yes, I have backed it up',
-          onPress: async () => {
-            try {
-              // Save the seed phrase for use in the verification screen
-              await setSeedPhraseForOnboarding(seedPhrase);
-              
-              // Proceed to verification screen
-              setOnboardingStep('verify-seed');
-            } catch (error) {
-              console.error('Failed to store seed phrase:', error);
-              Alert.alert('Error', 'Failed to proceed to verification. Please try again.');
-            }
-          },
-        },
-      ]
-    );
-  };
+  const words = seedPhrase ? seedPhrase.split(' ') : [];
 
   return (
-    <ThemedView className="flex-1 m-4">
-      <SafeAreaView className="flex-1 p-8">
-      <View className="flex-row items-center mb-8">
-        <TouchableOpacity onPress={() => setOnboardingStep('user-type')} className="mr-4">
-          <ArrowLeft size={24} className="text-black dark:text-white" />
-        </TouchableOpacity>
-        <Text className="text-2xl font-bold text-black dark:text-white">Create Wallet</Text>
-      </View>
-      
-      {/* Educational content based on user type */}
-      <View className="mb-6 bg-blue-50 dark:bg-blue-900 p-4 rounded-xl">
-        {userType === 'vendor' ? (
-          <View className="flex-row items-center">
-            <View className="bg-blue-100 dark:bg-blue-800 rounded-full p-2 mr-3">
-              <Store size={24} className="text-blue-600 dark:text-blue-300" />
-            </View>
-            <View className="flex-1">
-              <Text className="text-lg font-semibold text-black dark:text-white">Vendor Wallet</Text>
-              <Text className="text-gray-600 dark:text-gray-400">
-                This wallet will help you accept payments from customers securely and efficiently.
-              </Text>
-            </View>
-          </View>
-        ) : (
-          <View className="flex-row items-center">
-            <View className="bg-green-100 dark:bg-green-800 rounded-full p-2 mr-3">
-              <Wallet size={24} className="text-green-600 dark:text-green-300" />
-            </View>
-            <View className="flex-1">
-              <Text className="text-lg font-semibold text-black dark:text-white">Customer Wallet</Text>
-              <Text className="text-gray-600 dark:text-gray-400">
-                This wallet will let you make payments to vendors quickly and securely.
-              </Text>
-            </View>
-          </View>
-        )}
-      </View>
+    <ThemedView className="flex-1 bg-black">
+      <SafeAreaView className="flex-1">
+        <View className="px-6 pt-6">
+          <TouchableOpacity onPress={() => setOnboardingStep('user-type')} className="mb-16">
+            <ArrowLeft size={32} color={userType === 'vendor' ? '#2196F3' : '#9C27B0'} />
+          </TouchableOpacity>
 
-      <ScrollView className="flex-1 mx-2">
-        <View className="mb-8">
-          <Text className="text-lg font-semibold text-black dark:text-white mb-2">
-            Your Recovery Seed Phrase
+          <Text className="text-5xl font-bold text-white leading-tight mb-12">
+            This is your{'\n'}password:
           </Text>
-          <Text className="text-gray-600 dark:text-gray-400 mb-6">
-            Write down these 12 words in order and keep them in a safe place. Anyone with this phrase can access your wallet.
-          </Text>
+        </View>
 
-          <View className="bg-gray-100 dark:bg-gray-800 rounded-xl p-5 mb-5">
-            <View className="flex-row flex-wrap justify-between">
-              {seedWords.map((word, index) => (
-                <View key={index} className="w-[30%] p-2">
-                  <Text className="text-gray-500 dark:text-gray-400 text-sm">{index + 1}.</Text>
-                  <Text className="text-black dark:text-white font-medium">{word}</Text>
-                </View>
-              ))}
+        <ScrollView className="flex-1 px-6">
+          {seedPhrase ? (
+            <>
+              <View className="flex-row flex-wrap justify-between mb-8">
+                {words.map((word, index) => (
+                  <View 
+                    key={index} 
+                    className="w-[30%] bg-gray-800 rounded-xl p-4 mb-4"
+                  >
+                    <Text className="text-gray-400 text-xs absolute top-2 left-2">
+                      {(index + 1).toString().padStart(2, '0')}
+                    </Text>
+                    <Text className="text-white text-lg font-medium text-center mt-2">
+                      {word}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+
+              <TouchableOpacity
+                onPress={handleCopy}
+                className="flex-row items-center justify-center bg-gray-800/50 py-3 px-4 rounded-xl mb-16"
+              >
+                {copied ? (
+                  <>
+                    <CheckCircle size={20} color="#10B981" />
+                    <Text className="text-[#10B981] text-base font-medium ml-2">Copied!</Text>
+                  </>
+                ) : (
+                  <>
+                    <Copy size={20} color="#9CA3AF" />
+                    <Text className="text-gray-400 text-base font-medium ml-2">Copy</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </>
+          ) : (
+            <View className="flex-1 justify-center items-center">
+              <Text className="text-white text-lg">Generating your seed phrase...</Text>
             </View>
-          </View>
+          )}
+        </ScrollView>
 
-          <TouchableOpacity 
-            className="flex-row items-center justify-center py-3 bg-gray-200 dark:bg-gray-700 rounded-lg mb-6"
-            onPress={handleCopy}
+        <View className="absolute bottom-12 right-6">
+          <TouchableOpacity
+            onPress={() => setOnboardingStep('verify-seed')}
+            className="bg-yellow-400 w-16 h-16 rounded-full items-center justify-center"
           >
-            {copied ? (
-              <>
-                <CheckCircle size={18} className="text-green-500 mr-2" />
-                <Text className="text-black dark:text-white font-medium">Copied!</Text>
-              </>
-            ) : (
-              <>
-                <Copy size={18} className="text-black dark:text-white mr-2" />
-                <Text className="text-black dark:text-white font-medium">Copy to Clipboard</Text>
-              </>
-            )}
+            <ArrowRight size={32} color="#000000" />
           </TouchableOpacity>
         </View>
-
-        <View className="mb-8">
-          <Text className="text-lg font-semibold text-black dark:text-white mb-2">
-            Important
-          </Text>
-          <View className="bg-yellow-100 dark:bg-yellow-900 p-5 rounded-lg">
-            <Text className="text-yellow-800 dark:text-yellow-200">
-              • Never share your recovery phrase with anyone{'\n'}
-              • Index will never ask for your recovery phrase{'\n'}
-              • Store this phrase in a secure location{'\n'}
-              • If you lose this phrase, you will lose access to your wallet
-            </Text>
-          </View>
-        </View>
-      </ScrollView>
-
-      <TouchableOpacity 
-        className="bg-blue-600 py-4 rounded-xl items-center mb-6 mx-2"
-        onPress={handleContinue}
-      >
-        <Text className="text-white font-semibold text-lg">I've Backed Up My Phrase</Text>
-      </TouchableOpacity>
       </SafeAreaView>
     </ThemedView>
   );

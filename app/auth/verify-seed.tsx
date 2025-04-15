@@ -1,32 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, SafeAreaView } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, TextInput, SafeAreaView } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { ThemedView } from '@/components/ThemedView';
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowLeft, CheckCircle } from 'lucide-react-native';
+import { ArrowLeft } from 'lucide-react-native';
 
 export default function VerifySeedScreen() {
-  const { seedPhrase, setOnboardingStep, completeOnboarding } = useAuth();
-  const [selectedWords, setSelectedWords] = useState<{word: string, originalIndex: number}[]>([]);
-  const [availableWords, setAvailableWords] = useState<{word: string, index: number}[]>([]);
+  const { seedPhrase, setOnboardingStep } = useAuth();
+  const [verificationInputs, setVerificationInputs] = useState<{[key: number]: string}>({});
+  const [missingIndices, setMissingIndices] = useState<number[]>([]);
   const [isVerified, setIsVerified] = useState(false);
 
   useEffect(() => {
     if (seedPhrase) {
-      const words = seedPhrase.split(' ');
-      
-      // Select 4 random words to verify (indices 0-based)
-      const indicesToVerify = generateRandomIndices(4, words.length);
-      
-      // Create shuffled array of words for selection
-      const shuffled = [...words].map((word, index) => ({ word, index }));
-      shuffleArray(shuffled);
-      
-      setAvailableWords(shuffled);
+      // Generate 3 random indices to verify
+      const indices = generateRandomIndices(3, 12);
+      setMissingIndices(indices);
     }
   }, [seedPhrase]);
 
-
-  // Generate n random unique indices between 0 and max-1
   const generateRandomIndices = (n: number, max: number): number[] => {
     const indices: number[] = [];
     while (indices.length < n) {
@@ -35,142 +27,102 @@ export default function VerifySeedScreen() {
         indices.push(index);
       }
     }
-    return indices.sort((a, b) => a - b); // Sort in ascending order
+    return indices.sort((a, b) => a - b);
   };
 
-
-  // Fisher-Yates shuffle algorithm
-  const shuffleArray = (array: any[]) => {
-    for (let i = array.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [array[i], array[j]] = [array[j], array[i]];
-    }
-  };
-
-  
-  const handleWordSelect = (word: string, index: number) => {
-    // Add word to selected words
-    const newSelected = [...selectedWords, { word, originalIndex: index }];
-    setSelectedWords(newSelected);
+  const handleInputChange = (index: number, value: string) => {
+    const newInputs = { ...verificationInputs, [index]: value.toLowerCase().trim() };
+    setVerificationInputs(newInputs);
     
-    // Remove word from available words
-    setAvailableWords(availableWords.filter(item => item.index !== index));
-    
-    // Check if all required words are selected
-    if (newSelected.length === 4) {
-      verifySelection(newSelected);
-    }
-  };
-
-
-  const verifySelection = (selected: {word: string, originalIndex: number}[]) => {
-    if (!seedPhrase) return;
-    
-    const seedWords = seedPhrase.split(' ');
-    const isCorrect = selected.every(item => seedWords[item.originalIndex] === item.word);
-    
-    if (isCorrect) {
-      setIsVerified(true);
-      Alert.alert(
-        'Verification Successful',
-        'You have successfully verified your seed phrase.',
-        [{ text: 'Continue', onPress: handleContinue }]
-      );
-    } else {
-      Alert.alert(
-        'Verification Failed',
-        'The selected words do not match your seed phrase. Please try again.',
-        [{ text: 'Try Again', onPress: resetVerification }]
-      );
-    }
-  };
-
-
-  const resetVerification = () => {
     if (seedPhrase) {
       const words = seedPhrase.split(' ');
-      const shuffled = [...words].map((word, index) => ({ word, index }));
-      shuffleArray(shuffled);
-      
-      setSelectedWords([]);
-      setAvailableWords(shuffled);
-      setIsVerified(false);
+      const allCorrect = missingIndices.every(idx => 
+        newInputs[idx] === words[idx]
+      );
+      setIsVerified(allCorrect);
     }
   };
 
-  
-  const handleContinue = async () => {
-    if (isVerified && seedPhrase) {
+  const handleContinue = () => {
+    if (isVerified) {
       setOnboardingStep('create-passkey');
     }
   };
 
+  const renderWord = (word: string, index: number) => {
+    if (missingIndices.includes(index)) {
+      return (
+        <View key={index} className="w-[30%] bg-gray-800 rounded-xl p-4 mb-4">
+          <Text className="text-gray-400 text-xs absolute top-2 left-2">
+            {(index + 1).toString().padStart(2, '0')}
+          </Text>
+          <TextInput
+            className="text-white text-lg font-medium text-center mt-2 h-7 bg-transparent"
+            value={verificationInputs[index] || ''}
+            onChangeText={(text) => handleInputChange(index, text)}
+            placeholder="..."
+            placeholderTextColor="#4B5563"
+            autoCapitalize="none"
+            autoCorrect={false}
+            style={{ outline: 'none' }}
+          />
+        </View>
+      );
+    }
+
+    return (
+      <View key={index} className="w-[30%] bg-gray-800 rounded-xl p-4 mb-4">
+        <Text className="text-gray-400 text-xs absolute top-2 left-2">
+          {(index + 1).toString().padStart(2, '0')}
+        </Text>
+        <Text className="text-white text-lg font-medium text-center mt-2">
+          {word}
+        </Text>
+      </View>
+    );
+  };
+
+  const words = seedPhrase ? seedPhrase.split(' ') : Array(12).fill('');
+
   return (
-    <ThemedView className="flex-1 m-4">
-      <SafeAreaView className="flex-1 p-8">
-        <View className="flex-row items-center mb-8">
-          <TouchableOpacity onPress={() => setOnboardingStep('create-seed')} className="mr-4">
-            <ArrowLeft size={24} className="text-black dark:text-white" />
+    <ThemedView className="flex-1 bg-black">
+      <SafeAreaView className="flex-1">
+        <View className="px-6 pt-6">
+          <TouchableOpacity onPress={() => setOnboardingStep('create-seed')} className="mb-16">
+            <ArrowLeft size={32} color="#FFFFFF" />
           </TouchableOpacity>
-          <Text className="text-2xl font-bold text-black dark:text-white">Verify Seed Phrase</Text>
+
+          <Text className="text-5xl font-bold text-white leading-tight mb-12">
+            Fill in the blanks to verify
+          </Text>
         </View>
 
-        <ScrollView className="flex-1 mx-2">
-          <View className="mb-8">
-            <Text className="text-lg font-semibold text-black dark:text-white mb-2">
-              Confirm Your Recovery Phrase
-            </Text>
-            <Text className="text-gray-600 dark:text-gray-400 mb-6">
-              Select the correct words from your seed phrase to verify you've saved it properly.
-            </Text>
-
-            {/* Selected words section */}
-            <View className="bg-gray-100 dark:bg-gray-800 rounded-xl p-5 mb-5">
-              <Text className="text-gray-600 dark:text-gray-400 mb-3">Selected Words:</Text>
-              <View className="flex-row flex-wrap">
-                {selectedWords.map((item, idx) => (
-                  <View key={idx} className="bg-blue-100 dark:bg-blue-900 rounded-lg px-3 py-2 m-1">
-                    <Text className="text-blue-800 dark:text-blue-200">{item.word}</Text>
-                  </View>
-                ))}
-                {Array(4 - selectedWords.length).fill(0).map((_, idx) => (
-                  <View key={`empty-${idx}`} className="bg-gray-200 dark:bg-gray-700 rounded-lg px-3 py-2 m-1 min-w-[80px]">
-                    <Text className="text-gray-400 dark:text-gray-500">...</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-
-            {/* Available words section */}
-            <View className="mb-8">
-              <Text className="text-gray-600 dark:text-gray-400 mb-3">Select 4 words from your seed phrase:</Text>
-              <View className="flex-row flex-wrap justify-between">
-                {availableWords.map((item, idx) => (
-                  <TouchableOpacity 
-                    key={idx} 
-                    className="bg-gray-200 dark:bg-gray-700 rounded-lg px-3 py-2 m-1 min-w-[30%]"
-                    onPress={() => handleWordSelect(item.word, item.index)}
-                    disabled={selectedWords.length >= 4}
-                  >
-                    <Text className="text-center text-black dark:text-white">{item.word}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
+        <ScrollView className="flex-1 px-6">
+          <View className="flex-row flex-wrap justify-between mb-16">
+            {words.map((word, index) => renderWord(word, index))}
           </View>
         </ScrollView>
 
-        <TouchableOpacity 
-          className={`py-4 rounded-xl items-center mb-6 mx-2 ${
-            isVerified ? 'bg-blue-600' : 'bg-gray-400'
-          }`}
-          onPress={handleContinue}
-          disabled={!isVerified}
-        >
-          <Text className="text-white font-semibold text-lg">
-            {isVerified ? 'Continue' : 'Verify Seed Phrase'}
-          </Text>
-        </TouchableOpacity>
+        <View className="absolute bottom-12 left-6">
+          <TouchableOpacity
+            onPress={() => setOnboardingStep('create-seed')}
+            className="w-16 h-16 rounded-full items-center justify-center bg-gray-800/50"
+          >
+            <ArrowLeft size={32} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+
+        <View className="absolute bottom-12 right-6">
+          <TouchableOpacity
+            onPress={handleContinue}
+            disabled={!isVerified}
+            className={`w-16 h-16 rounded-full items-center justify-center ${
+              isVerified ? 'bg-yellow-400' : 'bg-gray-600'
+            }`}
+          >
+            <ArrowLeft size={32} color="#000000" style={{ transform: [{ rotate: '180deg' }] }} />
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
     </ThemedView>
   );
