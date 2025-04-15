@@ -2,7 +2,6 @@ import axios from 'axios';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { API_URL } from '../config';
-import logger from '../utils/logger';
 
 // Get the API URL from our config file
 

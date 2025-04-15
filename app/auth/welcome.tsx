@@ -1,24 +1,10 @@
 import React from 'react';
-import { View, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
+import { Image, TouchableOpacity, SafeAreaView } from 'react-native';
+import { View, Text } from '@/components/Themed';
 import { ThemedView } from '@/components/ThemedView';
 import { useAuth } from '@/contexts/AuthContext';
-import { StyledText } from '@/components/StyledText';
 
-const styles = StyleSheet.create({
-  title: {
-    color: '#000',
-    marginBottom: 8,
-  },
-  buttonText: {
-    color: '#fff',
-  },
-  termsText: {
-    textAlign: 'center',
-    color: '#6b7280',
-  },
-});
-
-export default function WelcomeScreen() {
+const WelcomeScreen = () => {
   const { startOnboarding, setOnboardingStep } = useAuth();
 
   const handleCreateWallet = () => {
@@ -31,78 +17,53 @@ export default function WelcomeScreen() {
     setOnboardingStep('import-seed');
   };
   
-  const handleSignIn = () => {
-    startOnboarding();
-    setOnboardingStep('sign-in');
-  };
-
-  //TODO: Add shimmer on base logo
-  // Stylistic changes: 
-
-
-  // Need to differentiate between vendor and payment wallets: 
-  // Does schema change at all: 
-      // Only onboarding flow: 
-  // Vendor wallets: 
-  //  
   return (
     <ThemedView className="flex-1">
-      <SafeAreaView className="flex-1 p-6 justify-center">
-      <View className="items-center mb-12">
-        <StyledText 
-          variant="h1" 
-          weight="bold" 
-          style={styles.title}
+      <SafeAreaView className="flex-1 mx-12 p-6 justify-center">
+        <Image
+          source={require('@/assets/images/Logo.png')}
+          style={{ resizeMode: 'contain', width: 200, height: 200 }}
+        />
+
+      <View className="my-24 items-center">
+        <Text 
+          className="text-5xl font-bold text-center text-yellow-900 dark:text-yellow-400"
         >
           Index Wallets
-        </StyledText>
+        </Text>
       </View>
 
-      <View className="gap-8 mx-12">
-        <TouchableOpacity 
-          className="bg-blue-600 py-4 rounded-xl items-center"
-          onPress={handleCreateWallet}
-        >
-          <StyledText 
-            variant="button" 
-            weight="medium" 
-            style={styles.buttonText}
+      <View className="flex-1 justify-end">
+        <View className="gap-8">
+          <TouchableOpacity 
+            className="bg-blue-600 py-4 px-6 rounded-xl items-center"
+            onPress={handleCreateWallet}
           >
-            Create a New Wallet
-          </StyledText>
-        </TouchableOpacity>
+            <Text 
+              className="text-base font-medium text-white"
+            >
+              Create a New Wallet
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity 
-          className="border border-gray-300 dark:border-gray-700 py-4 rounded-xl items-center"
-          onPress={handleImportWallet}
-        >
-          <StyledText 
-            variant="button" 
-            weight="medium" 
-            style={styles.buttonText}
+          <TouchableOpacity 
+            className="border border-gray-300 dark:border-gray-700 py-4 px-6 rounded-xl items-center"
+            onPress={handleImportWallet}
           >
-            Import Existing Wallet
-          </StyledText>
-        </TouchableOpacity>
+            <Text 
+              className="text-base font-medium text-gray-900 dark:text-white"
+            >
+              Import Existing Wallet
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity 
-          className="py-4 rounded-xl items-center"
-          onPress={handleSignIn}
-        >
-          <StyledText 
-            variant="button" 
-            weight="medium" 
-            style={styles.buttonText}
-          >
-            Sign In
-          </StyledText>
-        </TouchableOpacity>
+        </View>
       </View>
 
       <View className="mt-12">
         <StyledText 
           variant="caption" 
-          style={styles.termsText}
+          className="text-xs font-light text-center text-gray-500 dark:text-gray-400"
         >
           By continuing, you agree to our Terms of Service and Privacy Policy
         </StyledText>
@@ -110,4 +71,6 @@ export default function WelcomeScreen() {
       </SafeAreaView>
     </ThemedView>
   );
-}
+};
+
+export default WelcomeScreen;

@@ -58,7 +58,6 @@ export function WalletIndex({
 }
 
 function WalletHeader() {
-  const { colorScheme } = useTheme();
   const { userName, walletAddress } = useAuth(); // Get user from global state
   
   // Display username from global state or fallback to 'Wallet'
@@ -67,9 +66,11 @@ function WalletHeader() {
   return (
     <View className="flex flex-row justify-center items-center mb-4">
       <View className="w-8 h-8 rounded-full bg-green-300 mr-4" />
-      <View className="flex flex-row items-center">
+      <View className="flex flex-col items-center">
         <Text className="text-black dark:text-white text-base font-semibold">{displayName}</Text>
-        <Text className="text-black dark:text-white text-base font-semibold">{walletAddress}</Text>
+        <Text className="text-black dark:text-white text-base font-semibold text-ellipsis">
+          {`${walletAddress?.substring(0, 3)}...${walletAddress?.substring(walletAddress?.length - 3)}`}
+        </Text>
       </View>
     </View>
   );
