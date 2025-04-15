@@ -29,7 +29,11 @@ export default function WelcomeScreen() {
   const handleImportWallet = () => {
     startOnboarding();
     setOnboardingStep('import-seed');
-
+  };
+  
+  const handleSignIn = () => {
+    startOnboarding();
+    setOnboardingStep('sign-in');
   };
 
   //TODO: Add shimmer on base logo
@@ -78,6 +82,19 @@ export default function WelcomeScreen() {
             style={styles.buttonText}
           >
             Import Existing Wallet
+          </StyledText>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          className="py-4 rounded-xl items-center"
+          onPress={handleSignIn}
+        >
+          <StyledText 
+            variant="button" 
+            weight="medium" 
+            style={styles.buttonText}
+          >
+            Sign In
           </StyledText>
         </TouchableOpacity>
       </View>

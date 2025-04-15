@@ -32,6 +32,12 @@ interface WalletData {
   has_biometrics: boolean;
   created_at: string;
   updated_at: string;
+  // User info
+  username?: string;
+  name?: string;
+  email?: string;
+  user_type?: 'vendor' | 'payee';
+  valuations?: any;
 }
 
 /**
@@ -56,7 +62,7 @@ export const validateAndFetchWallet = async (seedPhrase: string): Promise<Wallet
     
     try {
       // Try to fetch the wallet by address
-      const response = await api.get(`/api/wallets/address/${walletAddress}`);
+      const response = await api.get(`/api/users/${walletAddress}`);
       console.log('Wallet found:', response.data);
       return response.data;
     } catch (error: any) {

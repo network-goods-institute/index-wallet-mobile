@@ -1,11 +1,10 @@
 import axios from 'axios';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
-import { LOCAL_BACKEND_SERVER_URL } from '@/config';
+import { API_URL } from '../config';
+import logger from '../utils/logger';
 
-// Get the API URL from environment variables
-// 
-const API_URL = LOCAL_BACKEND_SERVER_URL || 'https://api.indexwallets.com';
+// Get the API URL from our config file
 
 // Create axios instance with default config
 const api = axios.create({
@@ -22,6 +21,10 @@ const api = axios.create({
 
 // User account API functions
 export const UserAPI = {
+  /**
+   * Sign in to an existing user account
+   * @param credentials User credentials
+   */
   /**
    * Register a new user account
    * @param userData User registration data
@@ -40,8 +43,32 @@ export const UserAPI = {
     try {
       const response = await api.post('/users/register', userData);
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error registering user:', error);
+      
+      if (error.response) {
+        console.error('Error response data:', error.response.data);
+        console.error('Error response status:', error.response.status);
+        
+        // Handle specific error codes
+        if (error.response.status === 409) {
+          // 409 Conflict - User or wallet already exists
+          const message = error.response.data.message || 'A user with this wallet address already exists';
+          throw new Error(message);
+        } else if (error.response.status === 400) {
+          // 400 Bad Request - Invalid data
+          const message = error.response.data.message || 'Invalid registration data';
+          throw new Error(message);
+        } else if (error.response.status === 500) {
+          // 500 Server Error
+          throw new Error('Server error occurred. Please try again later.');
+        }
+      } else if (error.request) {
+        // The request was made but no response was received
+        throw new Error('No response received from server. Please check your connection.');
+      }
+      
+      // For other errors, throw the original error
       throw error;
     }
   },
@@ -82,6 +109,7 @@ export const UserAPI = {
 
 // Wallet API functions
 export const WalletAPI = {
+
   /**
    * Register a new wallet
    * @param walletData Wallet registration data
@@ -137,7 +165,6 @@ api.interceptors.response.use(
       
       // Handle authentication errors
       if (error.response.status === 401) {
-        // Handle unauthorized access
         // You might want to redirect to login or refresh token
       }
     } else if (error.request) {

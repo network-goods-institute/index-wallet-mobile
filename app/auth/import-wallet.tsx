@@ -1,17 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, TextInput, Alert, ScrollView, SafeAreaView, Clipboard, Keyboard, ActivityIndicator } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ThemedView } from '@/components/ThemedView';
 import { useAuth } from '@/contexts/AuthContext';
 import { ArrowLeft, Clipboard as ClipboardIcon } from 'lucide-react-native';
-import { validateAndFetchWallet } from '@/services/walletService';
 
-export default function ImportWalletScreen() {
-  const { validateSeedPhrase, login, setOnboardingStep, setSeedPhraseForOnboarding } = useAuth();
+export default function ImportWalletScreen(): JSX.Element {
+  const { validateSeedPhrase, setOnboardingStep, setSeedPhraseForOnboarding, validateSeedAndCheckWallet } = useAuth();
   const [seedWords, setSeedWords] = useState<string[]>(Array(12).fill(''));
   const [error, setError] = useState<string | null>(null);
   const [focusedIndex, setFocusedIndex] = useState<number>(-1);
   const [isValidating, setIsValidating] = useState<boolean>(false);
-  const [existingWallet, setExistingWallet] = useState<any>(null);
   const inputRefs = useRef<Array<TextInput | null>>(Array(12).fill(null));
 
   // Focus next input after entering a word
@@ -84,57 +83,16 @@ export default function ImportWalletScreen() {
       }
       
       // Validate the seed phrase with the backend and check if a wallet already exists
-      const wallet = await validateAndFetchWallet(completeSeedPhrase);
+      const wallet = await validateSeedAndCheckWallet(completeSeedPhrase);
       
-      // If a wallet was found, store it for later use
       if (wallet) {
-        setExistingWallet(wallet);
-        console.log('Found existing wallet:', wallet.wallet_address);
-        
-        // Show confirmation to the user
-        Alert.alert(
-          'Existing Wallet Found',
-          'We found an existing wallet associated with this seed phrase. Would you like to restore it?',
-          [
-            {
-              text: 'Cancel',
-              style: 'cancel',
-              onPress: () => setIsValidating(false)
-            },
-            {
-              text: 'Restore',
-              onPress: async () => {
-                try {
-                  // Save the seed phrase and existing wallet info for use in the security settings screen
-                  await setSeedPhraseForOnboarding(completeSeedPhrase);
-                  
-                  // Proceed to security settings screen
-                  setOnboardingStep('create-passkey');
-                } catch (error) {
-                  console.error('Failed to store seed phrase:', error);
-                  setError('Failed to import wallet. Please try again.');
-                  setIsValidating(false);
-                }
-              }
-            }
-          ]
-        );
+        // Wallet found and authenticated, validateAndFetchWallet handles the setup
+        console.log('Existing wallet restored:', wallet.wallet_address);
       } else {
         // No existing wallet found, proceed with creating a new one
         console.log('No existing wallet found, will create a new one');
-        
-        // Store the seed phrase in the context but don't complete onboarding yet
-        // We'll redirect to the security settings screen first
-        try {
-          // Save the seed phrase for use in the security settings screen
-          await setSeedPhraseForOnboarding(completeSeedPhrase);
-          
-          // Proceed to security settings screen
-          setOnboardingStep('create-passkey');
-        } catch (error) {
-          console.error('Failed to store seed phrase:', error);
-          setError('Failed to import wallet. Please try again.');
-        }
+        await setSeedPhraseForOnboarding(completeSeedPhrase);
+        setOnboardingStep('create-seed');
       }
     } catch (error: any) {
       console.error('Error during wallet import:', error);

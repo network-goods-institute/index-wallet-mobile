@@ -3,6 +3,7 @@ import { View, Text, Image, TouchableOpacity } from 'react-native';
 import { ThemedView } from './ThemedView';
 import { Plus, ArrowUpRight, Copy, ChevronDown, Coins } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Token type definition
 interface Token {
@@ -58,13 +59,17 @@ export function WalletIndex({
 
 function WalletHeader() {
   const { colorScheme } = useTheme();
+  const { userName, walletAddress } = useAuth(); // Get user from global state
+  
+  // Display username from global state or fallback to 'Wallet'
+  const displayName = userName || 'Wallet';
   
   return (
     <View className="flex flex-row justify-center items-center mb-4">
       <View className="w-8 h-8 rounded-full bg-green-300 mr-4" />
       <View className="flex flex-row items-center">
-        <Text className="text-black dark:text-white text-base font-semibold">Wallet 1</Text>
-        <ChevronDown size={16} className="text-black dark:text-white ml-1" />
+        <Text className="text-black dark:text-white text-base font-semibold">{displayName}</Text>
+        <Text className="text-black dark:text-white text-base font-semibold">{walletAddress}</Text>
       </View>
     </View>
   );

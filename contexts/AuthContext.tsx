@@ -4,7 +4,8 @@ import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
 import * as Crypto from 'expo-crypto';
 import * as Device from 'expo-device';
-import { Platform } from 'react-native';
+import api from '../services/api';
+import { Platform, Alert } from 'react-native';
 import { 
   generateSeedPhrase as generateSeedPhraseUtil, 
   validateSeedPhrase as validateSeedPhraseUtil, 
@@ -13,11 +14,12 @@ import {
 } from '@/utils/cryptoUtils';
 import { registerUser, registerWallet } from '@/services/registerUser';
 import { validateAndFetchWallet, createWallet } from '@/services/walletService';
+import { UserAPI } from '@/services/api';
 
 
 // Define types
 export type AuthStatus = 'loading' | 'unauthenticated' | 'authenticated' | 'onboarding';
-export type OnboardingStep = 'welcome' | 'user-type' | 'user-name' | 'vendor-slides' | 'customer-slides' | 'create-seed' | 'verify-seed' | 'import-seed' | 'create-passkey' | 'complete';
+export type OnboardingStep = 'welcome' | 'user-type' | 'user-name' | 'vendor-slides' | 'customer-slides' | 'create-seed' | 'verify-seed' | 'import-seed' | 'create-passkey' | 'complete' | 'sign-in';
 export type BackupStatus = 'none' | 'pending' | 'completed' | 'failed';
 export type PlatformOS = 'ios' | 'android' | 'web' | 'unknown';
 export type BackupProvider = 'iCloud' | 'Google Drive' | 'None' | 'Local';
@@ -36,7 +38,9 @@ interface AuthContextType {
   backupProvider: BackupProvider;
   userType: UserType;
   userName: string | null;
+  walletAddress: string | null;
   existingWallet: any | null;
+  valuations: any | null;
   setSeedPhraseForOnboarding: (seedPhrase: string) => Promise<void>;
   setUserType: (type: UserType) => void;
   setUserName: (name: string) => void;
@@ -74,23 +78,12 @@ const PUBLIC_KEY_KEY = 'public-key';
 const HAS_PASSKEY_KEY = 'has-passkey';
 const ICLOUD_BACKUP_ENABLED_KEY = 'icloud-backup-enabled';
 const BACKUP_STATUS_KEY = 'backup-status';
-const BIOMETRIC_ENABLED_KEY = 'biometric-enabled';
 const USER_TYPE_KEY = 'user-type';
 const USER_NAME_KEY = 'user-name';
+const WALLET_ADDRESS_KEY = 'wallet-address';
+const USER_DATA_KEY = 'user-data';  // For storing complete user object
+const VALUATIONS_KEY = 'valuations';
 
-// Mock seed phrases
-const MOCK_SEED_PHRASES = [
-  'abandon ability able about above absent absorb abstract absurd abuse access accident',
-  'above absent absorb abstract absurd abuse access accident account accuse achieve',
-  'ability able about above absent absorb abstract absurd abuse access accident account',
-];
-
-// Mock private keys (these would be derived from seed phrases in a real implementation)
-const MOCK_PRIVATE_KEYS = [
-  '0x1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t1u2v3w4x5y6z7a8b9c0d1e2f3g',
-  '0x2a3b4c5d6e7f8g9h0i1j2k3l4m5n6o7p8q9r0s1t2u3v4w5x6y7z8a9b0c1d2e3f4g',
-  '0x3a4b5c6d7e8f9g0h1i2j3k4l5m6n7o8p9q0r1s2t3u4v5w6x7y8z9a0b1c2d3e4f5g',
-];
 
 // Create context
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -110,6 +103,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [userType, setUserType] = useState<UserType>(null);
   const [userName, setUserName] = useState<string | null>(null);
   const [existingWallet, setExistingWallet] = useState<any | null>(null);
+  const [valuations, setValuations] = useState<any | null>(null);
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
 
   // Initialize auth state
   useEffect(() => {
@@ -153,11 +148,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setBiometricsAvailable(biometricsCheck);
         
         if (storedStatus === 'authenticated') {
+          // Load wallet info
+          const walletAddress = await AsyncStorage.getItem(WALLET_ADDRESS_KEY);
+          const publicKey = await AsyncStorage.getItem(PUBLIC_KEY_KEY);
+          
+          // Load user info
+          const userDataStr = await AsyncStorage.getItem(USER_DATA_KEY);
+          const userData = userDataStr ? JSON.parse(userDataStr) : null;
+          const valuationsStr = await AsyncStorage.getItem(VALUATIONS_KEY);
+          const valuations = valuationsStr ? JSON.parse(valuationsStr) : null;
+          
+          // Set state
           setStatus('authenticated');
           setHasPasskey(storedHasPasskey === 'true');
           setICloudBackupEnabled(storedICloudBackup === 'true');
           setBackupStatus(storedBackupStatus);
           if (storedUserType) setUserType(storedUserType);
+          if (storedUserName) setUserName(storedUserName);
+          if (userData) setExistingWallet(userData);
+          if (valuations) setValuations(valuations);
+          if (walletAddress) setWalletAddress(walletAddress);
         } else if (storedStatus === 'onboarding') {
           setStatus('onboarding');
         } else {
@@ -226,6 +236,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return encryptedData;
   };
 
+
   // Complete the onboarding process
   const completeOnboarding = async (seedPhrase: string, usePasskey: boolean): Promise<boolean> => {
     try {
@@ -262,8 +273,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setBackupStatus('none');
       setICloudBackupEnabled(true);
       
-      // Generate wallet address from public key (in a real app, this would be a proper derivation)
-      const walletAddress = `0x${keyPair.publicKey.substring(0, 40)}`;
+      // Use the full public key as the wallet address
+      const walletAddress = keyPair.publicKey;
       
       // Use the user's name if available, otherwise use a default
       const displayName = userName || "Index Wallet User";
@@ -282,15 +293,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         console.log('User registered successfully:', userData);
         
-        // Register the wallet
         // Store user ID for future API calls
         if (userData.userId) {
+          console.log('Storing user ID:', userData.userId);
           await AsyncStorage.setItem('USER_ID', userData.userId);
         }
-      } catch (apiError) {
-        // Log error but don't fail onboarding - user can still use the app locally
+      } catch (apiError: any) {
+        // Log error and fail onboarding - we need a successful registration
         console.error('Error registering with backend:', apiError);
-        // We could add a retry mechanism here or queue for later sync
+        
+        // Clean up any stored data since registration failed
+        try {
+          await SecureStore.deleteItemAsync(SEED_PHRASE_KEY);
+          await SecureStore.deleteItemAsync(PRIVATE_KEY_KEY);
+          await AsyncStorage.removeItem(PUBLIC_KEY_KEY);
+          await AsyncStorage.removeItem(HAS_PASSKEY_KEY);
+          await AsyncStorage.removeItem(AUTH_STATUS_KEY);
+        } catch (cleanupError) {
+          console.error('Error cleaning up after failed registration:', cleanupError);
+        }
+        
+        // Throw the error to be handled by the UI
+        throw new Error(apiError.message || 'Registration failed. Please try again.');
       }
       
       return true;
@@ -651,6 +675,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Validate seed phrase and check if wallet exists
   const validateSeedAndCheckWallet = async (phrase: string): Promise<any | null> => {
+    console.log("VALIDATING AND CHECKING WALLET: ")
     try {
       // First validate the seed phrase format
       if (!validateSeedPhrase(phrase)) {
@@ -661,16 +686,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const wallet = await validateAndFetchWallet(phrase);
       
       if (wallet) {
-        setExistingWallet(wallet);
-        return wallet;
+        // Store the user ID and other relevant data
+        await AsyncStorage.setItem('user-id', wallet.user_id || '');
+        await AsyncStorage.setItem('wallet-address', wallet.wallet_address);
+        if (wallet.username) {
+          await AsyncStorage.setItem('username', wallet.username);
+        }
+        // Set the user type if available
+        if (wallet.user_type) {
+          setUserType(wallet.user_type as UserType);
+        }
+        // Set username if available
+        if (wallet.username) {
+          setUserName(wallet.username);
+        }
       }
       
-      return null;
+      setStatus('authenticated');
+      return wallet;
     } catch (error) {
       console.error('Error validating seed phrase:', error);
       throw error;
     }
   };
+
+  // Sign in with wallet address
 
   const value = {
     status,
@@ -682,8 +722,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     backupStatus,
     biometricsAvailable,
     platformOS,
+    walletAddress,
     backupProvider,
     userType,
+    valuations,
     setUserType: (type: UserType) => {
       setUserType(type);
       AsyncStorage.setItem(USER_TYPE_KEY, type || '');
@@ -703,6 +745,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setOnboardingStep,
     setSeedPhraseForOnboarding,
     completeOnboarding,
+    setWalletAddress,
     enableiCloudBackup,
     backupToiCloud,
     restoreFromiCloud,
