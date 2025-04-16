@@ -27,7 +27,8 @@ const WelcomeScreen = () => {
         />
 
         <Text 
-          className="text-5xl font-bold text-center text-yellow-900 dark:text-yellow-400"
+          className="text-5xl font-black text-center text-yellow-900 dark:text-yellow-400"
+          style={{ fontFamily: 'SF-Pro-Rounded-Black' }}
         >
           Index Wallets
         </Text>
@@ -40,7 +41,8 @@ const WelcomeScreen = () => {
             onPress={handleCreateWallet}
           >
             <Text 
-              className="text-base font-medium text-white"
+              className="text-base font-semibold text-white"
+              style={{ fontFamily: 'SF-Pro-Rounded-Bold' }}
             >
               Create a New Wallet
             </Text>
@@ -51,7 +53,8 @@ const WelcomeScreen = () => {
             onPress={handleImportWallet}
           >
             <Text 
-              className="text-base font-medium text-gray-900 dark:text-white"
+              className="text-base font-semibold text-black dark:text-white"
+              style={{ fontFamily: 'SF-Pro-Rounded-Bold' }}
             >
               Import Existing Wallet
             </Text>

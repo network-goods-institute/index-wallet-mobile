@@ -3,10 +3,12 @@ import { View, Text, TouchableOpacity, SafeAreaView, ScrollView } from 'react-na
 import * as Clipboard from 'expo-clipboard';
 import { ThemedView } from '@/components/ThemedView';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { ArrowLeft, Copy, CheckCircle, ArrowRight } from 'lucide-react-native';
 
 export default function CreateWalletScreen() {
   const { setOnboardingStep, userType, generateSeedPhrase, setSeedPhraseForOnboarding } = useAuth();
+  const { colorScheme } = useTheme();
   const [seedPhrase, setSeedPhrase] = useState('');
   const [copied, setCopied] = useState(false);
 
@@ -29,14 +31,14 @@ export default function CreateWalletScreen() {
   const words = seedPhrase ? seedPhrase.split(' ') : [];
 
   return (
-    <ThemedView className="flex-1 bg-black">
+    <ThemedView className="flex-1">
       <SafeAreaView className="flex-1">
         <View className="px-6 pt-6">
           <TouchableOpacity onPress={() => setOnboardingStep('user-type')} className="mb-16">
-            <ArrowLeft size={32} color={userType === 'vendor' ? '#2196F3' : '#9C27B0'} />
+            <ArrowLeft size={32} color={colorScheme === 'dark' ? '#FFFFFF' : '#000000'} />
           </TouchableOpacity>
 
-          <Text className="text-5xl font-bold text-white leading-tight mb-12">
+          <Text className="text-5xl font-bold text-black dark:text-white leading-tight mb-12">
             This is your{'\n'}password:
           </Text>
         </View>
@@ -48,12 +50,12 @@ export default function CreateWalletScreen() {
                 {words.map((word, index) => (
                   <View 
                     key={index} 
-                    className="w-[30%] bg-gray-800 rounded-xl p-4 mb-4"
+                    className="w-[30%] bg-gray-100 dark:bg-gray-800 rounded-xl p-4 mb-4"
                   >
-                    <Text className="text-gray-400 text-xs absolute top-2 left-2">
+                    <Text className="text-gray-500 dark:text-gray-400 text-xs absolute top-2 left-2">
                       {(index + 1).toString().padStart(2, '0')}
                     </Text>
-                    <Text className="text-white text-lg font-medium text-center mt-2">
+                    <Text className="text-gray-900 dark:text-white text-lg font-medium text-center mt-2">
                       {word}
                     </Text>
                   </View>
@@ -62,24 +64,28 @@ export default function CreateWalletScreen() {
 
               <TouchableOpacity
                 onPress={handleCopy}
-                className="flex-row items-center justify-center bg-gray-800/50 py-3 px-4 rounded-xl mb-16"
+                className="flex-row items-center justify-center gap-2 mb-8"
               >
                 {copied ? (
                   <>
-                    <CheckCircle size={20} color="#10B981" />
-                    <Text className="text-[#10B981] text-base font-medium ml-2">Copied!</Text>
+                    <CheckCircle size={16} color="#10B981" />
+                    <Text className="text-sm font-medium text-[#10B981]">
+                      Copied!
+                    </Text>
                   </>
                 ) : (
                   <>
-                    <Copy size={20} color="#9CA3AF" />
-                    <Text className="text-gray-400 text-base font-medium ml-2">Copy</Text>
+                    <Copy size={16} color={colorScheme === 'dark' ? '#9CA3AF' : '#4B5563'} />
+                    <Text className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                      Copy Phrase
+                    </Text>
                   </>
                 )}
               </TouchableOpacity>
             </>
           ) : (
             <View className="flex-1 justify-center items-center">
-              <Text className="text-white text-lg">Generating your seed phrase...</Text>
+              <Text className="text-gray-900 dark:text-white text-lg">Generating your seed phrase...</Text>
             </View>
           )}
         </ScrollView>

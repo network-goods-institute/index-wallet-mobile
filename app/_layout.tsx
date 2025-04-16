@@ -26,6 +26,10 @@ export default function RootLayout() {
     'SF-Pro-Display': require('../assets/fonts/SF-Pro-Display-Regular.otf'),
     'SF-Pro-Display-Medium': require('../assets/fonts/SF-Pro-Display-Medium.otf'),
     'SF-Pro-Display-Bold': require('../assets/fonts/SF-Pro-Display-Bold.otf'),
+    'SF-Pro-Rounded': require('../assets/fonts/SF-Pro-Rounded-Regular.otf'),
+    'SF-Pro-Rounded-Medium': require('../assets/fonts/SF-Pro-Rounded-Medium.otf'),
+    'SF-Pro-Rounded-Bold': require('../assets/fonts/SF-Pro-Rounded-Bold.otf'),
+    'SF-Pro-Rounded-Black': require('../assets/fonts/SF-Pro-Rounded-Black.otf'),
   });
   
   useEffect(() => {

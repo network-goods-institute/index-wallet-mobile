@@ -19,7 +19,7 @@ import { UserAPI } from '@/services/api';
 
 // Define types
 export type AuthStatus = 'loading' | 'unauthenticated' | 'authenticated' | 'onboarding';
-export type OnboardingStep = 'welcome' | 'user-type' | 'user-name' | 'vendor-slides' | 'customer-slides' | 'create-seed' | 'verify-seed' | 'import-seed' | 'create-passkey' | 'complete' | 'sign-in';
+export type OnboardingStep = 'welcome' | 'user-type' | 'user-name' | 'vendor-slides' | 'customer-slides' | 'create-seed' | 'verify-seed' | 'security-settings' | 'import-seed' | 'create-passkey' | 'complete' | 'sign-in';
 export type BackupStatus = 'none' | 'pending' | 'completed' | 'failed';
 export type PlatformOS = 'ios' | 'android' | 'web' | 'unknown';
 export type BackupProvider = 'iCloud' | 'Google Drive' | 'None' | 'Local';
@@ -700,9 +700,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (wallet.username) {
           setUserName(wallet.username);
         }
+        // Only set authenticated status if we found a valid wallet
+        setStatus('authenticated');
       }
       
-      setStatus('authenticated');
       return wallet;
     } catch (error) {
       console.error('Error validating seed phrase:', error);

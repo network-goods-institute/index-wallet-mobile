@@ -1,58 +1,48 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, TextInput, Alert, ScrollView, SafeAreaView, Clipboard, Keyboard, ActivityIndicator } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useState, useRef } from 'react';
+import { View, Text, TouchableOpacity, TextInput, ScrollView, SafeAreaView, ActivityIndicator } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { ThemedView } from '@/components/ThemedView';
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowLeft, Clipboard as ClipboardIcon } from 'lucide-react-native';
+import { useTheme } from '@/contexts/ThemeContext';
+import { ArrowLeft, Copy, X } from 'lucide-react-native';
 
 export default function ImportWalletScreen(): JSX.Element {
   const { validateSeedPhrase, setOnboardingStep, setSeedPhraseForOnboarding, validateSeedAndCheckWallet } = useAuth();
+  const { colorScheme } = useTheme();
   const [seedWords, setSeedWords] = useState<string[]>(Array(12).fill(''));
   const [error, setError] = useState<string | null>(null);
   const [focusedIndex, setFocusedIndex] = useState<number>(-1);
   const [isValidating, setIsValidating] = useState<boolean>(false);
   const inputRefs = useRef<Array<TextInput | null>>(Array(12).fill(null));
 
-  // Focus next input after entering a word
-  const focusNextInput = (index: number) => {
-    if (index < 11) {
-      inputRefs.current[index + 1]?.focus();
-    } else {
-      Keyboard.dismiss();
-    }
-  };
-
   // Handle input change for a specific word
   const handleWordChange = (text: string, index: number) => {
-    // Check if the text contains a space
-    if (text.includes(' ')) {
-      // Split by space and take only the first word
-      const firstWord = text.split(' ')[0].trim().toLowerCase();
-      const newWords = [...seedWords];
-      newWords[index] = firstWord;
-      setSeedWords(newWords);
-      
-      // Move to next input after processing the space
-      focusNextInput(index);
-    } else {
-      // Just update the current word without advancing
-      const newWords = [...seedWords];
-      newWords[index] = text.toLowerCase();
-      setSeedWords(newWords);
-    }
+    setError(null);
+    const newWords = [...seedWords];
+    newWords[index] = text.toLowerCase().trim();
+    setSeedWords(newWords);
   };
 
   // Handle paste from clipboard
   const handlePaste = async () => {
+    setError(null);
     try {
-      const clipboardContent = await Clipboard.getString();
+      const clipboardContent = await Clipboard.getStringAsync();
       const words = clipboardContent.trim().split(/\s+/);
       
-      if (words.length === 12) {
-        setSeedWords(words.map(word => word.toLowerCase()));
-        Keyboard.dismiss();
-      } else {
-        setError('Invalid seed phrase format. Please ensure it contains exactly 12 words.');
+      // Always handle as multi-word paste
+      const newWords = [...seedWords];
+      words.forEach((word, i) => {
+        if (i < 12) {
+          newWords[i] = word.toLowerCase().trim();
+        }
+      });
+      setSeedWords(newWords);
+      
+      // Focus the next empty cell if any
+      const nextEmptyIndex = newWords.findIndex((word, idx) => idx > words.length - 1 && !word);
+      if (nextEmptyIndex !== -1) {
+        inputRefs.current[nextEmptyIndex]?.focus();
       }
     } catch (error) {
       console.error('Failed to paste from clipboard:', error);
@@ -60,39 +50,36 @@ export default function ImportWalletScreen(): JSX.Element {
     }
   };
 
+  const handleClear = () => {
+    setSeedWords(Array(12).fill(''));
+    setError(null);
+    inputRefs.current[0]?.focus();
+  };
+
   const handleImport = async () => {
     setError(null);
     setIsValidating(true);
     
     try {
-      // Join words to create the seed phrase
       const completeSeedPhrase = seedWords.join(' ');
 
-      // Basic validation
       if (seedWords.some(word => !word)) {
         setError('Please enter all 12 words of your seed phrase');
-        setIsValidating(false);
         return;
       }
       
-      // Check if it's a valid BIP39 seed phrase
       if (!validateSeedPhrase(completeSeedPhrase)) {
         setError('Invalid seed phrase format. Please check and try again.');
-        setIsValidating(false);
         return;
       }
       
-      // Validate the seed phrase with the backend and check if a wallet already exists
       const wallet = await validateSeedAndCheckWallet(completeSeedPhrase);
       
       if (wallet) {
-        // Wallet found and authenticated, validateAndFetchWallet handles the setup
         console.log('Existing wallet restored:', wallet.wallet_address);
+        setOnboardingStep('security-settings');
       } else {
-        // No existing wallet found, proceed with creating a new one
-        console.log('No existing wallet found, will create a new one');
-        await setSeedPhraseForOnboarding(completeSeedPhrase);
-        setOnboardingStep('create-seed');
+        setError('No wallet found with this seed phrase. Please check your seed phrase and try again.');
       }
     } catch (error: any) {
       console.error('Error during wallet import:', error);
@@ -104,91 +91,94 @@ export default function ImportWalletScreen(): JSX.Element {
 
   return (
     <ThemedView className="flex-1">
-      <SafeAreaView className="flex-1 p-6 m-4">
-        <View className="flex-row items-center mb-8">
-          <TouchableOpacity onPress={() => setOnboardingStep('welcome')} className="mr-4">
-            <ArrowLeft size={24} className="text-black dark:text-white" />
+      <SafeAreaView className="flex-1">
+        <View className="px-6 pt-6">
+          <TouchableOpacity onPress={() => setOnboardingStep('welcome')} className="mb-16">
+            <ArrowLeft size={32} color={colorScheme === 'dark' ? '#FFFFFF' : '#000000'} />
           </TouchableOpacity>
-          <Text className="text-2xl font-bold text-black dark:text-white">Import Wallet</Text>
+
+          <Text className="text-5xl font-bold text-black dark:text-white leading-tight mb-12">
+            Enter your{'\n'}seed phrase
+          </Text>
         </View>
 
-        <ScrollView className="flex-1">
-          <View className="mb-8 mx-2">
-            <Text className="text-lg font-semibold text-black dark:text-white mb-2">
-              Enter Your Recovery Seed Phrase
-            </Text>
-            <Text className="text-gray-600 dark:text-gray-400 mb-6">
-              Enter your 12-word recovery phrase in the correct order to restore your wallet.
-            </Text>
-
-            <View className="mb-4 flex-row items-center justify-between">
-              <Text className="text-black dark:text-white font-medium">Enter your 12 words</Text>
-              <TouchableOpacity 
-                className="flex-row items-center bg-gray-200 dark:bg-gray-700 px-3 py-2 rounded-lg" 
-                onPress={handlePaste}
-              >
-                <ClipboardIcon size={16} className="text-black dark:text-white mr-4" />
-                <Text className="text-black dark:text-white text-sm ml-2">Paste</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View className="mb-5">
-              <View className="flex-row flex-wrap justify-between">
-                {seedWords.map((word, index) => (
-                  <View key={index} className="w-[32%] mb-3">
-                    <View className={`bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden ${focusedIndex === index ? 'border-2 border-blue-500' : 'border border-gray-300 dark:border-gray-600'}`}>
-                      <TextInput
-                        ref={ref => inputRefs.current[index] = ref}
-                        className="text-black dark:text-white text-base p-2"
-                        value={word}
-                        onChangeText={(text) => handleWordChange(text, index)}
-                        onFocus={() => setFocusedIndex(index)}
-                        onBlur={() => setFocusedIndex(-1)}
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                        spellCheck={false}
-                        returnKeyType={index < 11 ? 'next' : 'done'}
-                        onSubmitEditing={() => focusNextInput(index)}
-                        blurOnSubmit={index === 11}
-                        placeholder={` ${index + 1}`}
-                        placeholderTextColor="#9CA3AF"
-                      />
-                    </View>
-                  </View>
-                ))}
+        <ScrollView className="flex-1 px-6">
+          <View className="flex-row flex-wrap justify-between mb-8">
+            {seedWords.map((word, index) => (
+              <View key={index} className="w-[30%] bg-gray-100 dark:bg-gray-800 rounded-xl p-4 mb-4">
+                <Text className="text-gray-500 dark:text-gray-400 text-xs absolute top-2 left-2">
+                  {(index + 1).toString().padStart(2, '0')}
+                </Text>
+                <TextInput
+                  ref={ref => inputRefs.current[index] = ref}
+                  className="text-gray-900 dark:text-white text-lg font-medium text-center mt-2 h-7 bg-transparent"
+                  value={word}
+                  onChangeText={(text) => handleWordChange(text, index)}
+                  onFocus={() => setFocusedIndex(index)}
+                  onBlur={() => setFocusedIndex(-1)}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  placeholder="..."
+                  placeholderTextColor={colorScheme === 'dark' ? '#4B5563' : '#9CA3AF'}
+                  style={{ outline: 'none' }}
+                />
               </View>
-            </View>
+            ))}
+          </View>
 
-            {error && (
-              <View className="bg-red-100 dark:bg-red-900 p-3 rounded-lg mb-4">
-                <Text className="text-red-700 dark:text-red-200">{error}</Text>
-              </View>
-            )}
-
-            <View className="bg-yellow-100 dark:bg-yellow-900 p-5 rounded-lg mb-8">
-              <Text className="text-yellow-800 dark:text-yellow-200 font-medium mb-2">
-                Important
-              </Text>
-              <Text className="text-yellow-800 dark:text-yellow-200">
-                • Never share your recovery phrase with anyone{'\n'}
-                • Make sure you're not on a public or insecure network{'\n'}
-                • Index will never ask for your recovery phrase
-              </Text>
+          {error && (
+            <View className="bg-red-900/20 p-4 rounded-xl mb-8">
+              <Text className="text-red-400 text-center">{error}</Text>
             </View>
+          )}
+
+          <View className="flex-row justify-center gap-4 mb-8">
+            <TouchableOpacity
+              onPress={handleClear}
+              className="flex-row items-center justify-center gap-2 py-3 px-6 rounded-xl bg-gray-100 dark:bg-gray-800"
+            >
+              <X size={16} color={colorScheme === 'dark' ? '#9CA3AF' : '#4B5563'} />
+              <Text className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                Clear All
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              onPress={() => handlePaste()}
+              className="flex-row items-center justify-center gap-2 py-3 px-6 rounded-xl bg-gray-100 dark:bg-gray-800"
+            >
+              <Copy size={16} color={colorScheme === 'dark' ? '#9CA3AF' : '#4B5563'} />
+              <Text className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                Paste All
+              </Text>
+            </TouchableOpacity>
           </View>
         </ScrollView>
 
-        <TouchableOpacity 
-          className="bg-blue-600 py-4 rounded-xl items-center mb-6 mx-2"
-          onPress={handleImport}
-          disabled={isValidating}
-        >
-          {isValidating ? (
-            <ActivityIndicator color="white" size="small" />
-          ) : (
-            <Text className="text-white font-semibold text-lg">Import Wallet</Text>
-          )}
-        </TouchableOpacity>
+        <View className="absolute bottom-12 right-6">
+          <TouchableOpacity
+            onPress={handleImport}
+            disabled={isValidating || seedWords.some(word => !word) || error !== null}
+            className={`w-16 h-16 rounded-full items-center justify-center ${
+              isValidating || seedWords.some(word => !word) || error !== null
+                ? 'bg-gray-200 dark:bg-gray-800'
+                : 'bg-yellow-400'
+            }`}
+          >
+            {isValidating ? (
+              <ActivityIndicator color={colorScheme === 'dark' ? '#FFFFFF' : '#000000'} />
+            ) : (
+              <ArrowLeft
+                size={32}
+                color={isValidating || seedWords.some(word => !word) || error !== null
+                  ? (colorScheme === 'dark' ? '#4B5563' : '#9CA3AF')
+                  : '#000000'
+                }
+                style={{ transform: [{ rotate: '180deg' }] }}
+              />
+            )}
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
     </ThemedView>
   );
