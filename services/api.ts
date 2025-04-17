@@ -28,49 +28,49 @@ export const UserAPI = {
    * Register a new user account
    * @param userData User registration data
    */
-  registerUser: async (userData: {
-    walletAddress: string;
-    userType: 'vendor' | 'payee';
-    deviceId: string;
-    publicKey?: string;
-    platformData?: {
-      os: string;
-      version: string;
-      device: string;
-    };
-  }) => {
-    try {
-      const response = await api.post('/users/register', userData);
-      return response.data;
-    } catch (error: any) {
-      console.error('Error registering user:', error);
+  // registerUser: async (userData: {
+  //   walletAddress: string;
+  //   userType: 'vendor' | 'payee';
+  //   deviceId: string;
+  //   publicKey?: string;
+  //   platformData?: {
+  //     os: string;
+  //     version: string;
+  //     device: string;
+  //   };
+  // }) => {
+  //   try {
+  //     const response = await api.post('/users/register', userData);
+  //     return response.data;
+  //   } catch (error: any) {
+  //     console.error('Error registering user:', error);
       
-      if (error.response) {
-        console.error('Error response data:', error.response.data);
-        console.error('Error response status:', error.response.status);
+  //     if (error.response) {
+  //       console.error('Error response data:', error.response.data);
+  //       console.error('Error response status:', error.response.status);
         
-        // Handle specific error codes
-        if (error.response.status === 409) {
-          // 409 Conflict - User or wallet already exists
-          const message = error.response.data.message || 'A user with this wallet address already exists';
-          throw new Error(message);
-        } else if (error.response.status === 400) {
-          // 400 Bad Request - Invalid data
-          const message = error.response.data.message || 'Invalid registration data';
-          throw new Error(message);
-        } else if (error.response.status === 500) {
-          // 500 Server Error
-          throw new Error('Server error occurred. Please try again later.');
-        }
-      } else if (error.request) {
-        // The request was made but no response was received
-        throw new Error('No response received from server. Please check your connection.');
-      }
+  //       // Handle specific error codes
+  //       if (error.response.status === 409) {
+  //         // 409 Conflict - User or wallet already exists
+  //         const message = error.response.data.message || 'A user with this wallet address already exists';
+  //         throw new Error(message);
+  //       } else if (error.response.status === 400) {
+  //         // 400 Bad Request - Invalid data
+  //         const message = error.response.data.message || 'Invalid registration data';
+  //         throw new Error(message);
+  //       } else if (error.response.status === 500) {
+  //         // 500 Server Error
+  //         throw new Error('Server error occurred. Please try again later.');
+  //       }
+  //     } else if (error.request) {
+  //       // The request was made but no response was received
+  //       throw new Error('No response received from server. Please check your connection.');
+  //     }
       
-      // For other errors, throw the original error
-      throw error;
-    }
-  },
+  //     // For other errors, throw the original error
+  //     throw error;
+  //   }
+  // },
 
   /**
    * Verify wallet ownership by signing a message
@@ -139,6 +139,95 @@ export const WalletAPI = {
       return response.data;
     } catch (error) {
       console.error('Error getting wallet balance:', error);
+      throw error;
+    }
+  },
+};
+
+// Payment API functions
+export const PaymentAPI = {
+  /**
+   * Create a new payment request (vendor)
+   * @param paymentData Payment creation data
+   */
+  createPayment: async (paymentData: {
+    vendor_address: string;
+    vendor_name: string;
+    price_usd: number;
+  }) => {
+    try {
+      console.log('Creating payment with data:', paymentData);
+      
+      // Send the data as is, with price_usd as a number
+      const response = await api.post('/api/payments', paymentData);
+      console.log('Payment created response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating payment:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get payment details by ID
+   * @param paymentId Payment ID
+   */
+  getPayment: async (paymentId: string) => {
+    try {
+      const response = await api.get(`/api/payments/${paymentId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error getting payment:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Supplement a payment with payer address
+   * @param paymentId Payment ID
+   * @param supplementData Payment supplement data
+   */
+  supplementPayment: async (paymentId: string, supplementData: {
+    payer_address: string;
+  }) => {
+    try {
+      console.log(`Supplementing payment ${paymentId} with data:`, supplementData);
+      const response = await api.post(`/api/payments/${paymentId}/supplement`, supplementData);
+      console.log('Payment supplemented response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error supplementing payment:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get payment status
+   * @param paymentId Payment ID
+   */
+  getPaymentStatus: async (paymentId: string) => {
+    try {
+      const response = await api.get(`/api/payments/${paymentId}/status`);
+      return response.data;
+    } catch (error) {
+      console.error('Error getting payment status:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Complete a payment (customer)
+   * @param paymentId Payment ID
+   * @param completeData Payment completion data
+   */
+  completePayment: async (paymentId: string, completeData: {
+    customer_address: string;
+  }) => {
+    try {
+      const response = await api.post(`/api/payments/${paymentId}/complete`, completeData);
+      return response.data;
+    } catch (error) {
+      console.error('Error completing payment:', error);
       throw error;
     }
   },

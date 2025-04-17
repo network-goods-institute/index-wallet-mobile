@@ -35,7 +35,7 @@ export default function CustomerSlides() {
     if (index === slides.length - 1) {
       // Delay navigation to allow the animation to complete
       setTimeout(() => {
-        setOnboardingStep('create-seed');
+        setOnboardingStep('user-name');
       }, 1000);
     }
   };

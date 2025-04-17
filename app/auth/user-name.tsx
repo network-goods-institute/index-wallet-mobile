@@ -51,7 +51,7 @@ export default function UserNameScreen() {
 
           <View className="flex-1 px-6 pt-16">
             <TextInput
-              className="text-[color:var(--tw-text-primary)] text-3xl font-medium py-4"
+              className="dark:text-white light:text-black text-3xl font-medium py-4"
               placeholder={isVendor ? "Enter business name" : "Enter your name"}
               placeholderTextColor="#666"
               value={name}

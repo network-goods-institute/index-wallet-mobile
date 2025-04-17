@@ -8,6 +8,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { View, Text } from 'react-native';
 import 'react-native-reanimated';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { useTheme } from '@/contexts/ThemeContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
@@ -49,11 +50,13 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider>
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }
 
@@ -67,8 +70,6 @@ function LoadingScreen() {
     </View>
   );
 }
-
-
 
 // Authenticated app component
 function AuthenticatedApp() {

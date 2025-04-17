@@ -11,7 +11,6 @@ export default function VerifySeedScreen() {
   const { colorScheme } = useTheme();
   const [verificationInputs, setVerificationInputs] = useState<{[key: number]: string}>({});
   const [missingIndices, setMissingIndices] = useState<number[]>([]);
-  const [isVerified, setIsVerified] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -33,24 +32,24 @@ export default function VerifySeedScreen() {
     return indices.sort((a, b) => a - b);
   };
 
+  const verifyInputs = () => {
+    if (seedPhrase) {
+      const words = seedPhrase.split(' ');
+      return missingIndices.every(idx => 
+        verificationInputs[idx] === words[idx]
+      );
+    }
+    return false;
+  };
+
+  const areAllInputsFilled = () => {
+    return missingIndices.every(idx => verificationInputs[idx]?.length > 0);
+  };
+
   const handleInputChange = (index: number, value: string) => {
     setError(null);
     const newInputs = { ...verificationInputs, [index]: value.toLowerCase().trim() };
     setVerificationInputs(newInputs);
-    
-    if (seedPhrase) {
-      const words = seedPhrase.split(' ');
-      const allCorrect = missingIndices.every(idx => 
-        newInputs[idx] === words[idx]
-      );
-      setIsVerified(allCorrect);
-      
-      // If all words are filled but incorrect, show error
-      const allFilled = missingIndices.every(idx => newInputs[idx]?.length > 0);
-      if (allFilled && !allCorrect) {
-        setError('Incorrect words. Please check and try again.');
-      }
-    }
   };
 
   const handlePaste = async (index: number) => {
@@ -70,19 +69,7 @@ export default function VerifySeedScreen() {
             }
           });
           setVerificationInputs(newInputs);
-          
-          // Verify the pasted words
-          if (seedPhrase) {
-            const seedWords = seedPhrase.split(' ');
-            const allCorrect = missingIndices.every(idx => 
-              newInputs[idx] === seedWords[idx]
-            );
-            setIsVerified(allCorrect);
-            
-            if (!allCorrect) {
-              setError('Incorrect words. Please check and try again.');
-            }
-          }
+          setError(null);
         }
       } else {
         // Single word paste
@@ -95,7 +82,6 @@ export default function VerifySeedScreen() {
 
   const handleClear = () => {
     setVerificationInputs({});
-    setIsVerified(false);
     setError(null);
   };
 
@@ -103,13 +89,19 @@ export default function VerifySeedScreen() {
     const newInputs = { ...verificationInputs };
     delete newInputs[index];
     setVerificationInputs(newInputs);
-    setIsVerified(false);
     setError(null);
   };
 
   const handleContinue = () => {
-    if (isVerified) {
+    if (!areAllInputsFilled()) {
+      setError('Please fill in all missing words');
+      return;
+    }
+    
+    if (verifyInputs()) {
       setOnboardingStep('create-passkey');
+    } else {
+      setError('Incorrect words. Please check and try again.');
     }
   };
 
@@ -204,14 +196,14 @@ export default function VerifySeedScreen() {
         <View className="absolute bottom-12 right-6">
           <TouchableOpacity
             onPress={handleContinue}
-            disabled={!isVerified}
+            disabled={!areAllInputsFilled()}
             className={`w-16 h-16 rounded-full items-center justify-center ${
-              isVerified ? 'bg-yellow-400' : 'bg-gray-200 dark:bg-gray-800'
+              areAllInputsFilled() ? 'bg-yellow-400' : 'bg-gray-200 dark:bg-gray-800'
             }`}
           >
             <ArrowLeft
               size={32}
-              color={isVerified ? '#000000' : (colorScheme === 'dark' ? '#4B5563' : '#9CA3AF')}
+              color={areAllInputsFilled() ? '#000000' : (colorScheme === 'dark' ? '#4B5563' : '#9CA3AF')}
               style={{ transform: [{ rotate: '180deg' }] }}
             />
           </TouchableOpacity>
