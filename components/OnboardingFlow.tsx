@@ -8,8 +8,8 @@ import SecuritySettingsScreen from '../app/auth/security-settings';
 import VerifySeedScreen from '../app/auth/verify-seed';
 import UserTypeScreen from '../app/auth/user-type';
 import UserNameScreen from '../app/auth/user-name';
-import VendorSlidesScreen from '../app/auth/vendor-slides';
-import CustomerSlidesScreen from '../app/auth/customer-slides';
+import VendorSlides from '../app/onboarding/vendor-slides';
+import CustomerSlides from '../app/onboarding/customer-slides';
 
 /**
  * Component that handles the different screens in the onboarding flow
@@ -22,9 +22,9 @@ export default function OnboardingFlow({ step }: { step: OnboardingStep }) {
     case 'user-name':
       return <UserNameScreen />;
     case 'vendor-slides':
-      return <VendorSlidesScreen />;
+      return <VendorSlides />;
     case 'customer-slides':
-      return <CustomerSlidesScreen />;
+      return <CustomerSlides />;
     case 'create-seed':
       return <CreateWalletScreen />;
     case 'verify-seed':

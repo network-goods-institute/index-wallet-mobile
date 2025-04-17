@@ -7,7 +7,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { ArrowLeft, Copy, X } from 'lucide-react-native';
 
 export default function ImportWalletScreen(): JSX.Element {
-  const { validateSeedPhrase, setOnboardingStep, setSeedPhraseForOnboarding, validateSeedAndCheckWallet } = useAuth();
+  const { validateSeedPhrase, setOnboardingStep, validateSeedAndCheckWallet } = useAuth();
   const { colorScheme } = useTheme();
   const [seedWords, setSeedWords] = useState<string[]>(Array(12).fill(''));
   const [error, setError] = useState<string | null>(null);

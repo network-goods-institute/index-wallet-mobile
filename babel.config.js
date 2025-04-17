@@ -6,6 +6,8 @@ module.exports = function (api) {
         "nativewind/babel",
       ],
       // Removed react-native-dotenv plugin that was causing conflicts with Expo Router
-      plugins: []
+      plugins: [
+        'react-native-reanimated/plugin'
+      ]
     };
   };
