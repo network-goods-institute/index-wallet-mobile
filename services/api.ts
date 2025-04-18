@@ -154,6 +154,7 @@ export const PaymentAPI = {
     vendor_address: string;
     vendor_name: string;
     price_usd: number;
+    vendor_valuations: any; 
   }) => {
     try {
       console.log('Creating payment with data:', paymentData);
@@ -187,11 +188,11 @@ export const PaymentAPI = {
    * @param paymentId Payment ID
    * @param supplementData Payment supplement data
    */
-  supplementPayment: async (paymentId: string, supplementData: {
+  getFinalizedTransaction: async (paymentId: string, supplementData: {
     payer_address: string;
   }) => {
     try {
-      console.log(`Supplementing payment ${paymentId} with data:`, supplementData);
+      console.log(`Getting transaction message and  price ${paymentId} with data:`, supplementData);
       const response = await api.post(`/api/payments/${paymentId}/supplement`, supplementData);
       console.log('Payment supplemented response:', response.data);
       return response.data;

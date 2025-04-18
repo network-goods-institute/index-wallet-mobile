@@ -46,9 +46,7 @@ interface TransactionContextType {
 const API_BASE_URL = 'http://localhost:3000/api';
 
 // Create context with default values
-export const TransactionContext = createContext<TransactionContextType>({
-  createTransaction: async () => '',
-  pollTransactionStatus: () => {},
+export const TransactionContext = createContext<TransactionContextType>({ createTransaction: async () => '', pollTransactionStatus: () => {},
   stopPolling: () => {},
   scanTransaction: async () => ({} as Transaction),
   supplementTransaction: async () => ({} as Transaction),
@@ -62,7 +60,7 @@ export const TransactionProvider: React.FC<{ children: ReactNode }> = ({ childre
   // Get user data from AuthContext
   const auth = useAuth();
   
-  const [currentTransaction, setCurrentTransaction] = useState<Transaction | null>(null);
+  const [currentTransaction, setCurrentTransaction] = useState<any>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
@@ -95,7 +93,8 @@ export const TransactionProvider: React.FC<{ children: ReactNode }> = ({ childre
       const paymentData = {
         vendor_address: auth.walletAddress,
         vendor_name: auth.userName || 'Unknown Vendor',
-        price_usd: amount
+        price_usd: amount,
+        vendor_valuations: auth.valuations
       };
       
       console.log('Sending payment data to API:', paymentData);
@@ -105,12 +104,11 @@ export const TransactionProvider: React.FC<{ children: ReactNode }> = ({ childre
       console.log('Payment created:', response);
       
       // Convert the response to our Transaction format
-      const transaction: Transaction = {
+      const transaction: any = {
         paymentId: response.payment_id,
         merchantId: auth.walletAddress,
         amount: amount,
         status: 'pending',
-        calculatedBundle: null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
@@ -121,21 +119,7 @@ export const TransactionProvider: React.FC<{ children: ReactNode }> = ({ childre
       console.error('API call error:', err);
       
       // Fallback to mock implementation if API call fails
-      console.log('Falling back to mock implementation');
-      
-      const mockTransaction = {
-        paymentId: `mock-${Date.now()}`,
-        merchantId: auth.walletAddress,
-        amount: amount,
-        status: 'pending' as TransactionStatus,
-        calculatedBundle: null,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      
-      console.log('Mock transaction created:', mockTransaction);
-      setCurrentTransaction(mockTransaction);
-      return mockTransaction.paymentId;
+      throw err;
     } finally {
       setIsLoading(false);
     }
@@ -277,35 +261,15 @@ export const TransactionProvider: React.FC<{ children: ReactNode }> = ({ childre
       console.log('User info:', {
         walletAddress: auth.walletAddress,
         userName: auth.userName || 'Unknown User',
-        hasValuations: auth.valuations ? true : false
+        hasValuations: auth.valuations 
       });
       
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      const mockTransaction = currentTransaction ? {
-        ...currentTransaction,
-        status: 'calculated' as TransactionStatus,
-        calculatedBundle: [
-          { tokenSymbol: 'ETH', amount: 0.01 },
-          { tokenSymbol: 'USDC', amount: 10 }
-        ],
-        updatedAt: new Date().toISOString()
-      } : {
-        paymentId,
-        merchantId: 'mock-merchant-id',
-        amount: 10.00,
-        status: 'calculated' as TransactionStatus,
-        calculatedBundle: [
-          { tokenSymbol: 'ETH', amount: 0.01 },
-          { tokenSymbol: 'USDC', amount: 10 }
-        ],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      
-      setCurrentTransaction(mockTransaction);
-      console.log('Transaction supplemented:', mockTransaction);
-      return mockTransaction;
+      const transaction = await PaymentAPI.getFinalizedTransaction(paymentId, { payer_address: auth.walletAddress })
+      console.log(transaction + "Transaction from Context")
+      setCurrentTransaction(transaction);
+      return transaction;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to supplement transaction';
       setError(errorMessage);
