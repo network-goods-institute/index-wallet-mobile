@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity } from 'react-native';
+import { View, Text, Image, TouchableOpacity, ScrollView } from 'react-native';
 import { ThemedView } from './ThemedView';
-import { Plus, ArrowUpRight, Copy, ChevronDown, Coins } from 'lucide-react-native';
+import { Plus, ArrowUpRight, Copy, ChevronDown, Coins, Store, ArrowRight } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { router } from 'expo-router';
 
 // Token type definition
 interface Token {
@@ -37,22 +38,30 @@ export function WalletIndex({
     <ThemedView
       className="flex-1 p-4 rounded-2xl pt-16 bg-white dark:bg-black"
     >
-      {/* Top section with wallet name and dropdown */}
-      <WalletHeader />
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Top section with wallet name and dropdown */}
+        <WalletHeader />
 
-      {/* Total value display */}
-      <TotalValueDisplay totalValue={totalValue} />
+        {/* Total value display */}
+        <TotalValueDisplay totalValue={totalValue} />
 
-      {/* Action buttons */}
-      <ActionButtonRow
-        onBuyPress={onBuyPress}
-        onSwapPress={onSwapPress}
-        onSendPress={onSendPress}
-        onCopyPress={onCopyPress}
-      />
+        {/* Action buttons */}
+        <ActionButtonRow
+          onBuyPress={onBuyPress}
+          onSwapPress={onSwapPress}
+          onSendPress={onSendPress}
+          onCopyPress={onCopyPress}
+        />
 
-      {/* Token list */}
-      <TokenList tokens={tokens} />
+        {/* Token list */}
+        <TokenList tokens={tokens} />
+        
+        {/* Partnered Vendors Section */}
+        <PartneredVendorsSection />
+        
+        {/* Add some bottom padding */}
+        <View style={{ height: 20 }} />
+      </ScrollView>
     </ThemedView>
   );
 }
@@ -86,6 +95,53 @@ function TotalValueDisplay({ totalValue }: { totalValue: number }) {
         }).format(totalValue)}
       </Text>
     </View>
+  );
+}
+
+function PartneredVendorsSection() {
+  const { colorScheme } = useTheme();
+  const navigateToVendors = () => {
+    router.push('/(tabs)/vendors');
+  };
+
+  return (
+    <TouchableOpacity 
+      className="mt-6 mb-4"
+      onPress={navigateToVendors}
+    >
+      <View 
+        className="flex-row items-center justify-between p-4 rounded-xl"
+        style={{ 
+          backgroundColor: colorScheme === 'dark' ? '#402E32' : '#FFF0E6',
+          borderWidth: 1,
+          borderColor: colorScheme === 'dark' ? '#FF8C42' : '#FFD8C2',
+        }}
+      >
+        <View className="flex-row items-center">
+          <View 
+            className="w-10 h-10 rounded-full mr-3 justify-center items-center"
+            style={{ backgroundColor: '#FF8C42' }}
+          >
+            <Store size={20} color="#FFFFFF" />
+          </View>
+          <View>
+            <Text 
+              className="font-bold text-base"
+              style={{ color: colorScheme === 'dark' ? '#FF8C42' : '#FF8C42' }}
+            >
+              Partnered Vendors
+            </Text>
+            <Text 
+              className="text-sm"
+              style={{ color: colorScheme === 'dark' ? '#FFB38A' : '#FF8C42' }}
+            >
+              Explore businesses that accept your tokens
+            </Text>
+          </View>
+        </View>
+        <ArrowRight size={20} color={colorScheme === 'dark' ? '#FF8C42' : '#FF8C42'} />
+      </View>
+    </TouchableOpacity>
   );
 }
 

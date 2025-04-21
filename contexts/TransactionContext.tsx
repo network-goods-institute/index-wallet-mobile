@@ -39,6 +39,7 @@ interface TransactionContextType {
   // Shared state
   currentTransaction: Transaction | null;
   isLoading: boolean;
+  clearTransaction: () => void;
   error: string | null;
 }
 
@@ -53,6 +54,7 @@ export const TransactionContext = createContext<TransactionContextType>({ create
   completeTransaction: async () => false,
   currentTransaction: null,
   isLoading: false,
+  clearTransaction: () => {},
   error: null,
 });
 
@@ -75,6 +77,9 @@ export const TransactionProvider: React.FC<{ children: ReactNode }> = ({ childre
     };
   }, [pollingInterval]);
 
+  const clearTransaction = () => {
+    setCurrentTransaction(null);
+  };
   // Merchant: Create a new transaction
   const createTransaction = async (amount: number): Promise<string> => {
     console.log("Amount:", amount);
@@ -328,6 +333,7 @@ export const TransactionProvider: React.FC<{ children: ReactNode }> = ({ childre
         completeTransaction,
         currentTransaction,
         isLoading,
+        clearTransaction,
         error,
       }}
     >
