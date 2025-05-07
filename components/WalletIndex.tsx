@@ -1,10 +1,11 @@
-import React from 'react';
-import { View, Text, Image, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, Image, TouchableOpacity, ScrollView, Modal, Linking } from 'react-native';
 import { ThemedView } from './ThemedView';
-import { Plus, ArrowUpRight, Copy, ChevronDown, Coins, Store, ArrowRight } from 'lucide-react-native';
+import { Plus, ArrowUpRight, Copy, ChevronDown, Coins, Store, ArrowRight, Wallet, X } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { router } from 'expo-router';
+import { StripeAPI } from '@/services/stripe';
 
 // Token type definition
 interface Token {
@@ -34,6 +35,8 @@ export function WalletIndex({
   onCopyPress,
 }: WalletIndexProps) {
   const { colorScheme } = useTheme();
+  const [showLoadWalletModal, setShowLoadWalletModal] = useState(false);
+  
   return (
     <ThemedView
       className="flex-1 p-4 rounded-2xl pt-16 bg-white dark:bg-black"
@@ -56,12 +59,21 @@ export function WalletIndex({
         {/* Token list */}
         <TokenList tokens={tokens} />
         
+        {/* Load Wallet Section */}
+        <LoadWalletSection onPress={() => setShowLoadWalletModal(true)} />
+        
         {/* Partnered Vendors Section */}
         <PartneredVendorsSection />
         
         {/* Add some bottom padding */}
         <View style={{ height: 20 }} />
       </ScrollView>
+      
+      {/* Load Wallet Modal */}
+      <LoadWalletModal 
+        visible={showLoadWalletModal} 
+        onClose={() => setShowLoadWalletModal(false)} 
+      />
     </ThemedView>
   );
 }
@@ -95,6 +107,187 @@ function TotalValueDisplay({ totalValue }: { totalValue: number }) {
         }).format(totalValue)}
       </Text>
     </View>
+  );
+}
+
+function LoadWalletSection({ onPress }: { onPress: () => void }) {
+  const { colorScheme } = useTheme();
+
+  return (
+    <TouchableOpacity 
+      className="mt-6 mb-4"
+      onPress={onPress}
+    >
+      <View 
+        className="flex-row items-center justify-between p-4 rounded-xl"
+        style={{ 
+          backgroundColor: colorScheme === 'dark' ? '#323E4F' : '#EBF2FF',
+          borderWidth: 1,
+          borderColor: colorScheme === 'dark' ? '#4F83CC' : '#C7D9F2',
+        }}
+      >
+        <View className="flex-row items-center">
+          <View 
+            className="w-10 h-10 rounded-full mr-3 justify-center items-center"
+            style={{ backgroundColor: '#4F83CC' }}
+          >
+            <Wallet size={20} color="#FFFFFF" />
+          </View>
+          <View>
+            <Text 
+              className="font-bold text-base"
+              style={{ color: colorScheme === 'dark' ? '#4F83CC' : '#4F83CC' }}
+            >
+              Load Wallet
+            </Text>
+            <Text 
+              className="text-sm"
+              style={{ color: colorScheme === 'dark' ? '#8EAEE0' : '#4F83CC' }}
+            >
+              Add funds to your wallet
+            </Text>
+          </View>
+        </View>
+        <ArrowRight size={20} color={colorScheme === 'dark' ? '#4F83CC' : '#4F83CC'} />
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+function LoadWalletModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const { colorScheme } = useTheme();
+  const { walletAddress } = useAuth();
+  const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  const handleAmountSelect = (amount: number) => {
+    setSelectedAmount(amount);
+  };
+  
+  const handleAddFunds = async () => {
+    if (!selectedAmount) return;
+    
+    try {
+      setIsLoading(true);
+      
+      // Option 1: Use direct Stripe checkout link with client reference ID
+      // This is a simpler approach that doesn't require backend API
+      const stripeUrl = `https://buy.stripe.com/test_6oE6pt3uO3gH1tS5kk?client_reference_id=${walletAddress}`;
+      
+      // Option 2: Use our custom API to generate a payment link (uncomment if you have backend support)
+      // const paymentData = {
+      //   amount: selectedAmount * 100, // Convert to cents
+      //   walletAddress: walletAddress || '',
+      //   description: 'Add funds to wallet',
+      //   metadata: {
+      //     source: 'mobile-app',
+      //     walletType: 'index-wallet'
+      //   }
+      // };
+      // const response = await StripeAPI.createPaymentLink(paymentData);
+      // const stripeUrl = response.url;
+      
+      // Open the Stripe checkout page in browser
+      await Linking.openURL(stripeUrl);
+      
+      // Close modal after opening the link
+      onClose();
+    } catch (error) {
+      console.error('Error creating payment link:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  return (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={visible}
+      onRequestClose={onClose}
+    >
+      <View 
+        className="flex-1 justify-end"
+        style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+      >
+        <View 
+          className="rounded-t-3xl p-6"
+          style={{ backgroundColor: colorScheme === 'dark' ? '#1F2937' : '#FFFFFF' }}
+        >
+          <View className="flex-row justify-between items-center mb-6">
+            <Text 
+              className="text-2xl font-bold"
+              style={{ color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }}
+            >
+              Load Your Wallet
+            </Text>
+            <TouchableOpacity onPress={onClose}>
+              <X size={24} color={colorScheme === 'dark' ? '#FFFFFF' : '#000000'} />
+            </TouchableOpacity>
+          </View>
+          
+          <View className="mb-6">
+            <Text 
+              className="text-base mb-2"
+              style={{ color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }}
+            >
+              Select an amount to add:
+            </Text>
+            
+            <View className="flex-row justify-between mb-4">
+              {[10, 25, 50].map((amount) => (
+                <TouchableOpacity 
+                  key={amount}
+                  className="py-3 px-6 rounded-xl"
+                  style={{ 
+                    backgroundColor: selectedAmount === amount 
+                      ? (colorScheme === 'dark' ? '#4F83CC' : '#4F83CC') 
+                      : (colorScheme === 'dark' ? '#323E4F' : '#EBF2FF'),
+                    borderWidth: 1,
+                    borderColor: colorScheme === 'dark' ? '#4F83CC' : '#C7D9F2',
+                  }}
+                  onPress={() => handleAmountSelect(amount)}
+                >
+                  <Text 
+                    className="text-lg font-bold"
+                    style={{ 
+                      color: selectedAmount === amount 
+                        ? '#FFFFFF' 
+                        : (colorScheme === 'dark' ? '#4F83CC' : '#4F83CC') 
+                    }}
+                  >
+                    ${amount}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            
+            <TouchableOpacity 
+              className="py-4 rounded-xl mb-4"
+              style={{ 
+                backgroundColor: selectedAmount ? '#4F83CC' : (colorScheme === 'dark' ? '#2C3A4A' : '#A0B8D9'),
+                opacity: selectedAmount ? 1 : 0.7
+              }}
+              onPress={handleAddFunds}
+              disabled={!selectedAmount || isLoading}
+            >
+              <Text className="text-white font-bold text-center text-lg">
+                {isLoading ? 'Processing...' : 'Add Funds'}
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity onPress={onClose}>
+              <Text 
+                className="text-center text-base"
+                style={{ color: colorScheme === 'dark' ? '#8EAEE0' : '#4F83CC' }}
+              >
+                Cancel
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
   );
 }
 

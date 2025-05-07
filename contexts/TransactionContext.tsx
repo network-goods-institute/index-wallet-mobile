@@ -102,7 +102,6 @@ export const TransactionProvider: React.FC<{ children: ReactNode }> = ({ childre
         vendor_valuations: auth.valuations
       };
       
-      console.log('Sending payment data to API:', paymentData);
       
       // Call the real backend API
       const response = await PaymentAPI.createPayment(paymentData);
@@ -159,7 +158,6 @@ export const TransactionProvider: React.FC<{ children: ReactNode }> = ({ childre
           
           if (updatedStatus !== currentTransaction.status) {
             setPollingDelay(1000);
-            console.log('Status changed, resetting polling delay');
           } else {
             setPollingDelay(prev => Math.min(prev * 1.5, 5000));
             console.log(`Increasing polling delay to: ${Math.min(pollingDelay * 1.5, 5000)}ms`);
@@ -321,6 +319,7 @@ export const TransactionProvider: React.FC<{ children: ReactNode }> = ({ childre
       setIsLoading(false);
     }
   };
+
 
   return (
     <TransactionContext.Provider
