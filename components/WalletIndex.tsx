@@ -13,7 +13,6 @@ interface Token {
   symbol: string;
   amount: string;
   value: number;
-  change: number;
   iconUrl?: string;
 }
 
@@ -36,7 +35,6 @@ export function WalletIndex({
 }: WalletIndexProps) {
   const { colorScheme } = useTheme();
   const [showLoadWalletModal, setShowLoadWalletModal] = useState(false);
-  
   return (
     <ThemedView
       className="flex-1 p-4 rounded-2xl pt-16 bg-white dark:bg-black"
@@ -172,6 +170,7 @@ function LoadWalletModal({ visible, onClose }: { visible: boolean; onClose: () =
       
       // Option 1: Use direct Stripe checkout link with client reference ID
       // This is a simpler approach that doesn't require backend API
+      // TODO: abstract this to a env variable: 
       const stripeUrl = `https://buy.stripe.com/test_6oE6pt3uO3gH1tS5kk?client_reference_id=${walletAddress}`;
       
       // Option 2: Use our custom API to generate a payment link (uncomment if you have backend support)
@@ -391,32 +390,17 @@ function TokenRow({ token }: { token: Token }) {
       key={token.symbol}
     >
       <View className="flex-row items-center">
-        <View className="mr-3">
-          {token.iconUrl ? (
-            <Image source={{ uri: token.iconUrl }} className="w-9 h-9 rounded-full" />
-          ) : (
-            <View className="w-9 h-9 rounded-full bg-gray-200 dark:bg-gray-700 justify-center items-center">
-              <Coins size={18} className="text-black dark:text-white" />
-            </View>
-          )}
-        </View>
         <View className="justify-center">
           <Text className="text-base font-medium text-black dark:text-white mb-1">{token.name}</Text>
           <Text className="text-sm text-gray-600 dark:text-gray-400">{token.amount} {token.symbol}</Text>
         </View>
       </View>
       <View className="items-end">
-        <Text className="text-base font-medium text-black dark:text-white mb-1">
+        <Text className="text-base font-medium text-black dark:text-white">
           {Intl.NumberFormat('en-US', {
             style: 'currency',
             currency: 'USD',
           }).format(token.value)}
-        </Text>
-        <Text
-          className={`text-sm ${token.change >= 0 ? 'text-green-500' : 'text-red-500'}`}
-        >
-          {token.change >= 0 ? '+' : ''}
-          {token.change.toFixed(2)}%
         </Text>
       </View>
     </View>

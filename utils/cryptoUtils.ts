@@ -1,119 +1,84 @@
-import 'react-native-get-random-values'; // This polyfill must be imported first
+import 'react-native-get-random-values'; // must come first
 import * as bip39 from 'bip39';
 import * as ed from '@noble/ed25519';
 import { sha512 } from '@noble/hashes/sha512';
-import { bytesToHex, hexToBytes, concatBytes } from '@noble/hashes/utils';
+import { concatBytes } from '@noble/hashes/utils';
+import bs58 from 'bs58';
 
-// Configure ed25519 to use the proper hash function
-// Noble ed25519 library configuration
-// We need to use 'any' type casting to configure the library properly
+// ——— noble-ed25519 sha512 shim ———
+if (!(ed as any).utils) (ed as any).utils = {};
+if (!(ed as any).etc)   (ed as any).etc   = {};
 
-// First ensure the required objects exist
-if (!(ed as any).utils) {
-  (ed as any).utils = {};
-}
+(ed as any).utils.sha512Sync = (...msgs: Uint8Array[]) => sha512(concatBytes(...msgs));
+(ed as any).etc.sha512Sync   = (msg: Uint8Array)    => sha512(msg);
 
-if (!(ed as any).etc) {
-  (ed as any).etc = {};
-}
+// ——— Helpers to go back and forth ———
+const toBase58 = (b: Uint8Array) => bs58.encode(b);
+const fromBase58 = (s: string)   => bs58.decode(s);
 
-// Set up the hash functions
-(ed as any).utils.sha512Sync = (...messages: Uint8Array[]) => {
-  return sha512(concatBytes(...messages));
+// ——— Seed phrase ———
+export const generateSeedPhrase = () => bip39.generateMnemonic(128);
+export const validateSeedPhrase = (p: string) => bip39.validateMnemonic(p);
+
+// ——— Key derivation & KeyPair factory ———
+export type KeyPair = {
+  privateKey: string;
+  publicKey:  string;
 };
 
-(ed as any).etc.sha512Sync = (message: Uint8Array) => sha512(message);
+export const createKeyPairFromSeedPhrase = async (
+  seedPhrase: string
+): Promise<KeyPair> => {
+  const seed = await bip39.mnemonicToSeed(seedPhrase); // 64 bytes
+  const priv = seed.slice(0, 32);                      // 32-byte private key
+  const pub  = await ed.getPublicKey(priv);            // 32-byte public key
 
-/**
- * Generates a new BIP39 mnemonic (seed phrase) with 128 bits of entropy (12 words)
- * @returns A 12-word seed phrase
- */
-export const generateSeedPhrase = (): string => {
-  // Generate a random mnemonic (128 bits = 12 words)
-  return bip39.generateMnemonic(128);
-};
-
-/**
- * Validates if a seed phrase is a valid BIP39 mnemonic
- * @param phrase The seed phrase to validate
- * @returns True if the phrase is valid, false otherwise
- */
-export const validateSeedPhrase = (phrase: string): boolean => {
-  return bip39.validateMnemonic(phrase);
-};
-
-/**
- * Derives a private key from a seed phrase
- * @param seedPhrase The BIP39 mnemonic seed phrase
- * @returns The private key as a hex string
- */
-export const derivePrimaryPrivateKey = async (seedPhrase: string): Promise<string> => {
-  // Convert mnemonic to seed (512 bits)
-  const seed = await bip39.mnemonicToSeed(seedPhrase);
-  
-  // Use the first 32 bytes of the seed as our private key
-  const privateKey = seed.slice(0, 32);
-  
-  return bytesToHex(privateKey);
-};
-
-/**
- * Creates a key pair from a private key
- * @param privateKeyHex The private key as a hex string
- * @returns An object containing the private and public keys
- */
-export const createKeyPairFromPrivateKey = async (privateKeyHex: string) => {
-  const privateKey = hexToBytes(privateKeyHex);
-  
-  // Derive the public key from the private key
-  const publicKey = await ed.getPublicKey(privateKey);
-  
   return {
-    privateKey: privateKeyHex,
-    publicKey: bytesToHex(publicKey)
+    privateKey: toBase58(priv),
+    publicKey:  toBase58(pub),
   };
 };
 
+// ——— Sign & verify ———
 /**
- * Creates a new key pair from a seed phrase
- * @param seedPhrase The BIP39 mnemonic seed phrase
- * @returns An object containing the private and public keys
+ * Sign arbitrary bytes with a Base58-encoded private key
  */
-export const createKeyPairFromSeedPhrase = async (seedPhrase: string) => {
-  const privateKeyHex = await derivePrimaryPrivateKey(seedPhrase);
-  return createKeyPairFromPrivateKey(privateKeyHex);
+export const signBytes = async (
+  data: Uint8Array,
+  privateBase58: string
+): Promise<string> => {
+  const priv = fromBase58(privateBase58);
+  const sig  = await ed.sign(data, priv);
+  return toBase58(sig);
 };
 
 /**
- * Signs a message using a private key
- * @param message The message to sign
- * @param privateKeyHex The private key as a hex string
- * @returns The signature as a hex string
+ * Verify a Base58 signature against message bytes and Base58 public key
  */
-export const signMessageWithPrivateKey = async (message: string, privateKeyHex: string): Promise<string> => {
-  const privateKey = hexToBytes(privateKeyHex);
-  const messageBytes = new TextEncoder().encode(message);
-  
-  const signature = await ed.sign(messageBytes, privateKey);
-  
-  return bytesToHex(signature);
-};
-
-/**
- * Verifies a signature using a public key
- * @param message The original message
- * @param signatureHex The signature as a hex string
- * @param publicKeyHex The public key as a hex string
- * @returns True if the signature is valid, false otherwise
- */
-export const verifySignature = async (
-  message: string, 
-  signatureHex: string, 
-  publicKeyHex: string
+export const verifyBytes = async (
+  data: Uint8Array,
+  signatureBase58: string,
+  publicBase58: string
 ): Promise<boolean> => {
-  const publicKey = hexToBytes(publicKeyHex);
-  const signature = hexToBytes(signatureHex);
-  const messageBytes = new TextEncoder().encode(message);
-  
-  return await ed.verify(signature, messageBytes, publicKey);
+  const sig = fromBase58(signatureBase58);
+  const pub = fromBase58(publicBase58);
+  return ed.verify(sig, data, pub);
+};
+
+// ——— Convenience wrappers for strings ———
+export const signMessage = async (
+  message: string,
+  privateBase58: string
+): Promise<string> => {
+  const data = new TextEncoder().encode(message);
+  return signBytes(data, privateBase58);
+};
+
+export const verifyMessage = async (
+  message: string,
+  signatureBase58: string,
+  publicBase58: string
+): Promise<boolean> => {
+  const data = new TextEncoder().encode(message);
+  return verifyBytes(data, signatureBase58, publicBase58);
 };

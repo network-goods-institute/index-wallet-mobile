@@ -19,17 +19,12 @@ const stripeApi = axios.create({
 export interface StripePaymentLinkRequest {
   amount: number;           // Amount in USD cents (e.g., 1000 for $10.00)
   walletAddress: string;    // User's public wallet address
-  name?: string;            // Optional user name
-  email?: string;           // Optional user email
-  description?: string;     // Optional payment description
   metadata?: Record<string, string>; // Any additional metadata
 }
 
 export interface StripePaymentLinkResponse {
   url: string;              // The payment link URL
   id: string;               // Stripe payment link ID
-  expiresAt?: number;       // Optional expiration timestamp
-  metadata?: Record<string, string>; // Any returned metadata
 }
 
 // Stripe API functions

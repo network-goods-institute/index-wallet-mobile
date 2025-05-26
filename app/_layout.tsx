@@ -13,6 +13,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useTheme } from '@/contexts/ThemeContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { AuthProvider, useAuth, AuthStatus, OnboardingStep } from '@/contexts/AuthContext';
+import { BalanceProvider } from '@/contexts/BalanceContext';
 import '../global.css';
 
 import WelcomeScreen from '../app/auth/welcome';
@@ -53,7 +54,9 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ThemeProvider>
         <AuthProvider>
-          <AppContent />
+          <BalanceProvider>
+            <AppContent />
+          </BalanceProvider>
         </AuthProvider>
       </ThemeProvider>
     </GestureHandlerRootView>

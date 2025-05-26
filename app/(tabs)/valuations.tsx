@@ -1,5 +1,6 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   Text,
   Animated,
@@ -9,12 +10,18 @@ import {
   Image,
   NativeSyntheticEvent,
   NativeScrollEvent,
-  ScrollView
+  ScrollView,
+  ActivityIndicator,
+  TouchableOpacity,
+  Alert,
+  RefreshControl,
+  SafeAreaView
 } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
+import { fetchTokenValuations, updateTokenValuation as updateTokenValuationApi, TokenValuation } from '@/services/valuationService';
 
 // Constants for slider configuration
-const { width } = Dimensions.get('screen');
+const { width } = Dimensions.get('window');
 const visibleRange = 40; // Number of visible segments
 const segmentWidth = 1; // Width of each tick mark
 const segmentSpacing = 13; // Space between tick marks
@@ -32,15 +39,19 @@ interface Token {
   adjustment: number; // Dollar amount adjustment (positive for premium, negative for discount)
   change: number;
   iconUrl?: string;
+  has_set: boolean; // Whether the valuation was set by the user or is default
+  isUpdating?: boolean; // Whether the token valuation is currently being updated
 }
 
 interface ValuationsProps {
   tokens: Token[];
-  onUpdateValuation: (symbol: string, newAdjustment: number) => void;
+  onUpdateValuation: (symbol: string, newAdjustment: number) => Promise<void>;
+  isLoading: boolean;
+  onRefresh: () => Promise<void>;
 }
 
 // CircularRuler component that creates the illusion of infinite scrolling
-function CircularRuler({ currentValue, onValueChange }: { currentValue: number; onValueChange: (value: number) => void }) {
+const CircularRuler = ({ currentValue, onValueChange }: { currentValue: number; onValueChange: (value: number) => void }) => {
   const scrollViewRef = useRef<ScrollView>(null);
   const [value, setValue] = useState(currentValue);
   const [isScrolling, setIsScrolling] = useState(false);
@@ -197,9 +208,10 @@ function CircularRuler({ currentValue, onValueChange }: { currentValue: number; 
   );
 }
 
-export function PremiumDiscountSlider({ token, onUpdateValuation }: { token: Token; onUpdateValuation: (symbol: string, newAdjustment: number) => void }) {
+const PremiumDiscountSlider = ({ token, onUpdateValuation }: { token: Token; onUpdateValuation: (symbol: string, newAdjustment: number) => Promise<void> }) => {
   // Current token adjustment value
   const [adjustment, setAdjustment] = useState(token.adjustment || 0);
+  const [isUpdating, setIsUpdating] = useState(false);
   
   // Update adjustment when token changes
   useEffect(() => {
@@ -207,10 +219,20 @@ export function PremiumDiscountSlider({ token, onUpdateValuation }: { token: Tok
   }, [token.adjustment]);
   
   // Handle value changes from the slider
-  const handleValueChange = (newValue: number) => {
+  const handleValueChange = async (newValue: number) => {
     if (newValue !== adjustment) {
       setAdjustment(newValue);
-      onUpdateValuation(token.symbol, newValue);
+      setIsUpdating(true);
+      try {
+        await onUpdateValuation(token.symbol, newValue);
+      } catch (error) {
+        console.error('Error updating valuation:', error);
+        // Revert to previous value on error
+        setAdjustment(token.adjustment);
+        Alert.alert('Update Failed', 'Failed to update valuation. Please try again.');
+      } finally {
+        setIsUpdating(false);
+      }
     }
   };
   
@@ -218,94 +240,168 @@ export function PremiumDiscountSlider({ token, onUpdateValuation }: { token: Tok
     <View style={styles.sliderContainer}>
       {/* Premium/Discount Labels */}
       <View style={styles.labelContainer}>
-        <Text className="text-xs font-medium text-blue-300 dark:text-blue-300">Premium</Text>
-        <Text className="text-xs font-medium text-amber-100 dark:text-amber-100">Discount</Text>
+        <Text style={styles.labelText}>Discount</Text>
+        <Text style={styles.labelText}>Premium</Text>
       </View>
-      
       
       {/* Circular scrolling ruler */}
       <CircularRuler 
         currentValue={adjustment} 
         onValueChange={handleValueChange}
       />
+      
+      {isUpdating && (
+        <View style={styles.updatingIndicator}>
+          <ActivityIndicator size="small" color="#3B82F6" />
+        </View>
+      )}
     </View>
   );
 }
 
-export function Valuations({
-  tokens,
-  onUpdateValuation,
-}: ValuationsProps) {
+const Valuations = ({ tokens, onUpdateValuation, isLoading, onRefresh }: ValuationsProps) => {
+  const [refreshing, setRefreshing] = useState(false);
+  
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await onRefresh();
+    setRefreshing(false);
+  }, [onRefresh]);
+  
+  if (isLoading && !refreshing) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#3B82F6" />
+        <Text style={styles.loadingText}>Loading valuations...</Text>
+      </View>
+    );
+  }
+  
+  if (tokens.length === 0 && !isLoading) {
+    return (
+      <View style={styles.emptyContainer}>
+        <Text style={styles.emptyText}>No tokens found</Text>
+        <TouchableOpacity 
+          style={styles.retryButton}
+          onPress={onRefresh}
+        >
+          <Text style={styles.retryButtonText}>Refresh</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+  
   return (
-    <ThemedView
-      className="flex-1 bg-white dark:bg-black p-4 rounded-2xl pt-16"
+    <ScrollView 
+      style={styles.container}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
+          colors={['#3B82F6']}
+          tintColor="#3B82F6"
+        />
+      }
     >
-      {/* Header section */}
-      <View className="flex flex-row justify-center items-center mb-4">
-        <Text className="text-xl font-semibold text-black dark:text-white">Valuations</Text>
+      <View style={styles.headerContainer}>
+        <Text style={styles.headerTitle}>Token Valuations</Text>
+        <Text style={styles.headerSubtitle}>Adjust premium or discount for each token</Text>
       </View>
       
-      {/* Token list - wrapped in ScrollView to make it scrollable */}
-      <ScrollView 
-        className="flex-1" 
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 40 }}
-        bounces={true}
-      >
-        {tokens.map((token, index) => (
-          <TokenRow 
-            key={index} 
-            token={token} 
-            onUpdateValuation={onUpdateValuation} 
-          />
-        ))}
-      </ScrollView>
-    </ThemedView>
+      {tokens.map((token) => (
+        <TokenRow 
+          key={token.symbol || token.name} 
+          token={token} 
+          onUpdateValuation={onUpdateValuation} 
+        />
+      ))}
+    </ScrollView>
   );
 }
 
-function TokenRow({ token, onUpdateValuation }: { token: Token; onUpdateValuation: (symbol: string, newAdjustment: number) => void }) {
+const TokenRow = ({ token, onUpdateValuation }: { token: Token; onUpdateValuation: (symbol: string, newAdjustment: number) => Promise<void> }) => {
+  const { colorScheme } = useTheme();
+  
   return (
-    <View
-      className="py-6 border-b border-gray-200 dark:border-white/10"
-      key={token.symbol}
-    >
-      <View className="flex-row justify-between items-center mb-4">
-        <View className="flex-row items-center">
-          <View className="mr-3">
-            {token.iconUrl ? (
-              <Image source={{ uri: token.iconUrl }} className="w-9 h-9 rounded-full" />
-            ) : (
-              <View className="w-9 h-9 rounded-full bg-gray-200 dark:bg-gray-700 justify-center items-center">
-                <Text className="text-base font-bold text-black dark:text-white">{token.symbol.charAt(0)}</Text>
-              </View>
-            )}
-          </View>
-          <View className="justify-center">
-            <Text className="text-base font-medium text-black dark:text-white mb-1">{token.name}</Text>
-            <Text className="text-sm text-gray-500 dark:text-gray-400">{token.symbol}</Text>
+    <View style={styles.tokenRow}>
+      <View style={styles.tokenInfoContainer}>
+        <View style={styles.tokenIconContainer}>
+          {token.iconUrl ? (
+            <Image 
+              source={{ uri: token.iconUrl }} 
+              style={styles.tokenIcon} 
+            />
+          ) : (
+            <View style={[styles.tokenIconPlaceholder, { backgroundColor: colorScheme === 'dark' ? '#374151' : '#E5E7EB' }]}>
+              <Text style={[styles.tokenIconText, { color: colorScheme === 'dark' ? '#F9FAFB' : '#1F2937' }]}>
+                {token.symbol.charAt(0)}
+              </Text>
+            </View>
+          )}
+        </View>
+        
+        <View style={styles.tokenDetails}>
+          <Text style={[styles.tokenName, { color: colorScheme === 'dark' ? '#F9FAFB' : '#1F2937' }]}>
+            {token.name}
+          </Text>
+          <View style={styles.tokenMetaContainer}>
+            <Text style={[styles.tokenSymbol, { color: colorScheme === 'dark' ? '#9CA3AF' : '#6B7280' }]}>
+              {token.symbol}
+            </Text>
+            <View 
+              style={[
+                styles.valuationBadge, 
+                { backgroundColor: token.has_set 
+                  ? colorScheme === 'dark' ? '#1E3A8A' : '#DBEAFE' 
+                  : colorScheme === 'dark' ? '#374151' : '#F3F4F6' 
+                }
+              ]}
+            >
+              <Text 
+                style={[
+                  styles.valuationBadgeText, 
+                  { color: token.has_set 
+                    ? colorScheme === 'dark' ? '#BFDBFE' : '#1E40AF' 
+                    : colorScheme === 'dark' ? '#D1D5DB' : '#4B5563' 
+                  }
+                ]}
+              >
+                {token.has_set ? 'Custom' : 'Default'}
+              </Text>
+            </View>
           </View>
         </View>
-        <View className="items-end">
-          <Text className="text-base font-medium text-black dark:text-white mb-1">
-            {Intl.NumberFormat('en-US', {
-              style: 'currency',
-              currency: 'USD',
-            }).format(token.value)}
+        
+        <View style={styles.tokenValueContainer}>
+          <Text style={[styles.tokenTotalValue, { color: colorScheme === 'dark' ? '#F9FAFB' : '#1F2937' }]}>
+            ${(parseFloat(token.amount) * token.value).toFixed(2)}
           </Text>
-          <Text className={`text-sm text-gray-400`}>
-            {token.adjustment !== 0 ? (token.adjustment < 0 ? 'Premium' : 'Discount') + ` ${Math.abs(token.adjustment).toFixed(2)}` : ''}
+          <Text style={[styles.tokenUnitValue, { color: colorScheme === 'dark' ? '#9CA3AF' : '#6B7280' }]}>
+            {token.amount} @ ${token.value.toFixed(2)}
           </Text>
+          {token.adjustment !== 0 && (
+            <Text 
+              style={[
+                styles.adjustmentText, 
+                { color: token.adjustment > 0 
+                  ? colorScheme === 'dark' ? '#86EFAC' : '#22C55E' 
+                  : colorScheme === 'dark' ? '#FCA5A5' : '#EF4444' 
+                }
+              ]}
+            >
+              {token.adjustment > 0 ? '+' : ''}{token.adjustment.toFixed(2)} valuation adjustment
+            </Text>
+          )}
         </View>
       </View>
       
       {/* Only show slider for non-USD tokens */}
-      {token.symbol !== 'USD' ? (
+      {token.symbol !== 'USD' && (
         <PremiumDiscountSlider
           token={token}
           onUpdateValuation={onUpdateValuation}
         />
-      ) : null}
+      )}
     </View>
   );
 }
@@ -372,33 +468,166 @@ const mockTokens = [
 ];
 
 export default function ValuationsScreen() {
-  const [tokens, setTokens] = React.useState(mockTokens);
+  const [tokens, setTokens] = useState<Token[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { walletAddress } = useAuth();
+  const { colorScheme } = useTheme();
   
-  // Update a token's dollar adjustment
-  const updateTokenValuation = (symbol: string, newAdjustment: number) => {
-    setTokens(prevTokens => 
-      prevTokens.map(token => {
-        if (token.symbol === symbol) {
-          // Don't allow changing USD valuation
-          if (symbol === 'USD') return token;
-          
-          return {
-            ...token,
-            adjustment: newAdjustment,
-          };
-        }
-        return token;
-      })
-    );
+  // Load token valuations when the component mounts
+  useEffect(() => {
+    loadTokenValuations();
+  }, []);
+  
+  // Function to load token valuations from the API
+  const loadTokenValuations = async () => {
+    if (!walletAddress) {
+      console.log('No wallet address found');
+      setError('No wallet address found');
+      setIsLoading(false);
+      return;
+    }
+    
+    console.log('Loading valuations for wallet:', walletAddress);
+    
+    try {
+      setIsLoading(true);
+      const valuations = await fetchTokenValuations(walletAddress);
+      
+      console.log('API Response:', JSON.stringify(valuations, null, 2));
+      
+      if (!valuations || valuations.length === 0) {
+        console.log('No valuations returned from API');
+        setError('No token valuations found');
+        setTokens([]);
+        return;
+      }
+      
+      // Transform the API response to match our Token interface
+      const transformedTokens: Token[] = valuations.map(valuation => ({
+        name: valuation.token_name,
+        symbol: valuation.token_symbol || valuation.token_name.toUpperCase(),
+        amount: '10', // This would come from another API endpoint in a real app
+        value: valuation.current_valuation,
+        adjustment: 0, // This would be calculated based on the default vs. custom valuation
+        change: 0, // This would come from another API endpoint in a real app
+        has_set: valuation.has_set,
+        iconUrl: getTokenIconUrl(valuation.token_symbol || valuation.token_name.toUpperCase())
+      }));
+      
+      console.log('Transformed tokens:', JSON.stringify(transformedTokens, null, 2));
+      setTokens(transformedTokens);
+      setError(null);
+    } catch (err: any) {
+      console.error('Error loading token valuations:', err);
+      console.error('Error details:', err.message);
+      if (err.response) {
+        console.error('Response status:', err.response.status);
+        console.error('Response data:', JSON.stringify(err.response.data, null, 2));
+      }
+      
+      setError(`API Error: ${err.message}`);
+      setTokens([]); // Don't fall back to mock tokens so we can see the real error
+    } finally {
+      setIsLoading(false);
+    }
   };
   
+  // Function to update a token's valuation
+  const updateTokenValuation = async (symbol: string, newAdjustment: number): Promise<void> => {
+    if (!walletAddress) {
+      Alert.alert('Error', 'No wallet address found');
+      return;
+    }
+    
+    console.log(`Updating valuation for ${symbol} to ${newAdjustment} for wallet ${walletAddress}`);
+    
+    try {
+      // Update the local state optimistically
+      setTokens(prevTokens => 
+        prevTokens.map(token => {
+          if (token.symbol === symbol) {
+            // Don't allow changing USD valuation
+            if (symbol === 'USD') return token;
+            
+            return {
+              ...token,
+              adjustment: newAdjustment,
+              has_set: true // Mark as custom valuation
+            };
+          }
+          return token;
+        })
+      );
+      
+      // Find the token name from the symbol
+      const token = tokens.find(t => t.symbol === symbol);
+      if (!token) {
+        console.error(`Token with symbol ${symbol} not found`);
+        Alert.alert('Error', `Token with symbol ${symbol} not found`);
+        return;
+      }
+      
+      // Call the API to update the valuation
+      console.log(`Calling API with token name: ${token.name}, value: ${newAdjustment}`);
+      const result = await updateTokenValuationApi(walletAddress, token.name, newAdjustment);
+      console.log(`API response:`, result);
+      console.log(`Successfully updated valuation for ${symbol} to ${newAdjustment}`);
+    } catch (err: any) {
+      console.error('Error updating token valuation:', err);
+      console.error('Error details:', err.message);
+      if (err.response) {
+        console.error('Response status:', err.response.status);
+        console.error('Response data:', JSON.stringify(err.response.data, null, 2));
+      }
+      
+      Alert.alert('Error', `Failed to update valuation: ${err.message}`);
+      // Revert the optimistic update on error
+      loadTokenValuations();
+      throw err; // Re-throw to be handled by the caller
+    }
+  };
+  
+  // Helper function to get a token icon URL (in a real app, this would be provided by the API)
+  const getTokenIconUrl = (symbol: string): string => {
+    const iconMap: Record<string, string> = {
+      'TREE': 'https://cdn-icons-png.flaticon.com/512/189/189503.png',
+      'FOUNTAIN': 'https://cdn-icons-png.flaticon.com/512/3464/3464446.png',
+      'RIVER': 'https://cdn-icons-png.flaticon.com/512/119/119573.png',
+      'SOLAR': 'https://cdn-icons-png.flaticon.com/512/196/196695.png',
+      'WIND': 'https://cdn1.iconfinder.com/data/icons/environment-and-ecology-icons/137/Ecology_24-18-512.png',
+      'OCEAN': 'https://cdn4.iconfinder.com/data/icons/marine-3/64/C_Sea-512.png',
+    };
+    
+    return iconMap[symbol] || '';
+  };
+  
+  // If there's an error, show an error message
+  if (error) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colorScheme === 'dark' ? '#000000' : '#FFFFFF' }}>
+        <View style={styles.errorContainer}>
+          <Text style={{ color: '#EF4444', fontSize: 16, marginBottom: 16 }}>{error}</Text>
+          <TouchableOpacity 
+            style={styles.retryButton}
+            onPress={loadTokenValuations}
+          >
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+  
   return (
-    <ThemedView className="flex-1 bg-white dark:bg-black pb-10">
+    <SafeAreaView style={{ flex: 1, backgroundColor: colorScheme === 'dark' ? '#000000' : '#FFFFFF' }}>
       <Valuations 
         tokens={tokens}
         onUpdateValuation={updateTokenValuation}
+        isLoading={isLoading}
+        onRefresh={loadTokenValuations}
       />
-    </ThemedView>
+    </SafeAreaView>
   );
 }
 
@@ -410,6 +639,15 @@ const styles = StyleSheet.create({
   sliderContainer: {
     height: 80,
     width: '100%',
+    position: 'relative',
+  },
+  updatingIndicator: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    borderRadius: 12,
+    padding: 4,
   },
   labelContainer: {
     flexDirection: 'row',
@@ -421,10 +659,9 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   currentValueContainer: {
-    alignItems: 'flex-end',
+    alignItems: 'center',
     justifyContent: 'center',
-    paddingRight: 10,
-    height: 20,
+    marginTop: 4,
   },
   currentValueText: {
     fontSize: 16,
@@ -443,6 +680,7 @@ const styles = StyleSheet.create({
   },
   tickContainer: {
     alignItems: 'center',
+    marginHorizontal: segmentSpacing / 2,
   },
   segment: {
     width: segmentWidth,
@@ -464,10 +702,10 @@ const styles = StyleSheet.create({
     width: indicatorWidth,
   },
   indicatorLine: {
-    width: 3, // Increased from 2 to 3 for thickness
+    width: 3,
     height: 50,
     backgroundColor: '#000000',
-    borderRadius: 2, // Increased from 1.5 to 2 for roundness
+    borderRadius: 2,
   },
   centerText: {
     fontSize: 14,
@@ -482,5 +720,127 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 14,
     marginTop: 10,
-  }
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#6B7280',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#6B7280',
+  },
+  tokenRow: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+  },
+  tokenInfoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  tokenIconContainer: {
+    marginRight: 12,
+  },
+  tokenIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  tokenIconPlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  tokenIconText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  tokenDetails: {
+    flex: 1,
+  },
+  tokenName: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  tokenMetaContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  tokenSymbol: {
+    fontSize: 14,
+  },
+  valuationBadge: {
+    marginLeft: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+  },
+  valuationBadgeText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  tokenValueContainer: {
+    alignItems: 'flex-end',
+  },
+  tokenTotalValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  tokenUnitValue: {
+    fontSize: 14,
+  },
+  adjustmentText: {
+    fontSize: 12,
+    marginTop: 4,
+  },
+  headerContainer: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 4,
+    color: '#1F2937',
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    color: '#6B7280',
+  },
+  retryButton: {
+    backgroundColor: '#3B82F6',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginTop: 16,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '500',
+    fontSize: 14,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
 });

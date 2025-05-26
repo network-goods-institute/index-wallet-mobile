@@ -10,7 +10,6 @@ import {
   generateSeedPhrase as generateSeedPhraseUtil, 
   validateSeedPhrase as validateSeedPhraseUtil, 
   createKeyPairFromSeedPhrase,
-  signMessageWithPrivateKey
 } from '@/utils/cryptoUtils';
 import { registerUser, registerWallet } from '@/services/registerUser';
 import { validateAndFetchWallet, createWallet } from '@/services/walletService';
@@ -67,7 +66,6 @@ interface AuthContextType {
   restoreFromiCloud: () => Promise<boolean>;
   
   // Cryptographic methods
-  signMessage: (message: string) => Promise<string | null>;
 }
 
 // Storage keys
@@ -151,6 +149,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Load wallet info
           const walletAddress = await AsyncStorage.getItem(WALLET_ADDRESS_KEY);
           const publicKey = await AsyncStorage.getItem(PUBLIC_KEY_KEY);
+          
+          // Load private key from secure storage or AsyncStorage
+          let privateKey = null;
+          try {
+            // Try to get from SecureStore first
+            const encryptedPrivateKey = await SecureStore.getItemAsync(PRIVATE_KEY_KEY);
+            if (encryptedPrivateKey) {
+              privateKey = await decryptData(encryptedPrivateKey);
+            } else {
+              // If not in SecureStore, try AsyncStorage
+              const asyncStoragePrivateKey = await AsyncStorage.getItem(PRIVATE_KEY_KEY);
+              if (asyncStoragePrivateKey) {
+                privateKey = await decryptData(asyncStoragePrivateKey);
+              }
+            }
+          } catch (error) {
+            console.error('Error loading private key:', error);
+          }
+          
+          // Set keyPair if we have both keys
+          if (publicKey && privateKey) {
+            setKeyPair({ privateKey, publicKey });
+            console.log('Loaded key pair during initialization');
+          }
           
           // Load user info
           const userDataStr = await AsyncStorage.getItem(USER_DATA_KEY);
@@ -242,6 +264,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       // Generate key pair from seed phrase
       const keyPair = await createKeyPairFromSeedPhrase(seedPhrase);
+      console.log("KEY PAIR: ", keyPair);
+      
+      // Log the private key for debugging
+      console.log('PRIVATE KEY (for debugging):', keyPair.privateKey);
+      console.log('PRIVATE KEY TYPE:', typeof keyPair.privateKey);
+      console.log('PRIVATE KEY LENGTH:', keyPair.privateKey.length);
       
       // Encrypt sensitive data
       const encryptedSeedPhrase = await encryptData(seedPhrase);
@@ -272,6 +300,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setStatus('authenticated');
       setBackupStatus('none');
       setICloudBackupEnabled(true);
+      setWalletAddress(keyPair.publicKey);
       
       // Use the full public key as the wallet address
       const walletAddress = keyPair.publicKey;
@@ -374,6 +403,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Generate key pair from seed phrase
       const keyPair = await createKeyPairFromSeedPhrase(inputSeedPhrase);
+      
+      // Log the private key for debugging
+      console.log('PRIVATE KEY (for debugging):', keyPair.privateKey);
+      console.log('PRIVATE KEY TYPE:', typeof keyPair.privateKey);
+      console.log('PRIVATE KEY LENGTH:', keyPair.privateKey.length);
       
       // Encrypt sensitive data
       const encryptedSeedPhrase = await encryptData(inputSeedPhrase);
@@ -656,23 +690,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Sign a message using the private key with cryptoUtils
-  const signMessage = async (message: string): Promise<string | null> => {
-    try {
-      if (!keyPair?.privateKey) {
-        console.error('No private key available for signing');
-        return null;
-      }
-      
-      // Use the real implementation from cryptoUtils
-      const signature = await signMessageWithPrivateKey(message, keyPair.privateKey);
-      return signature;
-    } catch (error) {
-      console.error('Error signing message:', error);
-      return null;
-    }
-  };
-
   // Validate seed phrase and check if wallet exists
   const validateSeedAndCheckWallet = async (phrase: string): Promise<any | null> => {
     console.log("VALIDATING AND CHECKING WALLET: ")
@@ -691,6 +708,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await AsyncStorage.setItem('wallet-address', wallet.wallet_address);
         if (wallet.username) {
           await AsyncStorage.setItem('username', wallet.username);
+        }
+
+        if (wallet.wallet_address) {
+          setWalletAddress(wallet.wallet_address);
         }
         // Set the user type if available
         if (wallet.user_type) {
@@ -711,7 +732,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Sign in with wallet address
+
+  
 
   const value = {
     status,
@@ -750,7 +772,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     enableiCloudBackup,
     backupToiCloud,
     restoreFromiCloud,
-    signMessage,
     existingWallet,
     validateSeedAndCheckWallet,
   };

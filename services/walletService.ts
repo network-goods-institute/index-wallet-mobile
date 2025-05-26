@@ -106,7 +106,7 @@ export const createWallet = async (walletData: {
     
     console.log('Creating new wallet:', backendData);
     
-    const response = await api.post('/api/wallets', backendData);
+    const response = await api.post('/users', backendData);
     return response.data;
   } catch (error: any) {
     console.error('Error creating wallet:', error.response?.data || error.message);
