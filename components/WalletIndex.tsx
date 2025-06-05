@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, Image, TouchableOpacity, ScrollView, Modal, Linking } from 'react-native';
 import { ThemedView } from './ThemedView';
 import { Plus, ArrowUpRight, Copy, ChevronDown, Coins, Store, ArrowRight, Wallet, X } from 'lucide-react-native';
@@ -79,8 +79,16 @@ export function WalletIndex({
 function WalletHeader() {
   const { userName, walletAddress } = useAuth(); // Get user from global state
   
+  // Add debugging to track the wallet address
+  console.log('HEADER - Current wallet address:', walletAddress);
+  
   // Display username from global state or fallback to 'Wallet'
   const displayName = userName || 'Wallet';
+  
+  // Force re-render when wallet address changes
+  useEffect(() => {
+    console.log('HEADER - Wallet address changed to:', walletAddress);
+  }, [walletAddress]);
   
   return (
     <View className="flex flex-row justify-center items-center mb-4">
@@ -88,7 +96,9 @@ function WalletHeader() {
       <View className="flex flex-col items-center">
         <Text className="text-black dark:text-white text-base font-semibold">{displayName}</Text>
         <Text className="text-black dark:text-white text-base font-semibold text-ellipsis">
-          {`${walletAddress?.substring(0, 3)}...${walletAddress?.substring(walletAddress?.length - 3)}`}
+          {walletAddress ? 
+            `${walletAddress.substring(0, 3)}...${walletAddress.substring(walletAddress.length - 3)}` : 
+            'No wallet address'}
         </Text>
       </View>
     </View>

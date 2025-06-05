@@ -20,20 +20,60 @@ export interface ValuationsResponse {
 export const fetchTokenValuations = async (walletAddress: string): Promise<TokenValuation[]> => {
   try {
     console.log(`Fetching valuations from: ${API_BASE_URL}/wallet/${walletAddress}/valuations`);
-    const response = await axios.get<ValuationsResponse>(`${API_BASE_URL}/wallet/${walletAddress}/valuations`);
+    const response = await axios.get(`${API_BASE_URL}/wallet/${walletAddress}/valuations`);
+    
+    // Log detailed information about the response
+    console.log('Response status:', response.status);
+    console.log('Response headers:', JSON.stringify(response.headers, null, 2));
+    console.log('Raw API response type:', typeof response.data);
     console.log('Raw API response:', JSON.stringify(response.data, null, 2));
     
-    if (!response.data || !response.data.valuations) {
-      console.error('Invalid response format. Expected valuations array.');
-      return [];
+    // Check if response.data is an array directly
+    if (Array.isArray(response.data)) {
+      console.log('Response is an array with length:', response.data.length);
+      return response.data as TokenValuation[];
     }
     
-    return response.data.valuations;
+    // Check if response.data has a valuations property
+    if (response.data && response.data.valuations && Array.isArray(response.data.valuations)) {
+      console.log('Response has valuations array with length:', response.data.valuations.length);
+      return response.data.valuations;
+    }
+    
+    // If we get here, the response format is unexpected
+    console.error('Invalid response format. Expected valuations array or direct array.');
+    console.error('Response structure:', Object.keys(response.data || {}));
+    
+    // Try to adapt to whatever format we received
+    if (response.data && typeof response.data === 'object') {
+      // Maybe it's an object with token valuations as properties
+      const keys = Object.keys(response.data);
+      if (keys.length > 0) {
+        console.log('Attempting to convert object to array...');
+        const adaptedData = keys.map(key => {
+          const item = response.data[key];
+          return {
+            token_name: key,
+            token_symbol: item.symbol || null,
+            current_valuation: parseFloat(item.average_valuation || '0'),
+            has_set: true
+          };
+        });
+        console.log('Adapted data:', JSON.stringify(adaptedData, null, 2));
+        return adaptedData;
+      }
+    }
+    
+    return [];
   } catch (error: any) {
     console.error('Error fetching token valuations:', error.message);
     if (error.response) {
       console.error('Response status:', error.response.status);
       console.error('Response data:', JSON.stringify(error.response.data, null, 2));
+    } else if (error.request) {
+      console.error('No response received:', error.request);
+    } else {
+      console.error('Error details:', error);
     }
     throw error;
   }

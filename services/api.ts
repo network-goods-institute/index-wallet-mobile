@@ -184,15 +184,22 @@ export const PaymentAPI = {
   },
 
   /**
-   * Supplement a payment with payer address
+   * Supplement a payment with payer address and token balances
    * @param paymentId Payment ID
-   * @param supplementData Payment supplement data
+   * @param supplementData Payment supplement data including token balances
    */
   getFinalizedTransaction: async (paymentId: string, supplementData: {
     payer_address: string;
+    payer_balances: Array<{
+      token_key: string;     // "address,chainId"
+      symbol: string;
+      name: string;
+      balance: number;
+      average_valuation: number;
+    }>;
   }) => {
     try {
-      console.log(`Getting transaction message and  price ${paymentId} with data:`, supplementData);
+      console.log(`Supplementing payment ${paymentId} with data:`, supplementData);
       const response = await api.post(`/api/payments/${paymentId}/supplement`, supplementData);
       console.log('Payment supplemented response:', response.data);
       return response.data;

@@ -14,14 +14,21 @@ import {
 import { ThemedText } from '@/components/ThemedText';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useTransaction } from '@/contexts/TransactionContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useBalance } from '@/contexts/BalanceContext';
 import TransactionSuccess from './TransactionSuccess';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { signAndSendTransaction } from '@/services/transactionSigningService';
 
 const { width, height } = Dimensions.get('window');
 const CORNER_SIZE = 70;
 
 export default function Pay() {
   const { colorScheme } = useTheme();
+  const auth = useAuth();
+  const { refreshBalances } = useBalance();
+  
+  // State variables
   const [paymentCode, setPaymentCode] = useState('');
   const [processing, setProcessing] = useState(false);
   const [showInput, setShowInput] = useState(false);
@@ -71,7 +78,6 @@ export default function Pay() {
     setPaymentCode('');
     setShowModal(false);
     setShowInput(false);
-    setShowSuccess(false);
     clearTransaction();
   };
 
@@ -80,27 +86,106 @@ export default function Pay() {
     if (!currentTransaction) return;
     
     setProcessing(true);
-    
     try {
-      // For debugging, always succeed without calling the backend
-      // const paymentId = currentTransaction.paymentId || 
-      //                  (currentTransaction as any).payment_id;
-      // const success = await completeTransaction(paymentId);
-      
-      // Mock success for debugging
-      const success = true;
-      
-      if (success) {
-        // Show success screen
-        setShowModal(false);
-        setShowSuccess(true);
-      } else {
-        // Show error
-        Alert.alert('Error', 'Payment failed. Please try again.');
+      // Debug auth context
+      console.log('AUTH CONTEXT DEBUG:');
+      console.log('- walletAddress:', auth?.walletAddress);
+      console.log('- keyPair exists:', auth?.keyPair ? 'YES' : 'NO');
+      console.log('- privateKey exists:', auth?.keyPair?.privateKey ? 'YES' : 'NO');
+      if (auth?.keyPair?.privateKey) {
+        console.log('- privateKey type:', typeof auth.keyPair.privateKey);
+        console.log('- privateKey length:', auth.keyPair.privateKey.length);
       }
-    } catch (err) {
-      console.error('Payment error:', err);
-      Alert.alert('Error', err instanceof Error ? err.message : 'An unknown error occurred');
+      
+      // Get the payment ID and unsigned transaction data
+      const paymentId = currentTransaction?.payment_id || (currentTransaction as any).paymentId;
+      const transactionData = currentTransaction?.unsigned_transaction ? 
+        JSON.parse(currentTransaction.unsigned_transaction) : undefined;
+      
+      if (!paymentId || !transactionData) {
+        throw new Error('Missing payment ID or unsigned transaction data');
+      }
+      
+      console.log('Starting payment completion for payment ID:', paymentId);
+      console.log('Transaction from API:', JSON.stringify(currentTransaction, null, 2));
+      
+      // Get the payer address from the auth context
+      const payerAddress = auth?.walletAddress;
+      
+      if (!payerAddress) {
+        throw new Error('Wallet address not found in auth context');
+      }
+      
+      // Get the private key from auth context
+      const privateKey = auth?.keyPair?.privateKey;
+      
+      if (!privateKey) {
+        console.warn('Private key not found in auth context, falling back to secure storage');
+      } else {
+        console.log('Using private key from auth context');
+      }
+      
+      // Use the transaction signing service to sign and send the transaction
+      const response = await signAndSendTransaction(
+        paymentId, 
+        transactionData, 
+        currentTransaction, 
+        payerAddress,
+        privateKey // Pass the private key from auth context
+      );
+      console.log('Backend response:', response);
+      
+      // Check if the payment was successful based on the PaymentStatusResponse
+      if (response && response.status) {
+        console.log('Payment status:', response.status);
+        
+        // Check for success statuses (adjust these based on your backend's status values)
+        const successStatuses = ['completed', 'success', 'confirmed', 'Completed', 'Success', 'Confirmed'];
+        const isSuccess = successStatuses.includes(response.status);
+        
+        if (isSuccess) {
+          console.log('Payment completed successfully, refreshing balances...');
+          
+          // Refresh user balances after successful payment
+          try {
+            await refreshBalances();
+            console.log('Balances refreshed successfully');
+          } catch (balanceError) {
+            console.warn('Failed to refresh balances:', balanceError);
+            // Don't fail the whole transaction if balance refresh fails
+          }
+          
+          // Complete the transaction in the context
+          await completeTransaction(paymentId);
+          
+          // Show success screen
+          setShowSuccess(true);
+          setShowModal(false);
+        } else {
+          // Payment failed or pending
+          console.log('Payment not completed, status:', response.status);
+          Alert.alert('Payment Status', `Payment status: ${response.status}. Please check your transaction.`);
+        }
+      } else {
+        // Fallback - assume success if we got a response but no status
+        console.log('No status in response, assuming success');
+        
+        // Refresh balances
+        try {
+          await refreshBalances();
+        } catch (balanceError) {
+          console.warn('Failed to refresh balances:', balanceError);
+        }
+        
+        // Complete the transaction in the context
+        await completeTransaction(paymentId);
+        
+        setShowSuccess(true);
+        setShowModal(false);
+      }
+    } catch (error) {
+      console.error('Error completing payment:', error);
+      Alert.alert('Payment Error', 'There was an error completing your payment. Please try again.');
     } finally {
       setProcessing(false);
     }
@@ -113,7 +198,7 @@ export default function Pay() {
     // Handle different property names in the transaction object
     const amount = currentTransaction.amount || 
                   (currentTransaction as any).price_usd;
-    const vendorName = currentTransaction.vendorName || 
+    const vendorName = currentTransaction.vendor_name || 
                       (currentTransaction as any).vendor_name;
     
     return (
@@ -151,6 +236,22 @@ export default function Pay() {
                 />
               </View>
             </TouchableOpacity>
+
+            {showBreakdown && currentTransaction && (currentTransaction as any).payment_bundle && (
+              <View className="w-full mb-6 bg-gray-100 dark:bg-gray-800 p-4 rounded-xl">
+                <ThemedText className="text-lg font-semibold mb-2">Payment Bundle</ThemedText>
+                {(currentTransaction as any).payment_bundle.map((item: any, index: number) => (
+                  <View key={index} className="flex-row justify-between mb-2">
+                    <ThemedText>
+                      {item.symbol}:
+                    </ThemedText>
+                    <ThemedText className="font-semibold">
+                      ${item.amount_to_pay.toFixed(2)}
+                    </ThemedText>
+                  </View>
+                ))}
+              </View>
+            )}
 
             <View className="flex-row justify-between w-full">
               <TouchableOpacity 

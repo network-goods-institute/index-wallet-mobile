@@ -11,6 +11,7 @@ export type TokenBalance = {
   logoUrl?: string;
   averageValuation?: string;
   totalAllocated?: number;
+  tokenKey?: string; // Add token key to store the original key from API response
 };
 
 // Context interface
@@ -87,6 +88,7 @@ export const BalanceProvider: React.FC<{ children: ReactNode }> = ({ children })
           valueUSD: valueUSD,
           averageValuation: data.average_valuation,
           totalAllocated: data.total_allocated,
+          tokenKey: tokenId, // Store the original token key from the API response
         });
       }
       
@@ -97,6 +99,12 @@ export const BalanceProvider: React.FC<{ children: ReactNode }> = ({ children })
         if (b.tokenSymbol === 'USD') return 1;
         return 0;
       });
+      
+      // Log the token balances with their keys for debugging
+      console.log('Processed token balances with keys:', sortedTokenBalances.map(token => ({
+        symbol: token.tokenSymbol,
+        tokenKey: token.tokenKey
+      })));
       
       // Update state with the parsed data
       setBalances(sortedTokenBalances);

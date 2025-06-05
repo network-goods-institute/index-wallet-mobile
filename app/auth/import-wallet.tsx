@@ -7,7 +7,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { ArrowLeft, Copy, X } from 'lucide-react-native';
 
 export default function ImportWalletScreen(): JSX.Element {
-  const { validateSeedPhrase, setOnboardingStep, validateSeedAndCheckWallet } = useAuth();
+  const { validateSeedPhrase, setOnboardingStep, validateSeedAndCheckWallet, login } = useAuth();
   const { colorScheme } = useTheme();
   const [seedWords, setSeedWords] = useState<string[]>(Array(12).fill(''));
   const [error, setError] = useState<string | null>(null);
@@ -73,11 +73,22 @@ export default function ImportWalletScreen(): JSX.Element {
         return;
       }
       
+      // First check if wallet exists in backend
       const wallet = await validateSeedAndCheckWallet(completeSeedPhrase);
       
       if (wallet) {
-        console.log('Existing wallet restored:', wallet.wallet_address);
-        setOnboardingStep('security-settings');
+        console.log('Existing wallet found:', wallet.wallet_address);
+        
+        // Now perform the actual login which will derive and store the private keys
+        console.log('Performing login to derive private keys...');
+        const loginSuccess = await login(completeSeedPhrase, false);
+        
+        if (loginSuccess) {
+          console.log('Login successful, private keys derived and stored');
+          setOnboardingStep('security-settings');
+        } else {
+          setError('Failed to complete login process. Please try again.');
+        }
       } else {
         setError('No wallet found with this seed phrase. Please check your seed phrase and try again.');
       }

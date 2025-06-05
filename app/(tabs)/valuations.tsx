@@ -492,9 +492,11 @@ export default function ValuationsScreen() {
     
     try {
       setIsLoading(true);
+      
+      // This will either return an array of valuations or an adapted array from the object format
       const valuations = await fetchTokenValuations(walletAddress);
       
-      console.log('API Response:', JSON.stringify(valuations, null, 2));
+      console.log('API Response after processing:', JSON.stringify(valuations, null, 2));
       
       if (!valuations || valuations.length === 0) {
         console.log('No valuations returned from API');
@@ -504,16 +506,25 @@ export default function ValuationsScreen() {
       }
       
       // Transform the API response to match our Token interface
-      const transformedTokens: Token[] = valuations.map(valuation => ({
-        name: valuation.token_name,
-        symbol: valuation.token_symbol || valuation.token_name.toUpperCase(),
-        amount: '10', // This would come from another API endpoint in a real app
-        value: valuation.current_valuation,
-        adjustment: 0, // This would be calculated based on the default vs. custom valuation
-        change: 0, // This would come from another API endpoint in a real app
-        has_set: valuation.has_set,
-        iconUrl: getTokenIconUrl(valuation.token_symbol || valuation.token_name.toUpperCase())
-      }));
+      const transformedTokens: Token[] = valuations.map(valuation => {
+        // Handle both formats - the expected TokenValuation format and the adapted format
+        const tokenName = valuation.token_name;
+        const tokenSymbol = valuation.token_symbol || tokenName.toUpperCase();
+        const value = typeof valuation.current_valuation === 'number' 
+          ? valuation.current_valuation 
+          : parseFloat(valuation.current_valuation || '0');
+        
+        return {
+          name: tokenName,
+          symbol: tokenSymbol,
+          amount: '10', // This would come from another API endpoint in a real app
+          value: value,
+          adjustment: 0, // This would be calculated based on the default vs. custom valuation
+          change: 0, // This would come from another API endpoint in a real app
+          has_set: valuation.has_set || false,
+          iconUrl: getTokenIconUrl(tokenSymbol)
+        };
+      });
       
       console.log('Transformed tokens:', JSON.stringify(transformedTokens, null, 2));
       setTokens(transformedTokens);
