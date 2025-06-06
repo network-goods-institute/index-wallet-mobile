@@ -35,6 +35,7 @@ export default function Pay() {
   const [showModal, setShowModal] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showBreakdown, setShowBreakdown] = useState(false);
+  const [completedTransaction, setCompletedTransaction] = useState(null);
   
   // Get transaction functions from context
   const { 
@@ -78,6 +79,8 @@ export default function Pay() {
     setPaymentCode('');
     setShowModal(false);
     setShowInput(false);
+    setShowSuccess(false);
+    setCompletedTransaction(null);
     clearTransaction();
   };
 
@@ -155,10 +158,10 @@ export default function Pay() {
             // Don't fail the whole transaction if balance refresh fails
           }
           
-          // Complete the transaction in the context
-          await completeTransaction(paymentId);
+          // Store the completed transaction with payment_bundle for success screen
+          setCompletedTransaction(response);
           
-          // Show success screen
+          // Transaction is already completed after signing - show success screen directly
           setShowSuccess(true);
           setShowModal(false);
         } else {
@@ -296,9 +299,9 @@ export default function Pay() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {showSuccess && currentTransaction ? (
+      {showSuccess && completedTransaction ? (
         <TransactionSuccess 
-          transaction={currentTransaction}
+          transaction={completedTransaction}
           onClose={resetPayment}
         />
       ) : (

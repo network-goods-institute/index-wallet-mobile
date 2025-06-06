@@ -1,15 +1,36 @@
 // Configuration values for the app
 import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 
 // Environment detection
 const isDevelopment = process.env.NODE_ENV === 'development';
 
+// Dynamic API URL detection for development
+const getLocalApiUrl = () => {
+  console.log('🔍 Determining API URL...');
+  console.log('  - Platform.OS:', Platform.OS);
+  console.log('  - Constants.appOwnership:', Constants.appOwnership);
+  console.log('  - Constants.executionEnvironment:', Constants.executionEnvironment);
+  
+  // Use ngrok for all development environments for simplicity
+  console.log('  ✅ Using ngrok tunnel for all development');
+  return 'https://1470-207-38-194-26.ngrok-free.app';
+};
+
 // API URLs
-export const LOCAL_BACKEND_SERVER_URL = 'http://127.0.0.1:8080';
+export const LOCAL_BACKEND_SERVER_URL = getLocalApiUrl();
 export const PRODUCTION_API_URL = 'https://api.indexwallets.com';
 
 // Use local server in development, production API in production
 export const API_URL = isDevelopment ? LOCAL_BACKEND_SERVER_URL : PRODUCTION_API_URL;
+
+// Log the API URL for debugging
+console.log('🌐 API Configuration:');
+console.log('  - Environment:', isDevelopment ? 'Development' : 'Production');
+console.log('  - Platform:', Platform.OS);
+console.log('  - App Ownership:', Constants.appOwnership);
+
+console.log('  - API URL:', API_URL);
 
 // App configuration from app.json
 export const APP_CONFIG = Constants.expoConfig || {};

@@ -2,11 +2,7 @@ import axios from 'axios';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { createKeyPairFromSeedPhrase } from '@/utils/cryptoUtils';
-
-// Use the same API configuration as in registerUser.ts
-const SERVER_HOST = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
-const SERVER_PORT = '8080';
-const API_URL = `http://${SERVER_HOST}:${SERVER_PORT}`;
+import { API_URL } from '../config';
 
 // Create axios instance with default config
 const api = axios.create({

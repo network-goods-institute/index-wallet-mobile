@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import axios from 'axios';
 import { useAuth } from './AuthContext';
+import { API_URL } from '../config';
 
 // Define token balance type
 export type TokenBalance = {
@@ -34,8 +35,8 @@ const BalanceContext = createContext<BalanceContextType>({
   lastUpdated: null,
 });
 
-// API base URL
-const API_BASE_URL = 'http://localhost:8080';
+// API base URL - use centralized config
+const API_BASE_URL = API_URL;
 
 export const BalanceProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [balances, setBalances] = useState<TokenBalance[]>([]);

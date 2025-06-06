@@ -1,13 +1,7 @@
 import axios from 'axios';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
-
-// Get API URL from environment variables or use default local development URL
-// For iOS simulator, use localhost
-// For Android emulator, use 10.0.2.2 (special alias to host loopback)
-const SERVER_HOST = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
-const SERVER_PORT = '8080';
-const API_URL = `http://${SERVER_HOST}:${SERVER_PORT}`;
+import { API_URL } from '../config';
 
 // Create axios instance with default config
 const api = axios.create({

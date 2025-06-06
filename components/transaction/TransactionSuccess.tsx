@@ -66,6 +66,31 @@ const TransactionSuccess: React.FC<TransactionSuccessProps> = ({ transaction, on
               {formatDate(transaction.createdAt || transaction.created_at || new Date())}
             </ThemedText>
           </View>
+          
+          {/* Payment Breakdown */}
+          {transaction.payment_bundle && transaction.payment_bundle.length > 0 && (
+            <>
+              <View style={styles.divider} />
+              <View style={styles.breakdownContainer}>
+                <ThemedText className="text-lg font-bold mb-3">Payment Breakdown</ThemedText>
+                {transaction.payment_bundle.map((payment: any, index: number) => (
+                  <View key={index} style={styles.breakdownRow}>
+                    <View style={styles.tokenInfo}>
+                      <ThemedText className="text-base font-semibold">
+                        {payment.symbol}
+                      </ThemedText>
+                      <ThemedText className="text-sm opacity-70">
+                        {payment.token_key}
+                      </ThemedText>
+                    </View>
+                    <ThemedText className="text-base font-bold">
+                      {payment.amount_to_pay.toFixed(4)}
+                    </ThemedText>
+                  </View>
+                ))}
+              </View>
+            </>
+          )}
         </View>
         
         {/* Close Button */}
@@ -120,6 +145,22 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 16,
     marginTop: 16,
+  },
+  breakdownContainer: {
+    paddingTop: 12,
+  },
+  breakdownRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginVertical: 2,
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    borderRadius: 8,
+  },
+  tokenInfo: {
+    flex: 1,
   },
 });
 

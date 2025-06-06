@@ -580,8 +580,8 @@ export default function ValuationsScreen() {
       }
       
       // Call the API to update the valuation
-      console.log(`Calling API with token name: ${token.name}, value: ${newAdjustment}`);
-      const result = await updateTokenValuationApi(walletAddress, token.name, newAdjustment);
+      console.log(`Calling API with token symbol: ${symbol}, value: ${newAdjustment}`);
+      const result = await updateTokenValuationApi(walletAddress, symbol, newAdjustment);
       console.log(`API response:`, result);
       console.log(`Successfully updated valuation for ${symbol} to ${newAdjustment}`);
     } catch (err: any) {

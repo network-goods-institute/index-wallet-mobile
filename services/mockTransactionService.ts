@@ -5,9 +5,10 @@ import { serialize, parse, sign } from '@repyh-labs/delta-signing';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../contexts/AuthContext';
+import { API_URL } from '../config';
 
-// API base URL - should match your backend
-const API_BASE_URL = 'http://localhost:8080';
+// API base URL - use centralized config
+const API_BASE_URL = API_URL;
 
 // Storage key for private key (must match the one in AuthContext)
 const PRIVATE_KEY_KEY = 'encrypted-private-key';

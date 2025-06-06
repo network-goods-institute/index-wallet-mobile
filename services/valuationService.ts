@@ -82,21 +82,21 @@ export const fetchTokenValuations = async (walletAddress: string): Promise<Token
 /**
  * Updates a token valuation for a specific wallet address
  * @param walletAddress The wallet address to update the valuation for
- * @param tokenName The name of the token to update
+ * @param tokenSymbol The symbol of the token to update
  * @param valuation The new valuation value
  * @returns The updated token valuation
  */
 export const updateTokenValuation = async (
   walletAddress: string,
-  tokenName: string,
+  tokenSymbol: string,
   valuation: number
 ): Promise<any> => {
   try {
     console.log(`Updating valuation at: ${API_BASE_URL}/wallet/${walletAddress}/valuations`);
-    console.log('Request payload:', { token_name: tokenName, valuation });
+    console.log('Request payload:', { symbol: tokenSymbol, valuation });
     
     const response = await axios.post(`${API_BASE_URL}/wallet/${walletAddress}/valuations`, {
-      token_name: tokenName,
+      symbol: tokenSymbol,
       valuation: valuation
     });
     

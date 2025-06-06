@@ -14,7 +14,7 @@ const api = axios.create({
     'X-Client-Platform': Platform.OS,
     'X-Client-Version': Constants.expoConfig?.version || '1.0.0',
   },
-  timeout: 10000,
+  timeout: 30000, // Increased timeout for mobile networks
 });
 
 
@@ -250,14 +250,57 @@ export const setAuthToken = (token: string | null) => {
   }
 };
 
+// Request interceptor for debugging
+api.interceptors.request.use(
+  (config) => {
+    console.log('🚀 Making API request:', {
+      method: config.method?.toUpperCase(),
+      url: config.url,
+      baseURL: config.baseURL,
+      fullURL: `${config.baseURL}${config.url}`,
+      headers: config.headers,
+      timeout: config.timeout
+    });
+    return config;
+  },
+  (error) => {
+    console.error('❌ Request setup error:', error);
+    return Promise.reject(error);
+  }
+);
+
 // Error handling interceptor
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log('✅ API response received:', {
+      status: response.status,
+      url: response.config.url,
+      data: response.data
+    });
+    return response;
+  },
   (error) => {
+    console.error('❌ API Error Details:', {
+      message: error.message,
+      code: error.code,
+      request: error.request ? 'Request made' : 'No request',
+      response: error.response ? {
+        status: error.response.status,
+        data: error.response.data,
+        headers: error.response.headers
+      } : 'No response received',
+      config: {
+        method: error.config?.method,
+        url: error.config?.url,
+        baseURL: error.config?.baseURL,
+        fullURL: error.config ? `${error.config.baseURL}${error.config.url}` : 'Unknown URL'
+      }
+    });
+    
     // Handle global error responses
     if (error.response) {
       // Server responded with a status code outside of 2xx range
-      console.log('API Error:', error.response.status, error.response.data);
+      console.log('Server Error Response:', error.response.status, error.response.data);
       
       // Handle authentication errors
       if (error.response.status === 401) {
@@ -265,10 +308,15 @@ api.interceptors.response.use(
       }
     } else if (error.request) {
       // Request was made but no response received
-      console.log('Network Error:', error.request);
+      console.log('Network/Request Error - no response received');
+      console.log('Request details:', {
+        url: error.config?.baseURL + error.config?.url,
+        method: error.config?.method,
+        headers: error.config?.headers
+      });
     } else {
       // Something else happened while setting up the request
-      console.log('Error:', error.message);
+      console.log('Request Setup Error:', error.message);
     }
     
     return Promise.reject(error);

@@ -4,8 +4,9 @@ import axios from 'axios';
 import bs58 from 'bs58';
 import { serialize, parse, sign } from '@repyh-labs/delta-signing';
 
-// Base URL for API requests - should match your backend
-const API_BASE_URL = 'http://localhost:8080';
+// Base URL for API requests - import from config for consistency
+import { API_URL } from '../config';
+const API_BASE_URL = API_URL;
 
 // Storage keys - must match the ones in AuthContext
 const PRIVATE_KEY_KEY = 'encrypted-private-key';
