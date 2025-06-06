@@ -10,7 +10,7 @@ export type TokenBalance = {
   amount: number;
   valueUSD: number;
   logoUrl?: string;
-  averageValuation?: string;
+  marketValuation?: string;
   totalAllocated?: number;
   tokenKey?: string; // Add token key to store the original key from API response
 };
@@ -75,8 +75,8 @@ export const BalanceProvider: React.FC<{ children: ReactNode }> = ({ children })
         // Calculate token value based on balance and average valuation
         // Divide by 100 to adjust for two decimal places
         const balance = (data.balance || 0) / 100;
-        const averageValuation = parseFloat(data.average_valuation || '0');
-        const valueUSD = balance * averageValuation;
+        const marketValuation = parseFloat(data.market_valuation || '0');
+        const valueUSD = balance * marketValuation;
         
         // Add to total value
         calculatedTotalValue += valueUSD;
@@ -87,7 +87,8 @@ export const BalanceProvider: React.FC<{ children: ReactNode }> = ({ children })
           tokenName: data.name || 'Unknown Token',
           amount: balance,
           valueUSD: valueUSD,
-          averageValuation: data.average_valuation,
+          marketValuation: data.market_valuation,
+          logoUrl: data.token_image_url,
           totalAllocated: data.total_allocated,
           tokenKey: tokenId, // Store the original token key from the API response
         });

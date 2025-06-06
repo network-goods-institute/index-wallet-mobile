@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, TouchableOpacity, ScrollView, Modal, Linking } from 'react-native';
+import { View, Text, Image, TouchableOpacity, ScrollView, Modal, Linking, RefreshControl } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { ThemedView } from './ThemedView';
 import { Plus, ArrowUpRight, Copy, ChevronDown, Coins, Store, ArrowRight, Wallet, X } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -23,6 +24,8 @@ interface WalletIndexProps {
   onSwapPress?: () => void;
   onSendPress?: () => void;
   onCopyPress?: () => void;
+  isRefreshing?: boolean;
+  onRefresh?: () => void;
 }
 
 export function WalletIndex({
@@ -32,6 +35,8 @@ export function WalletIndex({
   onSwapPress,
   onSendPress,
   onCopyPress,
+  isRefreshing = false,
+  onRefresh,
 }: WalletIndexProps) {
   const { colorScheme } = useTheme();
   const [showLoadWalletModal, setShowLoadWalletModal] = useState(false);
@@ -39,7 +44,17 @@ export function WalletIndex({
     <ThemedView
       className="flex-1 p-4 rounded-2xl pt-16 bg-white dark:bg-black"
     >
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            colors={['#3B82F6']}
+            tintColor="#3B82F6"
+          />
+        }
+      >
         {/* Top section with wallet name and dropdown */}
         <WalletHeader />
 
@@ -79,13 +94,8 @@ export function WalletIndex({
 function WalletHeader() {
   const { userName, walletAddress } = useAuth(); // Get user from global state
   
-  // Add debugging to track the wallet address
-  console.log('HEADER - Current wallet address:', walletAddress);
-  
-  // Display username from global state or fallback to 'Wallet'
   const displayName = userName || 'Wallet';
   
-  // Force re-render when wallet address changes
   useEffect(() => {
     console.log('HEADER - Wallet address changed to:', walletAddress);
   }, [walletAddress]);
@@ -123,7 +133,7 @@ function LoadWalletSection({ onPress }: { onPress: () => void }) {
 
   return (
     <TouchableOpacity 
-      className="mt-6 mb-4"
+      className="mt-4"
       onPress={onPress}
     >
       <View 
@@ -165,36 +175,15 @@ function LoadWalletSection({ onPress }: { onPress: () => void }) {
 function LoadWalletModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { colorScheme } = useTheme();
   const { walletAddress } = useAuth();
-  const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   
-  const handleAmountSelect = (amount: number) => {
-    setSelectedAmount(amount);
-  };
-  
-  const handleAddFunds = async () => {
-    if (!selectedAmount) return;
-    
+  const handleAddUSD = async () => {
     try {
       setIsLoading(true);
       
-      // Option 1: Use direct Stripe checkout link with client reference ID
-      // This is a simpler approach that doesn't require backend API
+      // Direct Stripe checkout link with client reference ID
       // TODO: abstract this to a env variable: 
       const stripeUrl = `https://buy.stripe.com/test_6oE6pt3uO3gH1tS5kk?client_reference_id=${walletAddress}`;
-      
-      // Option 2: Use our custom API to generate a payment link (uncomment if you have backend support)
-      // const paymentData = {
-      //   amount: selectedAmount * 100, // Convert to cents
-      //   walletAddress: walletAddress || '',
-      //   description: 'Add funds to wallet',
-      //   metadata: {
-      //     source: 'mobile-app',
-      //     walletType: 'index-wallet'
-      //   }
-      // };
-      // const response = await StripeAPI.createPaymentLink(paymentData);
-      // const stripeUrl = response.url;
       
       // Open the Stripe checkout page in browser
       await Linking.openURL(stripeUrl);
@@ -202,26 +191,41 @@ function LoadWalletModal({ visible, onClose }: { visible: boolean; onClose: () =
       // Close modal after opening the link
       onClose();
     } catch (error) {
-      console.error('Error creating payment link:', error);
+      console.error('Error opening Stripe payment link:', error);
     } finally {
       setIsLoading(false);
     }
   };
+
+  const handleSupportCauses = () => {
+    // Navigate to vendors/causes page
+    router.push('/(tabs)/vendors');
+    onClose();
+  };
   
   return (
     <Modal
-      animationType="slide"
+      animationType="fade"
       transparent={true}
       visible={visible}
       onRequestClose={onClose}
     >
-      <View 
-        className="flex-1 justify-end"
-        style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+      <BlurView
+        intensity={20}
+        tint={colorScheme === 'dark' ? 'dark' : 'light'}
+        style={{
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: 20,
+        }}
       >
         <View 
-          className="rounded-t-3xl p-6"
-          style={{ backgroundColor: colorScheme === 'dark' ? '#1F2937' : '#FFFFFF' }}
+          className="w-full rounded-3xl p-6 shadow-2xl"
+          style={{ 
+            backgroundColor: colorScheme === 'dark' ? 'rgba(31, 41, 55, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+            maxWidth: 400,
+          }}
         >
           <View className="flex-row justify-between items-center mb-6">
             <Text 
@@ -237,55 +241,56 @@ function LoadWalletModal({ visible, onClose }: { visible: boolean; onClose: () =
           
           <View className="mb-6">
             <Text 
-              className="text-base mb-2"
-              style={{ color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }}
+              className="text-base mb-6 text-center"
+              style={{ color: colorScheme === 'dark' ? '#D1D5DB' : '#4B5563' }}
             >
-              Select an amount to add:
+              Choose how you'd like to add value to your wallet
             </Text>
             
-            <View className="flex-row justify-between mb-4">
-              {[10, 25, 50].map((amount) => (
-                <TouchableOpacity 
-                  key={amount}
-                  className="py-3 px-6 rounded-xl"
-                  style={{ 
-                    backgroundColor: selectedAmount === amount 
-                      ? (colorScheme === 'dark' ? '#4F83CC' : '#4F83CC') 
-                      : (colorScheme === 'dark' ? '#323E4F' : '#EBF2FF'),
-                    borderWidth: 1,
-                    borderColor: colorScheme === 'dark' ? '#4F83CC' : '#C7D9F2',
-                  }}
-                  onPress={() => handleAmountSelect(amount)}
-                >
-                  <Text 
-                    className="text-lg font-bold"
-                    style={{ 
-                      color: selectedAmount === amount 
-                        ? '#FFFFFF' 
-                        : (colorScheme === 'dark' ? '#4F83CC' : '#4F83CC') 
-                    }}
-                  >
-                    ${amount}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            
+            {/* Add USD with Stripe */}
             <TouchableOpacity 
-              className="py-4 rounded-xl mb-4"
+              className="py-4 px-6 rounded-xl mb-4 flex-row items-center"
               style={{ 
-                backgroundColor: selectedAmount ? '#4F83CC' : (colorScheme === 'dark' ? '#2C3A4A' : '#A0B8D9'),
-                opacity: selectedAmount ? 1 : 0.7
+                backgroundColor: '#4F83CC',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                elevation: 3,
               }}
-              onPress={handleAddFunds}
-              disabled={!selectedAmount || isLoading}
+              onPress={handleAddUSD}
+              disabled={isLoading}
             >
-              <Text className="text-white font-bold text-center text-lg">
-                {isLoading ? 'Processing...' : 'Add Funds'}
-              </Text>
+              <Wallet size={24} color="#FFFFFF" style={{ marginRight: 12 }} />
+              <View className="flex-1">
+                <Text className="text-white font-bold text-lg">Add USD</Text>
+                <Text className="text-blue-100 text-sm">Load money with Stripe</Text>
+              </View>
+              <ArrowRight size={20} color="#FFFFFF" />
             </TouchableOpacity>
             
-            <TouchableOpacity onPress={onClose}>
+            {/* Support Other Causes */}
+            <TouchableOpacity 
+              className="py-4 px-6 rounded-xl mb-4 flex-row items-center"
+              style={{ 
+                backgroundColor: '#FF8C42',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                elevation: 3,
+              }}
+              onPress={handleSupportCauses}
+            >
+              <Store size={24} color="#FFFFFF" style={{ marginRight: 12 }} />
+              <View className="flex-1">
+                <Text className="text-white font-bold text-lg">Support Other Causes</Text>
+                <Text className="text-orange-100 text-sm">Browse partnered vendors</Text>
+              </View>
+              <ArrowRight size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+            
+            <TouchableOpacity onPress={onClose} className="mt-4">
               <Text 
                 className="text-center text-base"
                 style={{ color: colorScheme === 'dark' ? '#8EAEE0' : '#4F83CC' }}
@@ -295,7 +300,7 @@ function LoadWalletModal({ visible, onClose }: { visible: boolean; onClose: () =
             </TouchableOpacity>
           </View>
         </View>
-      </View>
+      </BlurView>
     </Modal>
   );
 }
@@ -308,7 +313,7 @@ function PartneredVendorsSection() {
 
   return (
     <TouchableOpacity 
-      className="mt-6 mb-4"
+      className="mt-4"
       onPress={navigateToVendors}
     >
       <View 
@@ -384,8 +389,21 @@ function ActionButton({
 }
 
 function TokenList({ tokens }: { tokens: Token[] }) {
+  const { colorScheme } = useTheme();
+  
   return (
-    <View className="flex-1">
+    <View className="flex-1 mt-4">
+      {/* Header with cause count */}
+      <View className="flex-row items-center mb-2">
+        <Text 
+          className="text-xl font-bold" 
+          style={{ color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }}
+        >
+          Causes {tokens.length > 0 && <Text className="text-gray-500">{tokens.length}</Text>}
+        </Text>
+      </View>
+      
+      {/* Causes list */}
       {tokens.map((token, index) => (
         <TokenRow key={index} token={token} />
       ))}
@@ -394,22 +412,56 @@ function TokenList({ tokens }: { tokens: Token[] }) {
 }
 
 function TokenRow({ token }: { token: Token }) {
+  const { colorScheme } = useTheme();
+  
   return (
     <View
-      className="flex-row justify-between items-center py-3 border-b border-black/10 dark:border-white/10"
+      className="flex-row justify-between items-center py-4 border-b border-black/5 dark:border-white/10"
       key={token.symbol}
     >
       <View className="flex-row items-center">
+        {/* Token Logo */}
+        <View className="mr-4">
+          {token.iconUrl ? (
+            <Image 
+              source={{ uri: token.iconUrl }} 
+              className="w-12 h-12 rounded-full"
+              style={{
+                borderWidth: 1,
+                borderColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
+              }}
+            />
+          ) : (
+            <View 
+              className="w-12 h-12 rounded-full justify-center items-center"
+              style={{ 
+                backgroundColor: colorScheme === 'dark' ? '#374151' : '#E5E7EB',
+                borderWidth: 1,
+                borderColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
+              }}
+            >
+              <Text 
+                className="text-lg font-bold"
+                style={{ color: colorScheme === 'dark' ? '#F9FAFB' : '#1F2937' }}
+              >
+                {token.symbol.charAt(0)}
+              </Text>
+            </View>
+          )}
+        </View>
+        
+        {/* Token Info */}
         <View className="justify-center">
-          <Text className="text-base font-medium text-black dark:text-white mb-1">{token.name}</Text>
+          <Text className="text-lg font-semibold text-black dark:text-white">{token.name}</Text>
           <Text className="text-sm text-gray-600 dark:text-gray-400">{token.amount} {token.symbol}</Text>
         </View>
       </View>
       <View className="items-end">
-        <Text className="text-base font-medium text-black dark:text-white">
+        <Text className="text-lg font-semibold text-black dark:text-white">
           {Intl.NumberFormat('en-US', {
             style: 'currency',
             currency: 'USD',
+            maximumFractionDigits: 2,
           }).format(token.value)}
         </Text>
       </View>

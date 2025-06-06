@@ -9,7 +9,9 @@ import {
   StyleSheet,
   Dimensions,
   SafeAreaView,
-  Alert
+  Alert,
+  Image,
+  ActivityIndicator
 } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -21,7 +23,6 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { signAndSendTransaction } from '@/services/transactionSigningService';
 
 const { width, height } = Dimensions.get('window');
-const CORNER_SIZE = 70;
 
 export default function Pay() {
   const { colorScheme } = useTheme();
@@ -90,17 +91,6 @@ export default function Pay() {
     
     setProcessing(true);
     try {
-      // Debug auth context
-      console.log('AUTH CONTEXT DEBUG:');
-      console.log('- walletAddress:', auth?.walletAddress);
-      console.log('- keyPair exists:', auth?.keyPair ? 'YES' : 'NO');
-      console.log('- privateKey exists:', auth?.keyPair?.privateKey ? 'YES' : 'NO');
-      if (auth?.keyPair?.privateKey) {
-        console.log('- privateKey type:', typeof auth.keyPair.privateKey);
-        console.log('- privateKey length:', auth.keyPair.privateKey.length);
-      }
-      
-      // Get the payment ID and unsigned transaction data
       const paymentId = currentTransaction?.payment_id || (currentTransaction as any).paymentId;
       const transactionData = currentTransaction?.unsigned_transaction ? 
         JSON.parse(currentTransaction.unsigned_transaction) : undefined;
@@ -109,80 +99,36 @@ export default function Pay() {
         throw new Error('Missing payment ID or unsigned transaction data');
       }
       
-      console.log('Starting payment completion for payment ID:', paymentId);
-      console.log('Transaction from API:', JSON.stringify(currentTransaction, null, 2));
-      
-      // Get the payer address from the auth context
       const payerAddress = auth?.walletAddress;
-      
       if (!payerAddress) {
         throw new Error('Wallet address not found in auth context');
       }
       
-      // Get the private key from auth context
       const privateKey = auth?.keyPair?.privateKey;
       
-      if (!privateKey) {
-        console.warn('Private key not found in auth context, falling back to secure storage');
-      } else {
-        console.log('Using private key from auth context');
-      }
-      
-      // Use the transaction signing service to sign and send the transaction
       const response = await signAndSendTransaction(
         paymentId, 
         transactionData, 
         currentTransaction, 
         payerAddress,
-        privateKey // Pass the private key from auth context
+        privateKey
       );
-      console.log('Backend response:', response);
       
-      // Check if the payment was successful based on the PaymentStatusResponse
       if (response && response.status) {
-        console.log('Payment status:', response.status);
-        
-        // Check for success statuses (adjust these based on your backend's status values)
         const successStatuses = ['completed', 'success', 'confirmed', 'Completed', 'Success', 'Confirmed'];
         const isSuccess = successStatuses.includes(response.status);
         
         if (isSuccess) {
-          console.log('Payment completed successfully, refreshing balances...');
-          
-          // Refresh user balances after successful payment
-          try {
-            await refreshBalances();
-            console.log('Balances refreshed successfully');
-          } catch (balanceError) {
-            console.warn('Failed to refresh balances:', balanceError);
-            // Don't fail the whole transaction if balance refresh fails
-          }
-          
-          // Store the completed transaction with payment_bundle for success screen
+          await refreshBalances();
           setCompletedTransaction(response);
-          
-          // Transaction is already completed after signing - show success screen directly
           setShowSuccess(true);
           setShowModal(false);
         } else {
-          // Payment failed or pending
-          console.log('Payment not completed, status:', response.status);
           Alert.alert('Payment Status', `Payment status: ${response.status}. Please check your transaction.`);
         }
       } else {
-        // Fallback - assume success if we got a response but no status
-        console.log('No status in response, assuming success');
-        
-        // Refresh balances
-        try {
-          await refreshBalances();
-        } catch (balanceError) {
-          console.warn('Failed to refresh balances:', balanceError);
-        }
-        
-        // Complete the transaction in the context
+        await refreshBalances();
         await completeTransaction(paymentId);
-        
         setShowSuccess(true);
         setShowModal(false);
       }
@@ -194,15 +140,26 @@ export default function Pay() {
     }
   };
 
-  // Transaction details modal
+  // Transaction details modal - Apple style bottom sheet
   const renderTransactionModal = () => {
     if (!currentTransaction) return null;
     
-    // Handle different property names in the transaction object
-    const amount = currentTransaction.amount || 
-                  (currentTransaction as any).price_usd;
-    const vendorName = currentTransaction.vendor_name || 
-                      (currentTransaction as any).vendor_name;
+    const amount = currentTransaction.amount || (currentTransaction as any).price_usd;
+    const vendorName = currentTransaction.vendor_name || (currentTransaction as any).vendor_name;
+    const paymentBundle = (currentTransaction as any).payment_bundle || [];
+    
+    // Get token colors based on symbol
+    const getTokenColor = (symbol: string) => {
+      const colors: { [key: string]: string } = {
+        'ETH': '#627EEA',
+        'USDC': '#2775CA',
+        'USDT': '#26A17B',
+        'DAI': '#F5AC37',
+        'WBTC': '#F09242',
+        'BTC': '#F7931A',
+      };
+      return colors[symbol] || '#6B7280';
+    };
     
     return (
       <Modal
@@ -210,95 +167,156 @@ export default function Pay() {
         transparent={true}
         visible={showModal}
         onRequestClose={resetPayment}
+        presentationStyle="pageSheet"
       >
-        <View style={styles.modalOverlay}>
-          <View style={[
-            styles.modalContent, 
-            { backgroundColor: colorScheme === 'dark' ? '#1F2937' : '#FFFFFF' }
-          ]}>
-            <ThemedText className="text-2xl font-bold mb-4">Payment Details</ThemedText>
-            <ThemedText className="text-xl mb-2">
-              Amount: ${amount} USD
-            </ThemedText>
-            <ThemedText className="text-lg mb-6">
-              To: {vendorName}
-            </ThemedText>
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={resetPayment}
+        >
+          <TouchableOpacity 
+            activeOpacity={1} 
+            style={[
+              styles.bottomSheet,
+              { backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF' }
+            ]}
+            onPress={(e) => e.stopPropagation()}
+          >
+            {/* Handle bar */}
+            <View style={styles.handleBar} />
             
-            <TouchableOpacity 
-              className="flex-row justify-between w-full mb-6"
-              onPress={() => setShowBreakdown(!showBreakdown)}
-            >
-              <ThemedText className="text-lg">
-                Payment Breakdown 
+            {/* Header */}
+            <View style={styles.sheetHeader}>
+              <ThemedText className="text-xl font-semibold text-center">
+                Confirm Payment
               </ThemedText>
-              <View className="flex items-center">
-                <Ionicons 
-                  name={showBreakdown ? "chevron-up" : "chevron-down"} 
-                  size={24} 
-                  color={colorScheme === 'dark' ? '#FFFFFF' : '#1F2937'} 
-                />
-              </View>
-            </TouchableOpacity>
-
-            {showBreakdown && currentTransaction && (currentTransaction as any).payment_bundle && (
-              <View className="w-full mb-6 bg-gray-100 dark:bg-gray-800 p-4 rounded-xl">
-                <ThemedText className="text-lg font-semibold mb-2">Payment Bundle</ThemedText>
-                {(currentTransaction as any).payment_bundle.map((item: any, index: number) => (
-                  <View key={index} className="flex-row justify-between mb-2">
-                    <ThemedText>
-                      {item.symbol}:
-                    </ThemedText>
-                    <ThemedText className="font-semibold">
-                      ${item.amount_to_pay.toFixed(2)}
-                    </ThemedText>
+            </View>
+            
+            {/* Amount Section */}
+            <View style={styles.amountSection}>
+              <ThemedText className="text-5xl font-bold text-center mb-2">
+                ${amount}
+              </ThemedText>
+              <ThemedText className="text-lg text-center opacity-60">
+                to {vendorName}
+              </ThemedText>
+            </View>
+            
+            {/* Token Breakdown */}
+            <View style={styles.breakdownSection}>
+              <ThemedText className="text-sm font-medium opacity-60 mb-4">
+                PAYMENT BREAKDOWN
+              </ThemedText>
+              
+              {paymentBundle.map((item: any, index: number) => (
+                <View 
+                  key={index} 
+                  style={[
+                    styles.tokenRow,
+                    { backgroundColor: colorScheme === 'dark' ? '#2C2C2E' : '#F2F2F7' }
+                  ]}
+                >
+                  <View style={styles.tokenInfo}>
+                    {/* Token Icon */}
+                    {item.token_image_url ? (
+                      <Image 
+                        source={{ uri: item.token_image_url }}
+                        style={styles.tokenIcon}
+                      />
+                    ) : (
+                      <View 
+                        style={[
+                          styles.tokenIcon,
+                          { backgroundColor: getTokenColor(item.symbol) }
+                        ]}
+                      >
+                        <ThemedText className="text-white font-bold text-lg">
+                          {item.symbol.charAt(0)}
+                        </ThemedText>
+                      </View>
+                    )}
+                    
+                    {/* Token Details */}
+                    <View style={styles.tokenDetails}>
+                      <ThemedText className="text-base font-semibold">
+                        {item.symbol}
+                      </ThemedText>
+                      <ThemedText className="text-sm opacity-60">
+                        {item.amount_to_pay.toFixed(6)} tokens
+                      </ThemedText>
+                    </View>
                   </View>
-                ))}
+                  
+                  {/* USD Value */}
+                  <ThemedText className="text-base font-semibold">
+                    ${item.amount_to_pay.toFixed(2)}
+                  </ThemedText>
+                </View>
+              ))}
+              
+              {/* Total */}
+              <View style={styles.totalRow}>
+                <ThemedText className="text-base font-medium">
+                  Total
+                </ThemedText>
+                <ThemedText className="text-lg font-bold">
+                  ${amount} USD
+                </ThemedText>
               </View>
-            )}
-
-            <View className="flex-row justify-between w-full">
+            </View>
+            
+            {/* Action Buttons */}
+            <View style={styles.buttonContainer}>
               <TouchableOpacity 
-                className="bg-red-500 p-4 rounded-xl flex-1 mr-2"
+                style={[
+                  styles.button,
+                  styles.cancelButton,
+                  { backgroundColor: colorScheme === 'dark' ? '#48484A' : '#E5E5EA' }
+                ]}
                 onPress={resetPayment}
               >
-                <ThemedText className="text-center text-white font-bold text-lg">
+                <ThemedText className="text-center font-semibold text-base">
                   Cancel
                 </ThemedText>
               </TouchableOpacity>
               
               <TouchableOpacity 
-                className="bg-green-500 p-4 rounded-xl flex-1 ml-2"
+                style={[
+                  styles.button,
+                  styles.approveButton,
+                  { 
+                    backgroundColor: processing || isLoading ? '#4ADE80' : '#22C55E',
+                    opacity: processing || isLoading ? 0.7 : 1
+                  }
+                ]}
                 disabled={processing || isLoading}
                 onPress={handleCompletePayment}
               >
-                <ThemedText className="text-center text-white font-bold text-lg">
-                  {processing || isLoading ? 'Processing...' : 'Approve'}
-                </ThemedText>
+                {processing || isLoading ? (
+                  <View style={styles.processingContainer}>
+                    <ThemedText className="text-white text-center font-semibold text-base mr-2">
+                      Processing
+                    </ThemedText>
+                    <Ionicons name="sync" size={18} color="#FFFFFF" />
+                  </View>
+                ) : (
+                  <ThemedText className="text-white text-center font-semibold text-base">
+                    Approve Payment
+                  </ThemedText>
+                )}
               </TouchableOpacity>
             </View>
-          </View>
-        </View>
+            
+            {/* Safe area padding */}
+            <View style={{ height: Platform.OS === 'ios' ? 20 : 0 }} />
+          </TouchableOpacity>
+        </TouchableOpacity>
       </Modal>
     );
   };
 
-  // Show error if any
-  if (error) {
-    return (
-      <View className="flex-1 items-center justify-center p-4">
-        <ThemedText className="text-base text-red-500 mb-4">{error}</ThemedText>
-        <TouchableOpacity 
-          className="bg-blue-500 p-3 rounded-full"
-          onPress={resetPayment}
-        >
-          <ThemedText className="text-center text-white font-bold">Try Again</ThemedText>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colorScheme === 'dark' ? '#000000' : '#FFFFFF' }]}>
       {showSuccess && completedTransaction ? (
         <TransactionSuccess 
           transaction={completedTransaction}
@@ -306,82 +324,177 @@ export default function Pay() {
         />
       ) : (
         <>
-          {/* Camera placeholder with yellow corners */}
+          {/* Header Section */}
+          <View style={styles.headerSection}>
+            <View style={styles.iconContainer}>
+              <View style={[
+                styles.iconBackground,
+                { backgroundColor: colorScheme === 'dark' ? '#1F2937' : '#EBF5FF' }
+              ]}>
+                <Ionicons 
+                  name="scan" 
+                  size={32} 
+                  color={colorScheme === 'dark' ? '#60A5FA' : '#3B82F6'} 
+                />
+              </View>
+            </View>
+            <ThemedText className="text-3xl font-bold text-center mb-2">
+              Scan to Pay
+            </ThemedText>
+            <ThemedText className="text-base text-center opacity-60">
+              Scan a QR code or enter payment code
+            </ThemedText>
+          </View>
+          
+          {/* Camera placeholder with modern styling */}
           <View style={styles.cameraContainer}>
-            <View style={[styles.camera, { backgroundColor: colorScheme === 'dark' ? '#1A1A1A' : '#F0F0F0' }]}>
-              {/* Yellow corners */}
+            <View style={[styles.camera, { backgroundColor: colorScheme === 'dark' ? '#111827' : '#F3F4F6' }]}>
+              {/* Yellow corners with gradient */}
               <View style={[styles.corner, styles.topLeft]} />
               <View style={[styles.corner, styles.topRight]} />
               <View style={[styles.corner, styles.bottomLeft]} />
               <View style={[styles.corner, styles.bottomRight]} />
               
-              {/* Camera message */}
-              <ThemedText className="text-center text-lg">
-                Point camera at QR code
-              </ThemedText>
+              {/* Camera content */}
+              <View style={styles.cameraContent}>
+                <View style={[
+                  styles.cameraIconContainer,
+                  { backgroundColor: colorScheme === 'dark' ? '#1F2937' : '#FFFFFF' }
+                ]}>
+                  <Ionicons 
+                    name="camera" 
+                    size={40} 
+                    color={colorScheme === 'dark' ? '#60A5FA' : '#3B82F6'} 
+                  />
+                </View>
+                
+                <ThemedText className="text-center text-base mt-4 opacity-70">
+                  Position QR code within frame
+                </ThemedText>
+              </View>
+              
+              {/* Corner guides */}
+              <View style={styles.guideContainer}>
+                <View style={[styles.guide, { borderColor: colorScheme === 'dark' ? '#374151' : '#E5E7EB' }]} />
+              </View>
             </View>
           </View>
           
-          {/* Bottom input area */}
+          {/* Bottom input area with modern styling */}
           <View style={styles.bottomContainer}>
-            {showInput ? (
-              <KeyboardAvoidingView 
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                style={styles.inputContainer}
-              >
-                <TextInput
-                  style={[
-                    styles.input, 
-                    { 
-                      backgroundColor: colorScheme === 'dark' ? '#333333' : '#FFFFFF',
-                      color: colorScheme === 'dark' ? '#FFFFFF' : '#000000',
-                      borderColor: colorScheme === 'dark' ? '#555555' : '#CCCCCC'
-                    }
-                  ]}
-                  placeholder="Enter payment code"
-                  placeholderTextColor={colorScheme === 'dark' ? '#9ca3af' : '#6b7280'}
-                  value={paymentCode}
-                  onChangeText={setPaymentCode}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  editable={!isLoading && !processing}
-                />
+            <View style={styles.dividerContainer}>
+              <View style={[styles.divider, { backgroundColor: colorScheme === 'dark' ? '#374151' : '#E5E7EB' }]} />
+              <ThemedText className="text-sm opacity-60 px-4">OR</ThemedText>
+              <View style={[styles.divider, { backgroundColor: colorScheme === 'dark' ? '#374151' : '#E5E7EB' }]} />
+            </View>
+            
+            <View style={styles.inputSection}>
+              {showInput ? (
+                <View>
+                  <View style={styles.inputWrapper}>
+                    <TextInput
+                      style={[
+                        styles.input, 
+                        { 
+                          backgroundColor: colorScheme === 'dark' ? '#1F2937' : '#F9FAFB',
+                          color: colorScheme === 'dark' ? '#FFFFFF' : '#000000',
+                          borderColor: colorScheme === 'dark' ? '#374151' : '#E5E7EB',
+                          textAlign: 'center'
+                        }
+                      ]}
+                      placeholder="Enter payment code"
+                      placeholderTextColor={colorScheme === 'dark' ? '#9CA3AF' : '#6B7280'}
+                      value={paymentCode}
+                      onChangeText={setPaymentCode}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      editable={!isLoading && !processing}
+                    />
+                    <TouchableOpacity 
+                      style={[
+                        styles.submitButton,
+                        { 
+                          backgroundColor: isLoading || processing || !paymentCode.trim() ? '#9CA3AF' : '#3B82F6',
+                          opacity: isLoading || processing || !paymentCode.trim() ? 0.6 : 1
+                        }
+                      ]}
+                      onPress={handlePaymentCodeSubmit}
+                      disabled={isLoading || processing || !paymentCode.trim()}
+                    >
+                      {isLoading || processing ? (
+                        <View style={styles.loadingButton}>
+                          <ActivityIndicator color="#FFFFFF" size="small" />
+                          <ThemedText className="text-white font-semibold ml-2">
+                            Processing...
+                          </ThemedText>
+                        </View>
+                      ) : (
+                        <View style={styles.submitContent}>
+                          <ThemedText className="text-white font-semibold">
+                            Submit
+                          </ThemedText>
+                          <Ionicons name="arrow-forward" size={18} color="#FFFFFF" style={{ marginLeft: 8 }} />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                  
+                  <TouchableOpacity 
+                    style={styles.cancelInputButton}
+                    onPress={() => {
+                      setShowInput(false);
+                      setPaymentCode('');
+                    }}
+                  >
+                    <ThemedText className="text-center opacity-60">
+                      Cancel
+                    </ThemedText>
+                  </TouchableOpacity>
+                </View>
+              ) : (
                 <TouchableOpacity 
                   style={[
-                    styles.submitButton,
-                    { backgroundColor: isLoading || processing || !paymentCode.trim() ? '#6B7280' : '#3B82F6' }
+                    styles.codeButton,
+                    { 
+                      backgroundColor: colorScheme === 'dark' ? '#1F2937' : '#FFFFFF',
+                      borderColor: colorScheme === 'dark' ? '#374151' : '#E5E7EB'
+                    }
                   ]}
-                  onPress={handlePaymentCodeSubmit}
-                  disabled={isLoading || processing || !paymentCode.trim()}
+                  onPress={() => setShowInput(true)}
                 >
-                  <ThemedText className="text-center text-white font-bold">
-                    {isLoading || processing ? 'Processing...' : 'Submit'}
-                  </ThemedText>
+                  <View style={styles.codeButtonContent}>
+                    <Ionicons 
+                      name="keypad" 
+                      size={24} 
+                      color={colorScheme === 'dark' ? '#60A5FA' : '#3B82F6'} 
+                    />
+                    <ThemedText className="font-semibold text-base ml-3">
+                      Enter Code Manually
+                    </ThemedText>
+                  </View>
                 </TouchableOpacity>
-              </KeyboardAvoidingView>
-            ) : (
-              <TouchableOpacity 
-                style={[
-                  styles.codeButton,
-                  { backgroundColor: colorScheme === 'dark' ? '#333333' : '#FFFFFF' }
-                ]}
-                onPress={() => setShowInput(true)}
-              >
-                <ThemedText className="text-center font-bold text-lg">
-                  Enter Code
-                </ThemedText>
-              </TouchableOpacity>
-            )}
+              )}
+            </View>
           </View>
           
           {/* Loading indicator */}
-          {(isLoading || processing) && (
+          {(isLoading || processing) && !showInput && (
             <View style={styles.loadingOverlay}>
               <View style={[
                 styles.loadingContainer,
-                { backgroundColor: colorScheme === 'dark' ? 'rgba(0, 0, 0, 0.8)' : 'rgba(255, 255, 255, 0.8)' }
+                { backgroundColor: colorScheme === 'dark' ? 'rgba(17, 24, 39, 0.95)' : 'rgba(255, 255, 255, 0.95)' }
               ]}>
-                <ThemedText className="text-lg">Processing payment...</ThemedText>
+                <ActivityIndicator 
+                  size="large" 
+                  color={colorScheme === 'dark' ? '#60A5FA' : '#3B82F6'} 
+                  style={{ marginBottom: 16 }}
+                />
+                <ThemedText className="text-lg font-medium">
+                  Processing payment...
+                </ThemedText>
+                <ThemedText className="text-sm opacity-60 mt-2">
+                  Please wait while we process your request
+                </ThemedText>
               </View>
             </View>
           )}
@@ -398,105 +511,262 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  headerSection: {
+    paddingTop: 20,
+    paddingBottom: 8,
+    alignItems: 'center',
+  },
+  iconContainer: {
+    marginBottom: 16,
+  },
+  iconBackground: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   cameraContainer: {
     flex: 1,
-    padding: 16,
+    padding: 24,
+    paddingTop: 8,
   },
   camera: {
     flex: 1,
-    borderRadius: 24,
+    borderRadius: 32,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
     position: 'relative',
   },
+  cameraContent: {
+    alignItems: 'center',
+    zIndex: 2,
+  },
+  cameraIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  guideContainer: {
+    position: 'absolute',
+    top: '20%',
+    bottom: '20%',
+    left: '15%',
+    right: '15%',
+  },
+  guide: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 24,
+    borderStyle: 'dashed',
+    opacity: 0.3,
+  },
   corner: {
     position: 'absolute',
-    width: CORNER_SIZE,
-    height: CORNER_SIZE,
-    borderColor: '#FFCC00',
-    borderWidth: 5,
+    width: 60,
+    height: 60,
+    borderColor: '#FCD34D',
+    borderWidth: 4,
   },
   topLeft: {
-    top: 20,
-    left: 20,
+    top: 24,
+    left: 24,
     borderBottomWidth: 0,
     borderRightWidth: 0,
-    borderTopLeftRadius: 20,
+    borderTopLeftRadius: 16,
   },
   topRight: {
-    top: 20,
-    right: 20,
+    top: 24,
+    right: 24,
     borderBottomWidth: 0,
     borderLeftWidth: 0,
-    borderTopRightRadius: 20,
+    borderTopRightRadius: 16,
   },
   bottomLeft: {
-    bottom: 20,
-    left: 20,
+    bottom: 24,
+    left: 24,
     borderTopWidth: 0,
     borderRightWidth: 0,
-    borderBottomLeftRadius: 20,
+    borderBottomLeftRadius: 16,
   },
   bottomRight: {
-    bottom: 20,
-    right: 20,
+    bottom: 24,
+    right: 24,
     borderTopWidth: 0,
     borderLeftWidth: 0,
-    borderBottomRightRadius: 20,
+    borderBottomRightRadius: 16,
   },
   bottomContainer: {
-    padding: 16,
-    paddingBottom: Platform.OS === 'ios' ? 32 : 16,
+    padding: 24,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
   },
-  codeButton: {
-    padding: 16,
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  inputContainer: {
+  dividerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 20,
+  },
+  divider: {
+    flex: 1,
+    height: 1,
+  },
+  inputSection: {
+    height: 100,
+    justifyContent: 'center',
+  },
+  codeButton: {
+    padding: 18,
+    borderRadius: 16,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  codeButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   input: {
     flex: 1,
-    padding: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
+    padding: 16,
+    paddingHorizontal: 20,
+    borderRadius: 16,
     borderWidth: 1,
     fontSize: 16,
-    marginRight: 8,
-    height: 50,
+    height: 56,
   },
   submitButton: {
-    padding: 12,
-    borderRadius: 12,
-    minWidth: 100,
-    height: 50,
+    paddingHorizontal: 24,
+    borderRadius: 16,
+    minWidth: 120,
+    height: 56,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#3B82F6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  submitContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  loadingButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  cancelInputButton: {
+    marginTop: 12,
+    paddingVertical: 12,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    justifyContent: 'flex-end',
+  },
+  bottomSheet: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 8,
+    paddingHorizontal: 20,
+    paddingBottom: 0,
+    maxHeight: '90%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  handleBar: {
+    width: 40,
+    height: 5,
+    backgroundColor: '#C7C7CC',
+    borderRadius: 3,
+    alignSelf: 'center',
+    marginBottom: 20,
+  },
+  sheetHeader: {
+    paddingBottom: 20,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#E5E5EA',
+  },
+  amountSection: {
+    paddingVertical: 32,
+  },
+  breakdownSection: {
+    paddingVertical: 20,
+  },
+  tokenRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+  tokenInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  tokenIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    marginRight: 12,
   },
-  modalContent: {
-    width: '100%',
-    padding: 24,
-    borderRadius: 24,
+  tokenDetails: {
+    flex: 1,
+  },
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#E5E5EA',
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingVertical: 20,
+  },
+  button: {
+    flex: 1,
+    paddingVertical: 18,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelButton: {
+    flex: 0.4,
+  },
+  approveButton: {
+    flex: 0.6,
+  },
+  processingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   loadingOverlay: {
     position: 'absolute',
@@ -506,14 +776,17 @@ const styles = StyleSheet.create({
     bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
   },
   loadingContainer: {
-    padding: 20,
-    borderRadius: 12,
+    padding: 32,
+    borderRadius: 24,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
+    alignItems: 'center',
+    minWidth: 280,
   },
 });

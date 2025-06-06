@@ -2,12 +2,13 @@ import { StyleSheet, View, Alert, AppState, TouchableOpacity, Text } from 'react
 import { WalletIndex } from '@/components/WalletIndex';
 import { ThemedView } from '@/components/ThemedView';
 import { TokenBalance, useBalance } from '@/contexts/BalanceContext';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { sendMockTransaction } from '@/services/mockTransactionService';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function HomeScreen() {
   const { balances, totalValueUSD, isLoading, error, refreshBalances, lastUpdated } = useBalance();
+  const [refreshing, setRefreshing] = useState(false);
   const { keyPair } = useAuth();
 
   useEffect(() => {
@@ -44,6 +45,13 @@ export default function HomeScreen() {
     Alert.alert('Copy', 'Address copied to clipboard!');
   };
 
+  // Handle pull-to-refresh
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await refreshBalances();
+    setRefreshing(false);
+  };
+
   // Handle mock transaction
   const handleMockTransaction = async () => {
     try {
@@ -74,13 +82,6 @@ export default function HomeScreen() {
   return (
     <ThemedView style={styles.container}>
       {/* Mock Transaction Button */}
-      <TouchableOpacity 
-        style={styles.mockButton}
-        onPress={handleMockTransaction}
-      >
-        <Text style={styles.mockButtonText}>Send Mock Transaction</Text>
-      </TouchableOpacity>
-      
       <WalletIndex 
         totalValue={totalValueUSD}
         tokens={transformedTokens}
@@ -88,6 +89,8 @@ export default function HomeScreen() {
         onSwapPress={handleSwap}
         onSendPress={handleSend}
         onCopyPress={handleCopy}
+        isRefreshing={refreshing}
+        onRefresh={handleRefresh}
       />
     </ThemedView>
   );

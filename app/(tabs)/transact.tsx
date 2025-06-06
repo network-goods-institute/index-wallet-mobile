@@ -11,8 +11,10 @@ import Animated, {
   interpolate
 } from 'react-native-reanimated';
 import { TransactionProvider } from '@/contexts/TransactionContext';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export default function TransactScreen() {
+  const { colorScheme } = useTheme();
   const [transactionType, setTransactionType] = useState<'pay' | 'receive'>('pay');
   const progress = useSharedValue(0); // 0 = pay, 1 = receive
 
@@ -33,7 +35,7 @@ export default function TransactScreen() {
 
   return (
     <TransactionProvider>
-      <SafeAreaView className="flex-1">
+      <SafeAreaView style={{ flex: 1, backgroundColor: colorScheme === 'dark' ? '#000000' : '#FFFFFF' }}>
         <ThemedView className="flex-1">
           <View className="flex-1">
             {transactionType === 'pay' ? <Pay /> : <Receive />}

@@ -329,10 +329,23 @@ const TokenRow = ({ token, onUpdateValuation }: { token: Token; onUpdateValuatio
           {token.iconUrl ? (
             <Image 
               source={{ uri: token.iconUrl }} 
-              style={styles.tokenIcon} 
+              style={[
+                styles.tokenIcon,
+                {
+                  borderWidth: 1,
+                  borderColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
+                }
+              ]} 
             />
           ) : (
-            <View style={[styles.tokenIconPlaceholder, { backgroundColor: colorScheme === 'dark' ? '#374151' : '#E5E7EB' }]}>
+            <View style={[
+              styles.tokenIconPlaceholder, 
+              { 
+                backgroundColor: colorScheme === 'dark' ? '#374151' : '#E5E7EB',
+                borderWidth: 1,
+                borderColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
+              }
+            ]}>
               <Text style={[styles.tokenIconText, { color: colorScheme === 'dark' ? '#F9FAFB' : '#1F2937' }]}>
                 {token.symbol.charAt(0)}
               </Text>
@@ -522,7 +535,7 @@ export default function ValuationsScreen() {
           adjustment: 0, // This would be calculated based on the default vs. custom valuation
           change: 0, // This would come from another API endpoint in a real app
           has_set: valuation.has_set || false,
-          iconUrl: getTokenIconUrl(tokenSymbol)
+          iconUrl: valuation.token_image_url || getTokenIconUrl(tokenSymbol)
         };
       });
       

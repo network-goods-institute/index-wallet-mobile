@@ -6,6 +6,7 @@ export interface TokenValuation {
   token_symbol: string | null;
   current_valuation: number;
   has_set: boolean;
+  token_image_url?: string;
 }
 
 export interface ValuationsResponse {
@@ -56,7 +57,8 @@ export const fetchTokenValuations = async (walletAddress: string): Promise<Token
             token_name: key,
             token_symbol: item.symbol || null,
             current_valuation: parseFloat(item.average_valuation || '0'),
-            has_set: true
+            has_set: true,
+            token_image_url: item.token_image_url
           };
         });
         console.log('Adapted data:', JSON.stringify(adaptedData, null, 2));

@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Alert } from 'react-native';
 import axios from 'axios';
 import { useAuth } from './AuthContext';
 import { useBalance } from './BalanceContext';
@@ -201,9 +200,9 @@ export const TransactionProvider: React.FC<{ children: ReactNode }> = ({ childre
             console.log(`Stopped polling - terminal status reached: ${statusResponse.status}`);
             
             if (completedStatuses.includes(statusResponse.status)) {
-              Alert.alert('Success', 'Transaction completed successfully!');
+              console.log('SUCCESS: Transaction completed successfully!');
             } else {
-              Alert.alert('Failed', `Transaction ${statusResponse.status.toLowerCase()}. Please try again.`);
+              console.log('FAILED: Transaction', statusResponse.status.toLowerCase(), '. Please try again.');
             }
             return; // Exit polling
           }
@@ -223,7 +222,7 @@ export const TransactionProvider: React.FC<{ children: ReactNode }> = ({ childre
         if (attemptCount >= maxAttempts) {
           stopPolling();
           console.log(`Stopped polling - reached maximum attempts (${maxAttempts})`);
-          Alert.alert('Timeout', 'Transaction status polling timed out. Please check manually.');
+          console.log('TIMEOUT: Transaction status polling timed out. Please check manually.');
           return;
         }
         
@@ -244,7 +243,7 @@ export const TransactionProvider: React.FC<{ children: ReactNode }> = ({ childre
         if (attemptCount >= maxAttempts) {
           stopPolling();
           console.log('Stopped polling due to too many errors');
-          Alert.alert('Error', 'Unable to check transaction status. Please try again later.');
+          console.log('ERROR: Unable to check transaction status. Please try again later.');
           return;
         }
         
@@ -370,7 +369,8 @@ export const TransactionProvider: React.FC<{ children: ReactNode }> = ({ childre
           symbol: token.tokenSymbol,
           name: token.tokenName,
           balance: token.amount,
-          average_valuation: token.valueUSD / token.amount // Calculate average valuation
+          average_valuation: token.valueUSD / token.amount, // Calculate average valuation
+          token_image_url: token.logoUrl // Include the token image URL
         };
       });
       
