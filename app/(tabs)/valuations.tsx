@@ -18,17 +18,12 @@ import {
   SafeAreaView
 } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
+import { ThemedText } from '@/components/ThemedText';
 import { fetchTokenValuations, updateTokenValuation as updateTokenValuationApi, TokenValuation } from '@/services/valuationService';
+import ValuationEditor from '@/components/ValuationEditor';
+import { Edit3, TrendingUp, TrendingDown } from 'lucide-react-native';
 
-// Constants for slider configuration
 const { width } = Dimensions.get('window');
-const visibleRange = 40; // Number of visible segments
-const segmentWidth = 1; // Width of each tick mark
-const segmentSpacing = 13; // Space between tick marks
-const snapSegment = segmentWidth + segmentSpacing; // Total width of one segment
-const spacerWidth = (width - segmentWidth) / 2; // Space at beginning and end
-const totalWidth = spacerWidth * 2 + visibleRange * snapSegment; // Total ruler width
-const indicatorWidth = 3; // Width of the position indicator
 
 // Token type definition
 interface Token {
@@ -50,217 +45,70 @@ interface ValuationsProps {
   onRefresh: () => Promise<void>;
 }
 
-// CircularRuler component that creates the illusion of infinite scrolling
-const CircularRuler = ({ currentValue, onValueChange }: { currentValue: number; onValueChange: (value: number) => void }) => {
-  const scrollViewRef = useRef<ScrollView>(null);
-  const [value, setValue] = useState(currentValue);
-  const [isScrolling, setIsScrolling] = useState(false);
-  const scrollX = useRef(new Animated.Value(0)).current;
-  const lastScrollPosition = useRef(0);
-  const accumulatedOffset = useRef(currentValue);
-  const { colorScheme } = useTheme();
-  
-  // Calculate center position
-  const centerPosition = visibleRange / 2;
-  
-  // Generate visible ticks centered around current value
-  const generateTicks = (centerValue: number) => {
-    const halfRange = Math.floor(visibleRange / 2);
-    const start = centerValue - halfRange;
-    return Array.from({ length: visibleRange }, (_, i) => i + start);
-  };
-  
-
-  // Helper function to ensure the ruler is centered
-  const centerRuler = () => {
-    if (scrollViewRef.current) {
-      scrollViewRef.current.scrollTo({
-        x: centerPosition * snapSegment,
-        animated: false
-      });
-    }
-  };
-  
-  const [ticks, setTicks] = useState(() => generateTicks(value));
-  
-  // Handle scroll events
-  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const position = event.nativeEvent.contentOffset.x;
-    lastScrollPosition.current = position;
-    
-    // Calculate current tick index
-    const rawTickIndex = position / snapSegment;
-    const tickIndex = Math.round(rawTickIndex);
-    
-    // Calculate the adjusted value based on offset from center
-    const newValue = ticks[tickIndex];
-    
-    if (newValue !== undefined && newValue !== value) {
-      setValue(newValue);
-      // Ensure we're passing the value to the parent component
-      onValueChange(newValue);
-    }
-  };
-  
-  // Check if we need to reset scroll position
-  const handleScrollEnd = () => {
-    setIsScrolling(false);
-    
-    // If we're near the edges, reset to center
-    const tickIndex = Math.round(lastScrollPosition.current / snapSegment);
-    
-    if (tickIndex < 5 || tickIndex > visibleRange - 6) {
-      // Remember the current value
-      accumulatedOffset.current = value;
-      
-      // Generate new ticks centered on current value
-      setTicks(generateTicks(value));
-      
-      // Reset scroll position to center (with animation turned off)
-      centerRuler();
-    }
-  };
-  
-  // Initial scroll to position when ticks change
-  useEffect(() => {
-    if (!isScrolling) {
-      centerRuler();
-    }
-  }, [ticks]);
-  
-  // Ensure values are centered when component mounts
-  useEffect(() => {
-    // Center the ruler on initial load with a slight delay to ensure rendering is complete
-    setTimeout(centerRuler, 100);
-  }, []);
-  
-  useEffect(() => {
-    // Only update when currentValue changes and it's not the initial render
-    if (currentValue !== value) {
-      setTicks(generateTicks(currentValue));
-      setValue(currentValue);
-      // Ensure we center the ruler after a brief delay to allow rendering
-      setTimeout(centerRuler, 50);
-    }
-  }, [currentValue]);
-
-  return (
-    <View style={styles.rulerContainer}>
-      <Animated.ScrollView
-        ref={scrollViewRef}
-        horizontal
-        contentContainerStyle={styles.scrollViewContainerStyle}
-        showsHorizontalScrollIndicator={false}
-        scrollEventThrottle={16}
-        snapToInterval={snapSegment}
-        decelerationRate="fast"
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-          { 
-            useNativeDriver: true,
-            listener: handleScroll
-          }
-        )}
-        onScrollBeginDrag={() => setIsScrolling(true)}
-        onMomentumScrollEnd={handleScrollEnd}
-        onScrollEndDrag={handleScrollEnd}
-      >
-        <View style={styles.ruler}>
-          <View style={styles.spacer} />
-          {ticks.map((tickValue, i) => {
-            const isMajor = tickValue % 5 === 0; // Major tick marks at multiples of 5
-            const isCenter = tickValue === 0; // Center (no adjustment) position
-            
-            return (
-              <View key={i} style={styles.tickContainer}>
-                <View
-                  style={[
-                    styles.segment,
-                    {
-                      backgroundColor: isCenter ? (colorScheme === 'dark' ? '#FFFFFF' : '#000000') : 
-                                       (tickValue > 0 ? '#F2C464' : '#68D6E4'),
-                      height: isCenter ? 22 : (isMajor ? 14 : 6),
-                      marginRight: i === ticks.length - 1 ? 0 : segmentSpacing
-                    }
-                  ]}
-                />
-                {isMajor && (
-                  <Text style={[
-                    styles.tickLabel, 
-                    { color: isCenter ? (colorScheme === 'dark' ? '#FFFFFF' : '#000000') : 
-                              (tickValue > 0 ? '#F7DC6F' : '#87CEEB') }
-                  ]}>
-                    {Math.abs(tickValue)}
-                  </Text>
-                )}
-              </View>
-            );
-          })}
-          <View style={styles.spacer} />
-        </View>
-      </Animated.ScrollView>
-      
-      {/* Center indicator line */}
-      <View style={styles.indicatorWrapper}>
-        <View style={styles.indicatorLine} />
-      </View>
-    </View>
-  );
-}
-
-const PremiumDiscountSlider = ({ token, onUpdateValuation }: { token: Token; onUpdateValuation: (symbol: string, newAdjustment: number) => Promise<void> }) => {
-  // Current token adjustment value
-  const [adjustment, setAdjustment] = useState(token.adjustment || 0);
-  const [isUpdating, setIsUpdating] = useState(false);
-  
-  // Update adjustment when token changes
-  useEffect(() => {
-    setAdjustment(token.adjustment || 0);
-  }, [token.adjustment]);
-  
-  // Handle value changes from the slider
-  const handleValueChange = async (newValue: number) => {
-    if (newValue !== adjustment) {
-      setAdjustment(newValue);
-      setIsUpdating(true);
-      try {
-        await onUpdateValuation(token.symbol, newValue);
-      } catch (error) {
-        console.error('Error updating valuation:', error);
-        // Revert to previous value on error
-        setAdjustment(token.adjustment);
-        Alert.alert('Update Failed', 'Failed to update valuation. Please try again.');
-      } finally {
-        setIsUpdating(false);
-      }
-    }
-  };
+// Component to display token valuation bar
+const TokenValuationBar = ({ adjustment, colorScheme }: { adjustment: number; colorScheme: 'light' | 'dark' }) => {
+  const isDark = colorScheme === 'dark';
+  // Dynamic max based on actual values
+  const maxAdjustment = Math.max(50, Math.ceil(Math.abs(adjustment) / 50) * 50);
+  const percentage = Math.min(Math.abs(adjustment) / maxAdjustment, 1) * 50; // Max 50% of bar
+  const isPositive = adjustment > 0;
+  const isExtreme = Math.abs(adjustment) > 100; // Show indicator for extreme values
   
   return (
-    <View style={styles.sliderContainer}>
-      {/* Premium/Discount Labels */}
-      <View style={styles.labelContainer}>
-        <Text style={styles.labelText}>Discount</Text>
-        <Text style={styles.labelText}>Premium</Text>
-      </View>
+    <View className="w-full h-2 relative">
+      {/* Background track */}
+      <View className={`absolute inset-0 rounded-full ${
+        isDark ? 'bg-gray-700' : 'bg-gray-200'
+      }`} />
       
-      {/* Circular scrolling ruler */}
-      <CircularRuler 
-        currentValue={adjustment} 
-        onValueChange={handleValueChange}
+      {/* Center marker */}
+      <View className={`absolute top-0 bottom-0 w-0.5 left-1/2 -translate-x-0.5 ${
+        isDark ? 'bg-gray-600' : 'bg-gray-300'
+      }`} />
+      
+      {/* Colored fill */}
+      {adjustment !== 0 && (
+        <View
+          className={`absolute top-0 bottom-0 rounded-full ${
+            isPositive ? 'bg-green-500' : 'bg-yellow-500'
+          }`}
+          style={{
+            width: `${percentage}%`,
+            [isPositive ? 'left' : 'right']: '50%',
+          }}
+        />
+      )}
+      
+      {/* Value indicator dot */}
+      <View
+        className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-2 border-white ${
+          adjustment === 0 ? 'bg-gray-400' : (isPositive ? 'bg-green-500' : 'bg-yellow-500')
+        }`}
+        style={{
+          left: `${50 + (adjustment / maxAdjustment * 50)}%`,
+          transform: [{ translateX: -8 }, { translateY: -8 }],
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.2,
+          shadowRadius: 2,
+          elevation: 3,
+        }}
       />
       
-      {isUpdating && (
-        <View style={styles.updatingIndicator}>
-          <ActivityIndicator size="small" color="#3B82F6" />
+      {/* Extreme value indicator */}
+      {isExtreme && (
+        <View className={`absolute -top-2 ${isPositive ? 'right-0' : 'left-0'}`}>
+          <View className={`w-1 h-1 rounded-full ${isPositive ? 'bg-green-500' : 'bg-yellow-500'}`} />
         </View>
       )}
     </View>
   );
 }
 
-const Valuations = ({ tokens, onUpdateValuation, isLoading, onRefresh }: ValuationsProps) => {
+const Valuations = ({ tokens, onUpdateValuation, isLoading, onRefresh, onEditToken }: ValuationsProps & { onEditToken: (token: Token) => void }) => {
   const [refreshing, setRefreshing] = useState(false);
+  const { colorScheme } = useTheme();
+  const isDark = colorScheme === 'dark';
   
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -270,152 +118,143 @@ const Valuations = ({ tokens, onUpdateValuation, isLoading, onRefresh }: Valuati
   
   if (isLoading && !refreshing) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="small" color="#E5E7EB" />
-        <Text style={styles.loadingText}>Loading valuations...</Text>
+      <View className="flex-1 items-center justify-center">
+        <ActivityIndicator size="large" color={isDark ? '#60A5FA' : '#3B82F6'} />
+        <ThemedText className="mt-4 text-base opacity-60">Loading valuations...</ThemedText>
       </View>
     );
   }
   
   if (tokens.length === 0 && !isLoading) {
     return (
-      <View style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>No tokens found</Text>
-        <TouchableOpacity 
-          style={styles.retryButton}
-          onPress={onRefresh}
-        >
-          <Text style={styles.retryButtonText}>Refresh</Text>
-        </TouchableOpacity>
+      <View className="flex-1 items-center justify-center px-8">
+        <View className={`p-8 rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
+          <ThemedText className="text-center text-lg font-medium mb-4">No tokens found</ThemedText>
+          <TouchableOpacity 
+            className="bg-blue-500 px-6 py-3 rounded-full"
+            onPress={onRefresh}
+          >
+            <Text className="text-white font-semibold text-base">Refresh</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
   
   return (
     <ScrollView 
-      style={styles.container}
+      className={`flex-1 ${isDark ? 'bg-black' : 'bg-gray-50'}`}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
           onRefresh={handleRefresh}
-          colors={['#E5E7EB']}
-          tintColor="#E5E7EB"
+          tintColor={isDark ? '#60A5FA' : '#3B82F6'}
         />
       }
+      showsVerticalScrollIndicator={false}
     >
-      <View style={styles.headerContainer}>
-        <Text style={styles.headerTitle}>Token Valuations</Text>
-        <Text style={styles.headerSubtitle}>Adjust premium or discount for each token</Text>
+      <View className="px-4 pt-4 pb-2">
+        <ThemedText className="text-3xl font-bold mb-2">Valuations</ThemedText>
+        <View className="flex-row items-center space-x-4">
+          <View className="flex-row items-center">
+            <View className="w-2 h-2 rounded-full bg-green-500 mr-1.5" />
+            <ThemedText className="text-sm opacity-60">Discount</ThemedText>
+          </View>
+          <View className="flex-row items-center">
+            <View className="w-2 h-2 rounded-full bg-yellow-500 mr-1.5" />
+            <ThemedText className="text-sm opacity-60">Premium</ThemedText>
+          </View>
+        </View>
       </View>
       
-      {tokens.map((token) => (
-        <TokenRow 
-          key={token.symbol || token.name} 
-          token={token} 
-          onUpdateValuation={onUpdateValuation} 
-        />
-      ))}
+      <View className="pb-4">
+        {tokens.map((token) => (
+          <TokenRow 
+            key={token.symbol || token.name} 
+            token={token} 
+            onEditToken={onEditToken}
+          />
+        ))}
+      </View>
+      
+      <View className="h-20" />
     </ScrollView>
   );
 }
 
-const TokenRow = ({ token, onUpdateValuation }: { token: Token; onUpdateValuation: (symbol: string, newAdjustment: number) => Promise<void> }) => {
+const TokenRow = ({ token, onEditToken }: { token: Token; onEditToken: (token: Token) => void }) => {
   const { colorScheme } = useTheme();
+  const isDark = colorScheme === 'dark';
   
   return (
-    <View style={styles.tokenRow}>
-      <View style={styles.tokenInfoContainer}>
-        <View style={styles.tokenIconContainer}>
-          {token.iconUrl ? (
-            <Image 
-              source={{ uri: token.iconUrl }} 
-              style={[
-                styles.tokenIcon,
-                {
-                  borderWidth: 1,
-                  borderColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
-                }
-              ]} 
-            />
-          ) : (
-            <View style={[
-              styles.tokenIconPlaceholder, 
-              { 
-                backgroundColor: colorScheme === 'dark' ? '#374151' : '#E5E7EB',
-                borderWidth: 1,
-                borderColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
-              }
-            ]}>
-              <Text style={[styles.tokenIconText, { color: colorScheme === 'dark' ? '#F9FAFB' : '#1F2937' }]}>
-                {token.symbol.charAt(0)}
-              </Text>
+    <TouchableOpacity
+      onPress={() => onEditToken(token)}
+      disabled={token.symbol === 'USD'}
+      className={`mx-4 mb-3 ${isDark ? 'bg-gray-800/50' : 'bg-white'} rounded-2xl overflow-hidden`}
+      style={{
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: isDark ? 0.3 : 0.08,
+        shadowRadius: 8,
+        elevation: 4,
+      }}
+    >
+      <View className="p-4">
+        <View className="flex-row items-center justify-between mb-3">
+          <View className="flex-row items-center flex-1">
+            <View className="relative">
+              {token.iconUrl ? (
+                <Image 
+                  source={{ uri: token.iconUrl }} 
+                  className="w-12 h-12 rounded-full"
+                  style={{
+                    borderWidth: 1,
+                    borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'
+                  }}
+                />
+              ) : (
+                <View className={`w-12 h-12 rounded-full items-center justify-center ${
+                  isDark ? 'bg-gray-700' : 'bg-gray-100'
+                }`}>
+                  <ThemedText className="text-lg font-bold">
+                    {token.symbol.charAt(0)}
+                  </ThemedText>
+                </View>
+              )}
             </View>
-          )}
-        </View>
-        
-        <View style={styles.tokenDetails}>
-          <Text style={[styles.tokenName, { color: colorScheme === 'dark' ? '#F9FAFB' : '#1F2937' }]}>
-            {token.name}
-          </Text>
-          <View style={styles.tokenMetaContainer}>
-            <Text style={[styles.tokenSymbol, { color: colorScheme === 'dark' ? '#9CA3AF' : '#6B7280' }]}>
-              {token.symbol}
-            </Text>
-            <View 
-              style={[
-                styles.valuationBadge, 
-                { backgroundColor: token.has_set 
-                  ? colorScheme === 'dark' ? '#1E3A8A' : '#DBEAFE' 
-                  : colorScheme === 'dark' ? '#374151' : '#F3F4F6' 
-                }
-              ]}
-            >
-              <Text 
-                style={[
-                  styles.valuationBadgeText, 
-                  { color: token.has_set 
-                    ? colorScheme === 'dark' ? '#BFDBFE' : '#1E40AF' 
-                    : colorScheme === 'dark' ? '#D1D5DB' : '#4B5563' 
-                  }
-                ]}
-              >
-                {token.has_set ? 'Custom' : 'Default'}
-              </Text>
+            
+            <View className="ml-3 flex-1">
+              <ThemedText className="text-base font-semibold">
+                {token.name}
+              </ThemedText>
+              <ThemedText className="text-sm opacity-60">
+                {token.symbol}
+              </ThemedText>
             </View>
           </View>
-        </View>
-        
-        <View style={styles.tokenValueContainer}>
-          <Text style={[styles.tokenTotalValue, { color: colorScheme === 'dark' ? '#F9FAFB' : '#1F2937' }]}>
-            ${(parseFloat(token.amount) * token.value).toFixed(2)}
-          </Text>
-          <Text style={[styles.tokenUnitValue, { color: colorScheme === 'dark' ? '#9CA3AF' : '#6B7280' }]}>
-            {token.amount} @ ${token.value.toFixed(2)}
-          </Text>
+          
           {token.adjustment !== 0 && (
-            <Text 
-              style={[
-                styles.adjustmentText, 
-                { color: token.adjustment > 0 
-                  ? colorScheme === 'dark' ? '#86EFAC' : '#22C55E' 
-                  : colorScheme === 'dark' ? '#FCA5A5' : '#EF4444' 
-                }
-              ]}
-            >
-              {token.adjustment > 0 ? '+' : ''}{token.adjustment.toFixed(2)} valuation adjustment
-            </Text>
+            <View className="items-end">
+              <ThemedText className={`text-lg font-bold ${
+                token.adjustment > 0 ? 'text-green-500' : 'text-yellow-500'
+              }`}>
+                {token.adjustment > 0 ? '+' : ''}{token.adjustment < 0 ? '-' : ''}${Math.abs(token.adjustment).toFixed(2)}
+              </ThemedText>
+              <ThemedText className="text-xs opacity-50">
+                {token.adjustment > 0 ? 'Discount' : 'Premium'}
+              </ThemedText>
+            </View>
           )}
         </View>
+        
+        {/* Valuation bar for non-USD tokens */}
+        {token.symbol !== 'USD' && (
+          <View className="mt-2">
+            <TokenValuationBar adjustment={token.adjustment} colorScheme={colorScheme} />
+          </View>
+        )}
       </View>
-      
-      {/* Only show slider for non-USD tokens */}
-      {token.symbol !== 'USD' && (
-        <PremiumDiscountSlider
-          token={token}
-          onUpdateValuation={onUpdateValuation}
-        />
-      )}
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -484,6 +323,8 @@ export default function ValuationsScreen() {
   const [tokens, setTokens] = useState<Token[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedToken, setSelectedToken] = useState<Token | null>(null);
+  const [showEditor, setShowEditor] = useState(false);
   const { walletAddress } = useAuth();
   const { colorScheme } = useTheme();
   
@@ -520,20 +361,19 @@ export default function ValuationsScreen() {
       
       // Transform the API response to match our Token interface
       const transformedTokens: Token[] = valuations.map(valuation => {
-        // Handle both formats - the expected TokenValuation format and the adapted format
         const tokenName = valuation.token_name;
         const tokenSymbol = valuation.token_symbol || tokenName.toUpperCase();
-        const value = typeof valuation.current_valuation === 'number' 
+        const adjustment = typeof valuation.current_valuation === 'number' 
           ? valuation.current_valuation 
           : parseFloat(valuation.current_valuation || '0');
         
         return {
           name: tokenName,
           symbol: tokenSymbol,
-          amount: '10', // This would come from another API endpoint in a real app
-          value: value,
-          adjustment: 0, // This would be calculated based on the default vs. custom valuation
-          change: 0, // This would come from another API endpoint in a real app
+          amount: '10',
+          value: 0, // Not used
+          adjustment: adjustment, // The valuation from API is the adjustment itself
+          change: 0,
           has_set: valuation.has_set || false,
           iconUrl: valuation.token_image_url || getTokenIconUrl(tokenSymbol)
         };
@@ -612,6 +452,17 @@ export default function ValuationsScreen() {
     }
   };
   
+  // Handle token edit
+  const handleEditToken = (token: Token) => {
+    setSelectedToken(token);
+    setShowEditor(true);
+  };
+  
+  // Handle save from editor
+  const handleSaveValuation = async (symbol: string, adjustment: number) => {
+    await updateTokenValuation(symbol, adjustment);
+  };
+  
   // Helper function to get a token icon URL (in a real app, this would be provided by the API)
   const getTokenIconUrl = (symbol: string): string => {
     const iconMap: Record<string, string> = {
@@ -629,242 +480,41 @@ export default function ValuationsScreen() {
   // If there's an error, show an error message
   if (error) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colorScheme === 'dark' ? '#000000' : '#FFFFFF' }}>
-        <View style={styles.errorContainer}>
-          <Text style={{ color: '#EF4444', fontSize: 16, marginBottom: 16 }}>{error}</Text>
-          <TouchableOpacity 
-            style={styles.retryButton}
-            onPress={loadTokenValuations}
-          >
-            <Text style={styles.retryButtonText}>Retry</Text>
-          </TouchableOpacity>
+      <SafeAreaView className={`flex-1 ${colorScheme === 'dark' ? 'bg-black' : 'bg-white'}`}>
+        <View className="flex-1 items-center justify-center px-8">
+          <View className={`p-8 rounded-2xl ${colorScheme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'}`}>
+            <ThemedText className="text-red-500 text-center text-base mb-4">{error}</ThemedText>
+            <TouchableOpacity 
+              className="bg-blue-500 px-6 py-3 rounded-full"
+              onPress={loadTokenValuations}
+            >
+              <Text className="text-white font-semibold text-base">Retry</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </SafeAreaView>
     );
   }
   
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colorScheme === 'dark' ? '#000000' : '#FFFFFF' }}>
+    <SafeAreaView className={`flex-1 ${colorScheme === 'dark' ? 'bg-black' : 'bg-white'}`}>
       <Valuations 
         tokens={tokens}
         onUpdateValuation={updateTokenValuation}
         isLoading={isLoading}
         onRefresh={loadTokenValuations}
+        onEditToken={handleEditToken}
+      />
+      <ValuationEditor
+        visible={showEditor}
+        token={selectedToken}
+        onClose={() => {
+          setShowEditor(false);
+          setSelectedToken(null);
+        }}
+        onSave={handleSaveValuation}
       />
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingBottom: 40,
-  },
-  sliderContainer: {
-    height: 80,
-    width: '100%',
-    position: 'relative',
-  },
-  updatingIndicator: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    borderRadius: 12,
-    padding: 4,
-  },
-  labelContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 10,
-  },
-  labelText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  currentValueContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 4,
-  },
-  currentValueText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  rulerContainer: {
-    height: 50,
-    width: '100%',
-    position: 'relative',
-  },
-  ruler: {
-    width: totalWidth,
-    alignItems: 'flex-end',
-    justifyContent: 'flex-start',
-    flexDirection: 'row',
-  },
-  tickContainer: {
-    alignItems: 'center',
-    marginHorizontal: segmentSpacing / 2,
-  },
-  segment: {
-    width: segmentWidth,
-  },
-  tickLabel: {
-    fontSize: 10,
-    marginTop: 2,
-  },
-  scrollViewContainerStyle: {
-    justifyContent: 'flex-end',
-  },
-  indicatorWrapper: {
-    position: 'absolute',
-    left: width / 2 - (indicatorWidth / 2),
-    top: 0,
-    bottom: 0,
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    width: indicatorWidth,
-  },
-  indicatorLine: {
-    width: 3,
-    height: 50,
-    backgroundColor: '#000000',
-    borderRadius: 2,
-  },
-  centerText: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginTop: 2,
-    textAlign: 'center',
-  },
-  spacer: {
-    width: spacerWidth,
-  },
-  usdText: {
-    textAlign: 'center',
-    fontSize: 14,
-    marginTop: 10,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#6B7280',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#6B7280',
-  },
-  tokenRow: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-  },
-  tokenInfoContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  tokenIconContainer: {
-    marginRight: 12,
-  },
-  tokenIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-  },
-  tokenIconPlaceholder: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  tokenIconText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  tokenDetails: {
-    flex: 1,
-  },
-  tokenName: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  tokenMetaContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  tokenSymbol: {
-    fontSize: 14,
-  },
-  valuationBadge: {
-    marginLeft: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 12,
-  },
-  valuationBadgeText: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  tokenValueContainer: {
-    alignItems: 'flex-end',
-  },
-  tokenTotalValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  tokenUnitValue: {
-    fontSize: 14,
-  },
-  adjustmentText: {
-    fontSize: 12,
-    marginTop: 4,
-  },
-  headerContainer: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    marginBottom: 4,
-    color: '#1F2937',
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: '#6B7280',
-  },
-  retryButton: {
-    backgroundColor: '#3B82F6',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    marginTop: 16,
-  },
-  retryButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '500',
-    fontSize: 14,
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-});
