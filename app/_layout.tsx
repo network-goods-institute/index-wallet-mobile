@@ -1,6 +1,6 @@
 import '../polyfills'; // Import Buffer polyfill
 
-import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
+import { DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -10,10 +10,11 @@ import { View, Text } from 'react-native';
 import 'react-native-reanimated';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-import { useTheme } from '@/contexts/ThemeContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { AuthProvider, useAuth, AuthStatus, OnboardingStep } from '@/contexts/AuthContext';
 import { BalanceProvider } from '@/contexts/BalanceContext';
+import { PendingTransactionManagerProvider } from '@/contexts/PendingTransactionManager';
+import { TransactionHistoryStoreProvider } from '@/contexts/TransactionHistoryStore';
 import '../global.css';
 
 import WelcomeScreen from '../app/auth/welcome';
@@ -56,7 +57,11 @@ export default function RootLayout() {
       <ThemeProvider>
         <AuthProvider>
           <BalanceProvider>
-            <AppContent />
+            <PendingTransactionManagerProvider>
+              <TransactionHistoryStoreProvider>
+                <AppContent />
+              </TransactionHistoryStoreProvider>
+            </PendingTransactionManagerProvider>
           </BalanceProvider>
         </AuthProvider>
       </ThemeProvider>
@@ -66,11 +71,9 @@ export default function RootLayout() {
 
 // Loading screen component
 function LoadingScreen() {
-  const { colorScheme } = useTheme();
-  
   return (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Text style={{ color: colorScheme === 'dark' ? '#fff' : '#000' }}>Loading...</Text>
+      <Text style={{ color: '#000' }}>Loading...</Text>
     </View>
   );
 }
@@ -87,7 +90,6 @@ function AuthenticatedApp() {
 
 // Main app content component
 function AppContent() {
-  const { colorScheme } = useTheme();
   const { status, onboardingStep } = useAuth();
   
   // Render the appropriate component based on auth status
@@ -105,9 +107,9 @@ function AppContent() {
   }
   
   return (
-    <NavigationThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <NavigationThemeProvider value={DefaultTheme}>
       {renderByAuthStatus(status)}
-      <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+      <StatusBar style="dark" />
       {status === 'authenticated' && <WalletDebugger />}
     </NavigationThemeProvider>
   );

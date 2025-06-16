@@ -271,7 +271,7 @@ const Valuations = ({ tokens, onUpdateValuation, isLoading, onRefresh }: Valuati
   if (isLoading && !refreshing) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#3B82F6" />
+        <ActivityIndicator size="small" color="#E5E7EB" />
         <Text style={styles.loadingText}>Loading valuations...</Text>
       </View>
     );
@@ -298,8 +298,8 @@ const Valuations = ({ tokens, onUpdateValuation, isLoading, onRefresh }: Valuati
         <RefreshControl
           refreshing={refreshing}
           onRefresh={handleRefresh}
-          colors={['#3B82F6']}
-          tintColor="#3B82F6"
+          colors={['#E5E7EB']}
+          tintColor="#E5E7EB"
         />
       }
     >

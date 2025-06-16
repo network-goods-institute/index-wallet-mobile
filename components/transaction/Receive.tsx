@@ -3,40 +3,78 @@ import { View, TextInput, TouchableOpacity, ActivityIndicator, Alert, ScrollView
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useTheme } from '@/contexts/ThemeContext';
-import { useTransaction } from '@/contexts/TransactionContext';
+import { useActiveTransaction } from '@/contexts/ActiveTransactionContext';
+import { usePendingTransactionManager } from '@/contexts/PendingTransactionManager';
+import { useTransactionHistory } from '@/contexts/TransactionHistoryStore';
+import { useAuth } from '@/contexts/AuthContext';
 import QRCode from 'react-native-qrcode-svg';
-import { QrCode, Copy, Check } from 'lucide-react-native';
+import { QrCode, Copy, Check, ArrowLeft } from 'lucide-react-native';
 import TransactionSuccess from '@/components/transaction/TransactionSuccess';
 
 export default function Receive() {
   const { colorScheme } = useTheme();
-  const { createTransaction, pollTransactionStatus, stopPolling, currentTransaction, isLoading, error, clearTransaction } = useTransaction();
+  const { activeRequest, createRequest, clearActiveRequest, isLoading, error } = useActiveTransaction();
+  const { pendingTransactions, syncTransactions } = usePendingTransactionManager();
+  const { transactions: historyTransactions, loadTransactionHistory } = useTransactionHistory();
+  const auth = useAuth();
   const [amount, setAmount] = useState('');
   const [paymentId, setPaymentId] = useState<string | null>(null);
   const [qrVisible, setQrVisible] = useState(false);
   const [transactionDetails, setTransactionDetails] = useState<any>(null);
   const [copied, setCopied] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-
-  // Clean up polling when component unmounts
+  
+  // Filter vendor's pending transactions (excluding the active one)
+  const vendorPendingTransactions = pendingTransactions
+    .filter(
+      t => t.vendor_address === auth?.walletAddress && 
+           t.payment_id !== activeRequest?.payment_id &&
+           t.status !== 'completed' && 
+           t.status !== 'Completed'
+    )
+    .sort((a, b) => b.created_at - a.created_at); // Sort by newest first
+    
+  // Filter vendor's completed transactions from both history and pending (as fallback)
+  const allTransactions = [...historyTransactions, ...pendingTransactions];
+  const vendorCompletedTransactions = allTransactions
+    .filter(
+      t => t.vendor_address === auth?.walletAddress &&
+           (t.status === 'completed' || t.status === 'Completed' || 
+            t.status === 'success' || t.status === 'Success' ||
+            t.status === 'confirmed' || t.status === 'Confirmed')
+    )
+    .sort((a, b) => b.created_at - a.created_at) // Sort by newest first
+    .filter((t, index, self) => 
+      index === self.findIndex(item => item.payment_id === t.payment_id) // Remove duplicates
+    );
+  
+  // Sync pending transactions on mount
   useEffect(() => {
-    return () => {
-      console.log('Receive component unmounting, stopping polling');
-      stopPolling();
-    };
-  }, []); // Remove stopPolling from dependencies to prevent re-running
+    console.log('Receive component mounted, syncing transactions...');
+    syncTransactions();
+    loadTransactionHistory();
+  }, []);
+  
+  // Debug effect to see pending transactions
+  useEffect(() => {
+    console.log('Pending transactions updated in Receive:', pendingTransactions.length);
+    console.log('Active request:', activeRequest?.payment_id);
+  }, [pendingTransactions, activeRequest]);
+
+  // Note: We don't clear active request on unmount anymore
+  // The ActiveTransactionContext is scoped to TransactScreen level
+  // so it will persist when switching between Pay/Receive tabs
 
   // Watch for completed transaction
   useEffect(() => {
-    if (currentTransaction) {
+    if (activeRequest) {
       const completedStatuses = ['completed', 'success', 'confirmed', 'Completed', 'Success', 'Confirmed'];
-      if (completedStatuses.includes(currentTransaction.status)) {
+      if (completedStatuses.includes(activeRequest.status)) {
         console.log('Transaction completed! Showing success screen');
         setShowSuccess(true);
-        stopPolling();
       }
     }
-  }, [currentTransaction?.status]);
+  }, [activeRequest?.status]);
 
   const handleCreatePayment = async () => {
     if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
@@ -45,10 +83,12 @@ export default function Receive() {
     }
 
     try {
-      const newPaymentId = await createTransaction(parseFloat(amount));
+      const newPaymentId = await createRequest(parseFloat(amount));
       setPaymentId(newPaymentId);
-      setQrVisible(true);
-      pollTransactionStatus(newPaymentId);
+      // Don't automatically show QR - let user see it in the list
+      setQrVisible(false);
+      setAmount(''); // Clear amount for next request
+      // Polling starts automatically in createRequest
       setTransactionDetails({
         paymentId: newPaymentId,
         amount: parseFloat(amount),
@@ -66,8 +106,7 @@ export default function Receive() {
   };
 
   const resetForm = () => {
-    stopPolling();
-    clearTransaction();
+    clearActiveRequest();
     setQrVisible(false);
     setPaymentId(null);
     setTransactionDetails(null);
@@ -78,9 +117,9 @@ export default function Receive() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colorScheme === 'dark' ? '#000000' : '#FFFFFF' }}>
       <ThemedView className="flex-1">
-        {showSuccess && currentTransaction ? (
+        {showSuccess && activeRequest ? (
           <TransactionSuccess 
-            transaction={currentTransaction}
+            transaction={activeRequest}
             onClose={resetForm}
             isVendor={true}
           />
@@ -143,19 +182,128 @@ export default function Receive() {
                   )}
                 </View>
               </TouchableOpacity>
+              
+              {/* Debug: Refresh button */}
+              <TouchableOpacity
+                className="mt-2 py-2"
+                onPress={() => {
+                  console.log('Manual sync triggered');
+                  syncTransactions();
+                }}
+              >
+                <ThemedText className="text-center text-sm opacity-60">
+                  Tap to refresh pending list
+                </ThemedText>
+              </TouchableOpacity>
             </View>
 
-            {/* Transaction Status - Only show when active */}
-            {currentTransaction && currentTransaction.status && currentTransaction.status !== 'No active transaction' && (
-              <View className="mx-4 p-4 bg-gray-100 dark:bg-gray-800 rounded-xl">
-                <ThemedText className="text-lg font-semibold mb-2">Transaction Status</ThemedText>
-                <View className="space-y-1">
-                  <ThemedText className="text-base opacity-80">Status: {currentTransaction.status}</ThemedText>
-                  {currentTransaction.amount && (
-                    <ThemedText className="text-base opacity-80">Amount: ${currentTransaction.amount}</ThemedText>
-                  )}
-                  {currentTransaction.paymentId && (
-                    <ThemedText className="text-base opacity-80">ID: {currentTransaction.paymentId}</ThemedText>
+            {/* Latest Request - Show prominently if exists */}
+            {activeRequest && (
+              <View className="mx-4 mt-6">
+                <ThemedText className="text-lg font-semibold mb-3">Latest Request</ThemedText>
+                <TouchableOpacity
+                  className="p-4 bg-green-100 dark:bg-green-900 rounded-xl border-2 border-green-500"
+                  onPress={() => {
+                    setPaymentId(activeRequest.payment_id);
+                    setAmount(activeRequest.price_usd.toString());
+                    setQrVisible(true);
+                  }}
+                >
+                  <View className="flex-row items-center justify-between mb-2">
+                    <ThemedText className="text-2xl font-bold">${activeRequest.price_usd}</ThemedText>
+                    <View className="bg-yellow-500 px-3 py-1 rounded-full">
+                      <ThemedText className="text-white text-sm font-semibold">Waiting</ThemedText>
+                    </View>
+                  </View>
+                  <View className="flex-row items-center justify-between">
+                    <ThemedText className="text-sm opacity-80">ID: {activeRequest.payment_id}</ThemedText>
+                    <ThemedText className="text-sm font-medium text-green-600 dark:text-green-400">
+                      Tap to show QR →
+                    </ThemedText>
+                  </View>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* All Pending Requests */}
+            {vendorPendingTransactions.length > 0 && (
+              <View className="mx-4 mt-6">
+                <ThemedText className="text-lg font-semibold mb-3">All Waiting Payments ({vendorPendingTransactions.length})</ThemedText>
+                <View className="space-y-2">
+                  {vendorPendingTransactions.map((transaction) => {
+                    const age = Date.now() - transaction.created_at;
+                    const ageMinutes = Math.floor(age / 60000);
+                    const ageText = ageMinutes < 1 ? 'Just now' : `${ageMinutes} min ago`;
+                    
+                    return (
+                      <TouchableOpacity
+                        key={transaction.payment_id}
+                        className="p-4 bg-gray-100 dark:bg-gray-800 rounded-xl flex-row items-center justify-between"
+                        onPress={() => {
+                          setPaymentId(transaction.payment_id);
+                          setAmount(transaction.price_usd.toString());
+                          setQrVisible(true);
+                        }}
+                      >
+                        <View className="flex-1">
+                          <ThemedText className="text-lg font-semibold">${transaction.price_usd}</ThemedText>
+                          <ThemedText className="text-sm opacity-60">{ageText} • {transaction.status}</ThemedText>
+                        </View>
+                        <View className={`w-3 h-3 rounded-full ${
+                          transaction.status === 'pending' || transaction.status === 'Created' ? 'bg-yellow-500' :
+                          transaction.status === 'calculated' || transaction.status === 'Supplemented' ? 'bg-blue-500' :
+                          'bg-gray-400'
+                        }`} />
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
+            
+            {/* Completed Transactions */}
+            {vendorCompletedTransactions.length > 0 && (
+              <View className="mx-4 mt-6 mb-8">
+                <ThemedText className="text-lg font-semibold mb-3">Completed Payments ({vendorCompletedTransactions.length})</ThemedText>
+                <View className="space-y-2">
+                  {vendorCompletedTransactions.slice(0, 5).map((transaction) => {
+                    const age = Date.now() - transaction.created_at;
+                    const ageMinutes = Math.floor(age / 60000);
+                    const ageHours = Math.floor(age / 3600000);
+                    const ageDays = Math.floor(age / 86400000);
+                    
+                    let ageText = 'Just now';
+                    if (ageDays > 0) {
+                      ageText = `${ageDays} day${ageDays > 1 ? 's' : ''} ago`;
+                    } else if (ageHours > 0) {
+                      ageText = `${ageHours} hour${ageHours > 1 ? 's' : ''} ago`;
+                    } else if (ageMinutes > 0) {
+                      ageText = `${ageMinutes} min ago`;
+                    }
+                    
+                    return (
+                      <TouchableOpacity
+                        key={transaction.payment_id}
+                        className="p-4 bg-gray-100 dark:bg-gray-800 rounded-xl flex-row items-center justify-between opacity-75"
+                        disabled={true} // Completed transactions are view-only
+                      >
+                        <View className="flex-1">
+                          <ThemedText className="text-lg font-semibold">${transaction.price_usd}</ThemedText>
+                          <ThemedText className="text-sm opacity-60">{ageText} • Completed</ThemedText>
+                          {transaction.customer_address && (
+                            <ThemedText className="text-xs opacity-50 mt-1">
+                              From: {transaction.customer_address.slice(0, 8)}...
+                            </ThemedText>
+                          )}
+                        </View>
+                        <View className="bg-green-500 w-3 h-3 rounded-full" />
+                      </TouchableOpacity>
+                    );
+                  })}
+                  {vendorCompletedTransactions.length > 5 && (
+                    <ThemedText className="text-sm text-center opacity-60 mt-2">
+                      +{vendorCompletedTransactions.length - 5} more completed payments
+                    </ThemedText>
                   )}
                 </View>
               </View>
@@ -164,11 +312,20 @@ export default function Receive() {
         ) : (
           <ScrollView 
             className="flex-1" 
-            contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24 }}
+            contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24 }}
             showsVerticalScrollIndicator={false}
           >
+            {/* Back Button */}
+            <TouchableOpacity
+              className="flex-row items-center mb-4 mt-4"
+              onPress={() => setQrVisible(false)}
+            >
+              <ArrowLeft size={24} color={colorScheme === 'dark' ? '#FFFFFF' : '#000000'} />
+              <ThemedText className="text-lg font-medium ml-2">Back to Requests</ThemedText>
+            </TouchableOpacity>
+            
             {/* QR Code Display */}
-            <View className="items-center">
+            <View className="items-center mt-8">
               <ThemedText className="text-2xl font-bold text-center mb-2">
                 Payment Request
               </ThemedText>
@@ -212,17 +369,17 @@ export default function Receive() {
               {/* Status Indicator */}
               <View className="flex-row items-center mb-8">
                 <View className={`w-3 h-3 rounded-full mr-3 ${
-                  currentTransaction?.status === 'pending' ? 'bg-yellow-500' :
-                  currentTransaction?.status === 'calculated' ? 'bg-blue-500' :
-                  currentTransaction?.status === 'confirmed' ? 'bg-green-500' :
-                  currentTransaction?.status === 'error' ? 'bg-red-500' :
+                  activeRequest?.status === 'pending' ? 'bg-yellow-500' :
+                  activeRequest?.status === 'calculated' ? 'bg-blue-500' :
+                  activeRequest?.status === 'confirmed' ? 'bg-green-500' :
+                  activeRequest?.status === 'error' ? 'bg-red-500' :
                   'bg-gray-400'
                 }`} />
                 <ThemedText className="text-base font-medium">
-                  {currentTransaction?.status === 'pending' ? 'Waiting for payment...' :
-                   currentTransaction?.status === 'calculated' ? 'Payment calculated' :
-                   currentTransaction?.status === 'confirmed' ? 'Payment confirmed!' :
-                   currentTransaction?.status === 'error' ? 'Error checking status' :
+                  {activeRequest?.status === 'pending' ? 'Waiting for payment...' :
+                   activeRequest?.status === 'calculated' ? 'Payment calculated' :
+                   activeRequest?.status === 'confirmed' ? 'Payment confirmed!' :
+                   activeRequest?.status === 'error' ? 'Error checking status' :
                    'Waiting...'}
                 </ThemedText>
               </View>
@@ -230,11 +387,11 @@ export default function Receive() {
               {/* Action Buttons */}
               <View className="w-full max-w-sm space-y-3">
                 <TouchableOpacity
-                  className="bg-gray-500 py-4 px-8 rounded-xl"
-                  onPress={resetForm}
+                  className="bg-blue-500 py-4 px-8 rounded-xl"
+                  onPress={() => setQrVisible(false)}
                 >
                   <ThemedText className="text-white text-center text-lg font-semibold">
-                    Create New Request
+                    Done
                   </ThemedText>
                 </TouchableOpacity>
               </View>

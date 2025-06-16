@@ -41,11 +41,10 @@ import { IconSymbol, IconSymbolName } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
 
 export default function SettingsScreen() {
-  const { colorScheme, toggleTheme, setTheme, theme } = useTheme();
+  const { colorScheme } = useTheme();
   const { status, logout, hasPasskey, seedPhrase } = useAuth();
   const router = useRouter();
   const isDarkMode = colorScheme === 'dark';
-  const isSystemTheme = theme === 'system';
   
   // These would be connected to actual functionality in a real implementation
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -99,28 +98,6 @@ export default function SettingsScreen() {
           type: 'link',
           onPress: handleLogout,
           icon: 'arrow.right.square.fill',
-        },
-      ],
-    },
-    {
-      title: 'Appearance',
-      items: [
-        {
-          title: 'Dark Mode',
-          description: 'Switch between light and dark theme',
-          type: 'toggle',
-          value: isDarkMode,
-          onValueChange: () => toggleTheme(),
-          icon: 'sun.max.fill',
-          iconDark: 'moon.fill',
-        },
-        {
-          title: 'Use System Theme',
-          description: 'Automatically match your device settings',
-          type: 'toggle',
-          value: isSystemTheme,
-          onValueChange: (value: boolean) => setTheme(value ? 'system' : isDarkMode ? 'dark' : 'light'),
-          icon: 'gearshape.fill',
         },
       ],
     },

@@ -190,6 +190,7 @@ export const PaymentAPI = {
    */
   getFinalizedTransaction: async (paymentId: string, supplementData: {
     payer_address: string;
+    payer_username?: string;
     payer_balances: Array<{
       token_key: string;     // "address,chainId"
       symbol: string;
@@ -236,6 +237,56 @@ export const PaymentAPI = {
       return response.data;
     } catch (error) {
       console.error('Error completing payment:', error);
+      throw error;
+    }
+  },
+
+
+  /**
+   * Sync transactions (pending and recent)
+   * @param params Sync parameters
+   */
+  syncTransactions: async (params: {
+    wallet_address: string;
+    include_pending: boolean;
+    include_recent: boolean;
+    if_modified_since?: number;
+  }) => {
+    try {
+      const response = await api.get('/api/transactions/sync', { params });
+      return response.data;
+    } catch (error) {
+      console.error('Error syncing transactions:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get transaction history for a user
+   * @param userAddress The wallet address of the user
+   */
+  getTransactionHistory: async (userAddress: string) => {
+    try {
+      const response = await api.get(`/api/users/${userAddress}/transactions`);
+      return response.data;
+    } catch (error) {
+      console.error('Error getting transaction history:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Batch check status for multiple transactions
+   * @param transactionIds Array of transaction IDs
+   */
+  batchCheckStatus: async (transactionIds: string[]) => {
+    try {
+      const response = await api.post('/api/transactions/batch-status', { 
+        transaction_ids: transactionIds 
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error batch checking status:', error);
       throw error;
     }
   },

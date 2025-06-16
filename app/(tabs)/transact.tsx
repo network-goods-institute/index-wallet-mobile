@@ -10,13 +10,13 @@ import Animated, {
   useSharedValue,
   interpolate
 } from 'react-native-reanimated';
-import { TransactionProvider, useTransaction } from '@/contexts/TransactionContext';
+import { ActiveTransactionProvider, useActiveTransaction } from '@/contexts/ActiveTransactionContext';
 import { useTheme } from '@/contexts/ThemeContext';
 
 // Inner component that can access transaction context
 function TransactContent() {
   const { colorScheme } = useTheme();
-  const { clearTransaction, stopPolling } = useTransaction();
+  const { clearActivePayment, clearActiveRequest } = useActiveTransaction();
   const [transactionType, setTransactionType] = useState<'pay' | 'receive'>('pay');
   const progress = useSharedValue(0); // 0 = pay, 1 = receive
 
@@ -30,9 +30,7 @@ function TransactContent() {
 
   const switchView = (type: 'pay' | 'receive') => {
     if (type !== transactionType) {
-      // Clear any existing transaction when switching tabs
-      clearTransaction();
-      stopPolling();
+      // Just switch view without clearing states
       progress.value = withSpring(type === 'pay' ? 0 : 1);
       setTransactionType(type);
     }
@@ -64,8 +62,8 @@ function TransactContent() {
 
 export default function TransactScreen() {
   return (
-    <TransactionProvider>
+    <ActiveTransactionProvider>
       <TransactContent />
-    </TransactionProvider>
+    </ActiveTransactionProvider>
   );
 }

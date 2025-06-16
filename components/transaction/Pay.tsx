@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { useTheme } from '@/contexts/ThemeContext';
-import { useTransaction } from '@/contexts/TransactionContext';
+import { useActiveTransaction } from '@/contexts/ActiveTransactionContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBalance } from '@/contexts/BalanceContext';
 import TransactionSuccess from './TransactionSuccess';
@@ -45,29 +45,29 @@ export default function Pay() {
   
   // Get transaction functions from context
   const { 
-    supplementTransaction,
-    completeTransaction,
+    activePayment,
+    initiatePayment,
+    completePayment,
+    clearActivePayment,
     isLoading,
-    error,
-    currentTransaction,
-    clearTransaction
-  } = useTransaction();
+    error
+  } = useActiveTransaction();
 
-  // Show modal when transaction is available
+  // Show modal when activePayment is available
   useEffect(() => {
-    if (currentTransaction) {
+    if (activePayment) {
       console.log('==========================================');
-      console.log('INCOMING TRANSACTION IN PAY COMPONENT:');
+      console.log('ACTIVE PAYMENT IN PAY COMPONENT:');
       console.log('==========================================');
-      console.log(JSON.stringify(currentTransaction, null, 2));
+      console.log(JSON.stringify(activePayment, null, 2));
       console.log('==========================================');
-      console.log('Transaction type:', typeof currentTransaction);
-      console.log('Has payment_bundle:', !!currentTransaction.payment_bundle);
-      console.log('Payment bundle length:', currentTransaction.payment_bundle?.length || 0);
+      console.log('Transaction type:', typeof activePayment);
+      console.log('Has payment_bundle:', !!activePayment.payment_bundle);
+      console.log('Payment bundle length:', activePayment.payment_bundle?.length || 0);
       console.log('==========================================');
       setShowModal(true);
     }
-  }, [currentTransaction]);
+  }, [activePayment]);
 
   // Animate modal when showModal changes
   useEffect(() => {
@@ -102,7 +102,7 @@ export default function Pay() {
     console.log('==========================================');
     
     try {
-      await supplementTransaction(paymentCode);
+      await initiatePayment(paymentCode);
       // Clear the input
       setPaymentCode('');
       setShowInput(false);
@@ -121,18 +121,18 @@ export default function Pay() {
     setShowInput(false);
     setShowSuccess(false);
     setCompletedTransaction(null);
-    clearTransaction();
+    clearActivePayment();
   };
 
   // Handle complete payment
   const handleCompletePayment = async () => {
-    if (!currentTransaction) return;
+    if (!activePayment) return;
     
     setProcessing(true);
     try {
-      const paymentId = currentTransaction?.payment_id || (currentTransaction as any).paymentId;
-      const transactionData = currentTransaction?.unsigned_transaction ? 
-        JSON.parse(currentTransaction.unsigned_transaction) : undefined;
+      const paymentId = activePayment?.payment_id || (activePayment as any).paymentId;
+      const transactionData = activePayment?.unsigned_transaction ? 
+        JSON.parse(activePayment.unsigned_transaction) : undefined;
       
       if (!paymentId || !transactionData) {
         throw new Error('Missing payment ID or unsigned transaction data');
@@ -148,7 +148,7 @@ export default function Pay() {
       const response = await signAndSendTransaction(
         paymentId, 
         transactionData, 
-        currentTransaction, 
+        activePayment, 
         payerAddress,
         privateKey
       );
@@ -167,7 +167,7 @@ export default function Pay() {
         }
       } else {
         await refreshBalances();
-        await completeTransaction(paymentId);
+        await completePayment(paymentId);
         setShowSuccess(true);
         setShowModal(false);
       }
@@ -181,11 +181,11 @@ export default function Pay() {
 
   // Transaction details modal - Apple style bottom sheet
   const renderTransactionModal = () => {
-    if (!currentTransaction) return null;
+    if (!activePayment) return null;
     
-    const amount = currentTransaction.amount || (currentTransaction as any).price_usd;
-    const vendorName = currentTransaction.vendor_name || (currentTransaction as any).vendor_name;
-    const paymentBundle = (currentTransaction as any).payment_bundle || [];
+    const amount = activePayment.amount || (activePayment as any).price_usd;
+    const vendorName = activePayment.vendor_name || (activePayment as any).vendor_name;
+    const paymentBundle = (activePayment as any).payment_bundle || [];
     
     // Get token colors based on symbol
     const getTokenColor = (symbol: string) => {
@@ -534,8 +534,8 @@ export default function Pay() {
                 { backgroundColor: colorScheme === 'dark' ? 'rgba(17, 24, 39, 0.95)' : 'rgba(255, 255, 255, 0.95)' }
               ]}>
                 <ActivityIndicator 
-                  size="large" 
-                  color={colorScheme === 'dark' ? '#60A5FA' : '#3B82F6'} 
+                  size="small" 
+                  color="#E5E7EB" 
                   style={{ marginBottom: 16 }}
                 />
                 <ThemedText className="text-lg font-medium">

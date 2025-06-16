@@ -37,10 +37,6 @@ export default function HomeScreen() {
     return;
   };
 
-  const handleSend = () => {
-    Alert.alert('Send', 'Trigger Payment flow');
-  };
-
   const handleCopy = () => {
     Alert.alert('Copy', 'Address copied to clipboard!');
   };
@@ -87,7 +83,6 @@ export default function HomeScreen() {
         tokens={transformedTokens}
         onBuyPress={handleBuy}
         onSwapPress={handleSwap}
-        onSendPress={handleSend}
         onCopyPress={handleCopy}
         isRefreshing={refreshing}
         onRefresh={handleRefresh}

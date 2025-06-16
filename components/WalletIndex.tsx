@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, TouchableOpacity, ScrollView, Modal, Linking, RefreshControl } from 'react-native';
+import { View, Text, Image, TouchableOpacity, ScrollView, Modal, Linking, RefreshControl, SafeAreaView } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { ThemedView } from './ThemedView';
-import { Plus, ArrowUpRight, Copy, ChevronDown, Coins, Store, ArrowRight, Wallet, X } from 'lucide-react-native';
+import { Plus, Copy, Store, ArrowRight, Wallet, X, Clock } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { router } from 'expo-router';
@@ -22,7 +22,6 @@ interface WalletIndexProps {
   tokens: Token[];
   onBuyPress?: () => void;
   onSwapPress?: () => void;
-  onSendPress?: () => void;
   onCopyPress?: () => void;
   isRefreshing?: boolean;
   onRefresh?: () => void;
@@ -33,7 +32,6 @@ export function WalletIndex({
   tokens,
   onBuyPress,
   onSwapPress,
-  onSendPress,
   onCopyPress,
   isRefreshing = false,
   onRefresh,
@@ -41,17 +39,18 @@ export function WalletIndex({
   const { colorScheme } = useTheme();
   const [showLoadWalletModal, setShowLoadWalletModal] = useState(false);
   return (
-    <ThemedView
-      className="flex-1 p-4 rounded-2xl pt-16 bg-white dark:bg-black"
-    >
+    <SafeAreaView style={{ flex: 1, backgroundColor: colorScheme === 'dark' ? '#000000' : '#FFFFFF' }}>
+      <ThemedView
+        className="flex-1 p-4 bg-white dark:bg-black"
+      >
       <ScrollView 
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={onRefresh}
-            colors={['#3B82F6']}
-            tintColor="#3B82F6"
+            colors={['#E5E7EB']}
+            tintColor="#E5E7EB"
           />
         }
       >
@@ -65,7 +64,7 @@ export function WalletIndex({
         <ActionButtonRow
           onBuyPress={onBuyPress}
           onSwapPress={onSwapPress}
-          onSendPress={onSendPress}
+          onHistoryPress={() => router.push('/history')}
           onCopyPress={onCopyPress}
         />
 
@@ -78,8 +77,9 @@ export function WalletIndex({
         {/* Partnered Vendors Section */}
         <PartneredVendorsSection />
         
-        {/* Add some bottom padding */}
-        <View style={{ height: 20 }} />
+        
+        {/* Add some bottom padding to account for tab bar */}
+        <View style={{ height: 100 }} />
       </ScrollView>
       
       {/* Load Wallet Modal */}
@@ -87,7 +87,8 @@ export function WalletIndex({
         visible={showLoadWalletModal} 
         onClose={() => setShowLoadWalletModal(false)} 
       />
-    </ThemedView>
+      </ThemedView>
+    </SafeAreaView>
   );
 }
 
@@ -355,18 +356,18 @@ function PartneredVendorsSection() {
 function ActionButtonRow({
   onBuyPress,
   onSwapPress,
-  onSendPress,
+  onHistoryPress,
   onCopyPress,
 }: {
   onBuyPress?: () => void;
   onSwapPress?: () => void;
-  onSendPress?: () => void;
+  onHistoryPress?: () => void;
   onCopyPress?: () => void;
 }) {
   return (
     <View className="flex-row px-24 justify-center gap-4 mb-8">
       <ActionButton icon={<Plus size={18} className="text-black dark:text-white" />} onPress={onBuyPress} />
-      <ActionButton icon={<ArrowUpRight size={18} className="text-black dark:text-white" />} onPress={onSendPress} />
+      <ActionButton icon={<Clock size={18} className="text-black dark:text-white" />} onPress={onHistoryPress} />
       <ActionButton icon={<Copy size={18} className="text-black dark:text-white" />} onPress={onCopyPress} />
     </View>
   );
