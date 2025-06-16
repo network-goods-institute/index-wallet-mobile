@@ -230,20 +230,37 @@ export const TransactionProvider: React.FC<{ children: ReactNode }> = ({ childre
         const timeout = setTimeout(pollFunction, currentDelay);
         setPollingInterval(timeout as any);
         
-      } catch (err) {
+      } catch (err: any) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to poll transaction status';
         setError(errorMessage);
         console.error('Polling error:', errorMessage);
         
-        // On error, increase delay more aggressively
-        currentDelay = Math.min(currentDelay * 2, maxDelay);
+        // Check if it's a server error (5xx)
+        if (err.response?.status >= 500 && err.response?.status < 600) {
+          console.error('Server error detected, will retry with longer delay');
+          // For server errors, increase delay more aggressively
+          currentDelay = Math.min(currentDelay * 3, maxDelay);
+        } else {
+          // For other errors, normal backoff
+          currentDelay = Math.min(currentDelay * 2, maxDelay);
+        }
         console.log(`Error occurred, increasing delay to: ${currentDelay}ms`);
         
         // Stop polling if too many errors or max attempts reached
-        if (attemptCount >= maxAttempts) {
+        if (attemptCount >= maxAttempts || attemptCount >= 10) { // Stop after 10 attempts for errors
           stopPolling();
           console.log('Stopped polling due to too many errors');
           console.log('ERROR: Unable to check transaction status. Please try again later.');
+          
+          // Update the transaction status to show error
+          setCurrentTransaction(prev => {
+            if (!prev) return null;
+            return {
+              ...prev,
+              status: 'error',
+              error: 'Unable to get payment status'
+            };
+          });
           return;
         }
         
@@ -381,7 +398,12 @@ export const TransactionProvider: React.FC<{ children: ReactNode }> = ({ childre
         payer_balances: payerBalances
       });
       
-      console.log('Transaction from API:', transaction);
+      console.log('==========================================');
+      console.log('TRANSACTION RECEIVED FROM API:');
+      console.log('==========================================');
+      console.log(JSON.stringify(transaction, null, 2));
+      console.log('==========================================');
+      console.log('Setting as currentTransaction...');
       setCurrentTransaction(transaction);
       return transaction;
     } catch (err) {

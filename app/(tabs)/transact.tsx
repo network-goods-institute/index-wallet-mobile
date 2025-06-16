@@ -10,11 +10,13 @@ import Animated, {
   useSharedValue,
   interpolate
 } from 'react-native-reanimated';
-import { TransactionProvider } from '@/contexts/TransactionContext';
+import { TransactionProvider, useTransaction } from '@/contexts/TransactionContext';
 import { useTheme } from '@/contexts/ThemeContext';
 
-export default function TransactScreen() {
+// Inner component that can access transaction context
+function TransactContent() {
   const { colorScheme } = useTheme();
+  const { clearTransaction, stopPolling } = useTransaction();
   const [transactionType, setTransactionType] = useState<'pay' | 'receive'>('pay');
   const progress = useSharedValue(0); // 0 = pay, 1 = receive
 
@@ -28,33 +30,42 @@ export default function TransactScreen() {
 
   const switchView = (type: 'pay' | 'receive') => {
     if (type !== transactionType) {
+      // Clear any existing transaction when switching tabs
+      clearTransaction();
+      stopPolling();
       progress.value = withSpring(type === 'pay' ? 0 : 1);
       setTransactionType(type);
     }
   };
 
   return (
-    <TransactionProvider>
-      <SafeAreaView style={{ flex: 1, backgroundColor: colorScheme === 'dark' ? '#000000' : '#FFFFFF' }}>
-        <ThemedView className="flex-1">
-          <View className="flex-1">
-            {transactionType === 'pay' ? <Pay /> : <Receive />}
-          </View>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colorScheme === 'dark' ? '#000000' : '#FFFFFF' }}>
+      <ThemedView className="flex-1">
+        <View className="flex-1">
+          {transactionType === 'pay' ? <Pay /> : <Receive />}
+        </View>
 
-          <View className="flex-row text-white justify-center items-center pb-24 gap-12">
-            <TouchableOpacity onPress={() => switchView('pay')}>
-              <Animated.View style={payTextStyle}>
-                <ThemedText className="text-base">Pay</ThemedText>
-              </Animated.View>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => switchView('receive')}>
-              <Animated.View style={receiveTextStyle}>
-                <ThemedText className="text-base">Receive</ThemedText>
-              </Animated.View>
-            </TouchableOpacity>
-          </View>
-        </ThemedView>
-      </SafeAreaView>
+        <View className="flex-row text-white justify-center items-center pb-24 gap-12">
+          <TouchableOpacity onPress={() => switchView('pay')}>
+            <Animated.View style={payTextStyle}>
+              <ThemedText className="text-base">Pay</ThemedText>
+            </Animated.View>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => switchView('receive')}>
+            <Animated.View style={receiveTextStyle}>
+              <ThemedText className="text-base">Receive</ThemedText>
+            </Animated.View>
+          </TouchableOpacity>
+        </View>
+      </ThemedView>
+    </SafeAreaView>
+  );
+}
+
+export default function TransactScreen() {
+  return (
+    <TransactionProvider>
+      <TransactContent />
     </TransactionProvider>
   );
 }

@@ -6,22 +6,37 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useTransaction } from '@/contexts/TransactionContext';
 import QRCode from 'react-native-qrcode-svg';
 import { QrCode, Copy, Check } from 'lucide-react-native';
+import TransactionSuccess from '@/components/transaction/TransactionSuccess';
 
 export default function Receive() {
   const { colorScheme } = useTheme();
-  const { createTransaction, pollTransactionStatus, stopPolling, currentTransaction, isLoading, error } = useTransaction();
+  const { createTransaction, pollTransactionStatus, stopPolling, currentTransaction, isLoading, error, clearTransaction } = useTransaction();
   const [amount, setAmount] = useState('');
   const [paymentId, setPaymentId] = useState<string | null>(null);
   const [qrVisible, setQrVisible] = useState(false);
   const [transactionDetails, setTransactionDetails] = useState<any>(null);
   const [copied, setCopied] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   // Clean up polling when component unmounts
   useEffect(() => {
     return () => {
+      console.log('Receive component unmounting, stopping polling');
       stopPolling();
     };
-  }, [stopPolling]);
+  }, []); // Remove stopPolling from dependencies to prevent re-running
+
+  // Watch for completed transaction
+  useEffect(() => {
+    if (currentTransaction) {
+      const completedStatuses = ['completed', 'success', 'confirmed', 'Completed', 'Success', 'Confirmed'];
+      if (completedStatuses.includes(currentTransaction.status)) {
+        console.log('Transaction completed! Showing success screen');
+        setShowSuccess(true);
+        stopPolling();
+      }
+    }
+  }, [currentTransaction?.status]);
 
   const handleCreatePayment = async () => {
     if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
@@ -52,16 +67,24 @@ export default function Receive() {
 
   const resetForm = () => {
     stopPolling();
+    clearTransaction();
     setQrVisible(false);
     setPaymentId(null);
     setTransactionDetails(null);
     setAmount('');
+    setShowSuccess(false);
   };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colorScheme === 'dark' ? '#000000' : '#FFFFFF' }}>
       <ThemedView className="flex-1">
-        {!qrVisible ? (
+        {showSuccess && currentTransaction ? (
+          <TransactionSuccess 
+            transaction={currentTransaction}
+            onClose={resetForm}
+            isVendor={true}
+          />
+        ) : !qrVisible ? (
           <ScrollView 
             className="flex-1" 
             contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24 }}
@@ -192,12 +215,14 @@ export default function Receive() {
                   currentTransaction?.status === 'pending' ? 'bg-yellow-500' :
                   currentTransaction?.status === 'calculated' ? 'bg-blue-500' :
                   currentTransaction?.status === 'confirmed' ? 'bg-green-500' :
+                  currentTransaction?.status === 'error' ? 'bg-red-500' :
                   'bg-gray-400'
                 }`} />
                 <ThemedText className="text-base font-medium">
                   {currentTransaction?.status === 'pending' ? 'Waiting for payment...' :
                    currentTransaction?.status === 'calculated' ? 'Payment calculated' :
                    currentTransaction?.status === 'confirmed' ? 'Payment confirmed!' :
+                   currentTransaction?.status === 'error' ? 'Error checking status' :
                    'Waiting...'}
                 </ThemedText>
               </View>

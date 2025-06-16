@@ -19,6 +19,7 @@ const { width, height } = Dimensions.get('window');
 interface TransactionSuccessProps {
   transaction: any;
   onClose: () => void;
+  isVendor?: boolean;
 }
 
 // Confetti particle component
@@ -76,7 +77,7 @@ const ConfettiParticle = ({ delay }: { delay: number }) => {
   );
 };
 
-const TransactionSuccess: React.FC<TransactionSuccessProps> = ({ transaction, onClose }) => {
+const TransactionSuccess: React.FC<TransactionSuccessProps> = ({ transaction, onClose, isVendor = false }) => {
   const { colorScheme } = useTheme();
   const checkAnimation = useRef(new Animated.Value(0)).current;
   const contentAnimation = useRef(new Animated.Value(0)).current;
@@ -167,10 +168,10 @@ const TransactionSuccess: React.FC<TransactionSuccessProps> = ({ transaction, on
           >
             {/* Success Message */}
             <ThemedText className="text-3xl font-bold text-center mb-2">
-              Payment Successful!
+              {isVendor ? 'Payment Received!' : 'Payment Successful!'}
             </ThemedText>
             <ThemedText className="text-lg text-center opacity-60 mb-8">
-              Your payment has been processed
+              {isVendor ? 'The payment has been received' : 'Your payment has been processed'}
             </ThemedText>
 
             {/* Amount Card */}
@@ -182,7 +183,7 @@ const TransactionSuccess: React.FC<TransactionSuccessProps> = ({ transaction, on
                 ${amount}
               </ThemedText>
               <ThemedText className="text-lg text-center opacity-60">
-                Paid to {vendorName}
+                {isVendor ? 'Received' : `Paid to ${vendorName}`}
               </ThemedText>
             </View>
 

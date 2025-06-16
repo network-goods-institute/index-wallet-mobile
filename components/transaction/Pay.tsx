@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { 
   View, 
   TouchableOpacity, 
@@ -11,7 +11,8 @@ import {
   SafeAreaView,
   Alert,
   Image,
-  ActivityIndicator
+  ActivityIndicator,
+  Animated
 } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -38,6 +39,10 @@ export default function Pay() {
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [completedTransaction, setCompletedTransaction] = useState(null);
   
+  // Animation values for modal
+  const modalOpacity = useRef(new Animated.Value(0)).current;
+  const sheetTranslateY = useRef(new Animated.Value(height)).current;
+  
   // Get transaction functions from context
   const { 
     supplementTransaction,
@@ -51,16 +56,50 @@ export default function Pay() {
   // Show modal when transaction is available
   useEffect(() => {
     if (currentTransaction) {
+      console.log('==========================================');
+      console.log('INCOMING TRANSACTION IN PAY COMPONENT:');
+      console.log('==========================================');
+      console.log(JSON.stringify(currentTransaction, null, 2));
+      console.log('==========================================');
+      console.log('Transaction type:', typeof currentTransaction);
+      console.log('Has payment_bundle:', !!currentTransaction.payment_bundle);
+      console.log('Payment bundle length:', currentTransaction.payment_bundle?.length || 0);
+      console.log('==========================================');
       setShowModal(true);
     }
   }, [currentTransaction]);
+
+  // Animate modal when showModal changes
+  useEffect(() => {
+    if (showModal) {
+      // Fade in overlay and slide up sheet
+      Animated.parallel([
+        Animated.timing(modalOpacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.spring(sheetTranslateY, {
+          toValue: 0,
+          damping: 20,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      // Reset animations
+      modalOpacity.setValue(0);
+      sheetTranslateY.setValue(height);
+    }
+  }, [showModal]);
 
   // Handle payment code submission
   const handlePaymentCodeSubmit = async () => {
     if (!paymentCode.trim() || processing || isLoading) return;
     
     setProcessing(true);
-    console.log(`Processing payment code: ${paymentCode}`);
+    console.log('==========================================');
+    console.log(`PAYMENT CODE SUBMITTED: ${paymentCode}`);
+    console.log('==========================================');
     
     try {
       await supplementTransaction(paymentCode);
@@ -163,25 +202,38 @@ export default function Pay() {
     
     return (
       <Modal
-        animationType="slide"
+        animationType="none"
         transparent={true}
         visible={showModal}
         onRequestClose={resetPayment}
-        presentationStyle="pageSheet"
+        presentationStyle="overFullScreen"
       >
-        <TouchableOpacity 
-          style={styles.modalOverlay} 
-          activeOpacity={1} 
-          onPress={resetPayment}
+        <Animated.View 
+          style={[
+            styles.modalOverlay,
+            {
+              opacity: modalOpacity,
+            }
+          ]}
         >
           <TouchableOpacity 
+            style={styles.modalOverlayTouch} 
             activeOpacity={1} 
-            style={[
-              styles.bottomSheet,
-              { backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF' }
-            ]}
-            onPress={(e) => e.stopPropagation()}
+            onPress={resetPayment}
           >
+            <Animated.View 
+              style={[
+                styles.bottomSheet,
+                { 
+                  backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
+                  transform: [{ translateY: sheetTranslateY }]
+                }
+              ]}
+            >
+              <TouchableOpacity 
+                activeOpacity={1} 
+                onPress={(e) => e.stopPropagation()}
+              >
             {/* Handle bar */}
             <View style={styles.handleBar} />
             
@@ -309,8 +361,10 @@ export default function Pay() {
             
             {/* Safe area padding */}
             <View style={{ height: Platform.OS === 'ios' ? 20 : 0 }} />
+              </TouchableOpacity>
+            </Animated.View>
           </TouchableOpacity>
-        </TouchableOpacity>
+        </Animated.View>
       </Modal>
     );
   };
@@ -421,32 +475,27 @@ export default function Pay() {
                       onPress={handlePaymentCodeSubmit}
                       disabled={isLoading || processing || !paymentCode.trim()}
                     >
-                      {isLoading || processing ? (
-                        <View style={styles.loadingButton}>
-                          <ActivityIndicator color="#FFFFFF" size="small" />
-                          <ThemedText className="text-white font-semibold ml-2">
-                            Processing...
-                          </ThemedText>
-                        </View>
-                      ) : (
-                        <View style={styles.submitContent}>
-                          <ThemedText className="text-white font-semibold">
-                            Submit
-                          </ThemedText>
+                      <View style={styles.submitContent}>
+                        <ThemedText className="text-white font-semibold">
+                          Submit
+                        </ThemedText>
+                        {isLoading || processing ? (
+                          <ActivityIndicator color="#FFFFFF" size="small" style={{ marginLeft: 8 }} />
+                        ) : (
                           <Ionicons name="arrow-forward" size={18} color="#FFFFFF" style={{ marginLeft: 8 }} />
-                        </View>
-                      )}
+                        )}
+                      </View>
                     </TouchableOpacity>
                   </View>
                   
                   <TouchableOpacity 
-                    style={styles.cancelInputButton}
+                    style={[styles.cancelInputButton, { position: 'absolute', right: 0, top: 70 }]}
                     onPress={() => {
                       setShowInput(false);
                       setPaymentCode('');
                     }}
                   >
-                    <ThemedText className="text-center opacity-60">
+                    <ThemedText className="text-sm opacity-60">
                       Cancel
                     </ThemedText>
                   </TouchableOpacity>
@@ -672,12 +721,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cancelInputButton: {
-    marginTop: 12,
-    paddingVertical: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
   },
   modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalOverlayTouch: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
     justifyContent: 'flex-end',
   },
   bottomSheet: {
