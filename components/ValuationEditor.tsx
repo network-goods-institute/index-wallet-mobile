@@ -81,20 +81,27 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
     if (sliderWidth > 0) {
       const percentage = Math.max(0, Math.min(1, touchX / sliderWidth));
       
-      // Same non-linear mapping
+      // Dynamic non-linear scale that adapts to current value
       let mappedValue;
-      if (percentage >= 0.4 && percentage <= 0.6) {
-        mappedValue = (percentage - 0.5) * 100;
-      } else if (percentage < 0.4) {
-        const normalized = (0.4 - percentage) / 0.4;
-        mappedValue = -25 - (Math.pow(normalized, 2) * 475);
+      const currentRange = Math.max(50, Math.abs(adjustment) + 50);
+      
+      if (percentage >= 0.45 && percentage <= 0.55) {
+        // Small linear zone in center for fine control
+        mappedValue = (percentage - 0.5) * currentRange * 0.4;
+      } else if (percentage < 0.45) {
+        // Progressive exponential on left
+        const normalized = (0.45 - percentage) / 0.45;
+        const expo = Math.pow(normalized, 1.5);
+        mappedValue = -currentRange * 0.2 - (expo * currentRange * 2);
       } else {
-        const normalized = (percentage - 0.6) / 0.4;
-        mappedValue = 25 + (Math.pow(normalized, 2) * 475);
+        // Progressive exponential on right
+        const normalized = (percentage - 0.55) / 0.45;
+        const expo = Math.pow(normalized, 1.5);
+        mappedValue = currentRange * 0.2 + (expo * currentRange * 2);
       }
       
       const newAdjustment = Math.round(mappedValue * 10) / 10;
-      setAdjustment(Math.max(-500, Math.min(500, newAdjustment)));
+      setAdjustment(Math.max(-1000, Math.min(1000, newAdjustment)));
     }
   };
 
@@ -111,25 +118,27 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
         if (sliderWidth > 0) {
           const percentage = Math.max(0, Math.min(1, touchX / sliderWidth));
           
-          // Use a non-linear scale for more natural feeling
-          // Center area (40-60%) maps to smaller values
-          // Edge areas expand exponentially
+          // Dynamic non-linear scale that adapts to current value
           let mappedValue;
-          if (percentage >= 0.4 && percentage <= 0.6) {
-            // Linear in center
-            mappedValue = (percentage - 0.5) * 100;
-          } else if (percentage < 0.4) {
-            // Exponential on left
-            const normalized = (0.4 - percentage) / 0.4;
-            mappedValue = -25 - (Math.pow(normalized, 2) * 475);
+          const currentRange = Math.max(50, Math.abs(adjustment) + 50);
+          
+          if (percentage >= 0.45 && percentage <= 0.55) {
+            // Small linear zone in center for fine control
+            mappedValue = (percentage - 0.5) * currentRange * 0.4;
+          } else if (percentage < 0.45) {
+            // Progressive exponential on left
+            const normalized = (0.45 - percentage) / 0.45;
+            const expo = Math.pow(normalized, 1.5);
+            mappedValue = -currentRange * 0.2 - (expo * currentRange * 2);
           } else {
-            // Exponential on right
-            const normalized = (percentage - 0.6) / 0.4;
-            mappedValue = 25 + (Math.pow(normalized, 2) * 475);
+            // Progressive exponential on right
+            const normalized = (percentage - 0.55) / 0.45;
+            const expo = Math.pow(normalized, 1.5);
+            mappedValue = currentRange * 0.2 + (expo * currentRange * 2);
           }
           
           const newAdjustment = Math.round(mappedValue * 10) / 10;
-          setAdjustment(Math.max(-500, Math.min(500, newAdjustment)));
+          setAdjustment(Math.max(-1000, Math.min(1000, newAdjustment)));
         }
       },
       onPanResponderRelease: () => {
@@ -161,22 +170,26 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
   // Calculate display range based on current adjustment
   const displayRange = Math.max(50, Math.ceil(Math.abs(adjustment) / 50) * 50 + 50);
   
-  // Calculate the position of the thumb on the slider using non-linear mapping
+  // Calculate the position of the thumb on the slider using dynamic scaling
   const getThumbPosition = () => {
     if (sliderWidth === 0) return sliderWidth / 2;
     
-    // Inverse of the non-linear mapping
-    if (Math.abs(adjustment) <= 25) {
+    const currentRange = Math.max(50, Math.abs(adjustment) + 50);
+    
+    // Inverse of the dynamic non-linear mapping
+    if (Math.abs(adjustment) <= currentRange * 0.2) {
       // Linear range
-      return (adjustment / 100 + 0.5) * sliderWidth;
-    } else if (adjustment < -25) {
+      return (adjustment / (currentRange * 0.4) + 0.5) * sliderWidth;
+    } else if (adjustment < -currentRange * 0.2) {
       // Left exponential
-      const normalized = Math.sqrt((Math.abs(adjustment) - 25) / 475);
-      return (0.4 - normalized * 0.4) * sliderWidth;
+      const valueOffset = Math.abs(adjustment) - currentRange * 0.2;
+      const normalized = Math.pow(valueOffset / (currentRange * 2), 1/1.5);
+      return (0.45 - normalized * 0.45) * sliderWidth;
     } else {
       // Right exponential
-      const normalized = Math.sqrt((adjustment - 25) / 475);
-      return (0.6 + normalized * 0.4) * sliderWidth;
+      const valueOffset = adjustment - currentRange * 0.2;
+      const normalized = Math.pow(valueOffset / (currentRange * 2), 1/1.5);
+      return (0.55 + normalized * 0.45) * sliderWidth;
     }
   };
   
@@ -322,14 +335,14 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
                   />
                 )}
                 
-                {/* Edge glow effect when approaching limits */}
+                {/* Edge glow and continuation indicator */}
                 {Math.abs(adjustment) > displayRange * 0.7 && (
                   <>
                     <Animated.View 
-                      className="absolute h-full w-16"
+                      className="absolute h-full w-20"
                       style={{
                         [adjustment > 0 ? 'right' : 'left']: 0,
-                        opacity: ((Math.abs(adjustment) - displayRange * 0.7) / (displayRange * 0.3)) * 0.3,
+                        opacity: ((Math.abs(adjustment) - displayRange * 0.7) / (displayRange * 0.3)) * 0.4,
                         backgroundColor: adjustment > 0 ? '#22C55E' : '#EAB308',
                       }}
                     />
@@ -338,9 +351,25 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
                       style={{
                         [adjustment > 0 ? 'right' : 'left']: 0,
                         backgroundColor: adjustment > 0 ? '#22C55E' : '#EAB308',
-                        opacity: 0.5,
+                        opacity: 0.8,
                       }}
                     />
+                    {/* Continuation arrows */}
+                    <View 
+                      className="absolute"
+                      style={{
+                        [adjustment > 0 ? 'right' : 'left']: 8,
+                        top: '50%',
+                        transform: [{ translateY: -12 }],
+                      }}
+                    >
+                      <ThemedText className="text-lg font-bold" style={{
+                        color: adjustment > 0 ? '#22C55E' : '#EAB308',
+                        opacity: 0.8,
+                      }}>
+                        {adjustment > 0 ? '»»' : '««'}
+                      </ThemedText>
+                    </View>
                   </>
                 )}
                 
@@ -372,26 +401,80 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
                 />
               </View>
 
-              {/* Tick marks */}
+              {/* Dynamic scale marks */}
               <View style={styles.tickContainer}>
-                {[-100, -50, -25, 0, 25, 50, 100].map((value) => {
-                  // Only show ticks within current display range
-                  if (Math.abs(value) > displayRange) return null;
+                {/* Center mark at $0 */}
+                <View style={[styles.tickWrapper, { position: 'absolute', left: sliderWidth / 2 - 1 }]}>
+                  <View style={[styles.tick, { 
+                    backgroundColor: colorScheme === 'dark' ? '#48484A' : '#C7C7CC',
+                    height: 12,
+                    width: 2,
+                  }]} />
+                  <ThemedText style={[styles.tickLabel, { opacity: 1 }]}>
+                    $0
+                  </ThemedText>
+                </View>
+                
+                {/* Dynamic scale marks based on current value */}
+                {(() => {
+                  const marks = [];
+                  const absAdjustment = Math.abs(adjustment);
                   
-                  return (
-                    <View key={value} style={styles.tickWrapper}>
-                      <View style={[styles.tick, { 
-                        backgroundColor: colorScheme === 'dark' ? '#48484A' : '#C7C7CC',
-                        height: value === 0 ? 12 : 8,
-                      }]} />
-                      <ThemedText style={[styles.tickLabel, {
-                        opacity: Math.abs(value) > 50 ? 0.5 : 1,
-                      }]}>
-                        {value > 0 ? '+' : ''}{value < 0 ? '-' : ''}${Math.abs(value)}
-                      </ThemedText>
-                    </View>
-                  );
-                })}
+                  // Determine scale marks based on current value
+                  let stepSize = 25;
+                  if (absAdjustment > 100) stepSize = 50;
+                  if (absAdjustment > 200) stepSize = 100;
+                  if (absAdjustment > 400) stepSize = 200;
+                  
+                  // Generate marks
+                  for (let i = stepSize; i <= Math.max(100, displayRange); i += stepSize) {
+                    // Left side (negative/premium)
+                    marks.push(
+                      <View 
+                        key={`left-${i}`} 
+                        style={[styles.tickWrapper, { 
+                          position: 'absolute', 
+                          left: sliderWidth / 2 - (i / displayRange * sliderWidth / 2) - 1,
+                          opacity: i > displayRange * 0.8 ? 0.3 : 1,
+                        }]}
+                      >
+                        <View style={[styles.tick, { 
+                          backgroundColor: colorScheme === 'dark' ? '#48484A' : '#C7C7CC',
+                          height: 8,
+                        }]} />
+                        {i <= displayRange * 0.8 && (
+                          <ThemedText style={[styles.tickLabel, { opacity: 0.6 }]}>
+                            -${i}
+                          </ThemedText>
+                        )}
+                      </View>
+                    );
+                    
+                    // Right side (positive/discount)
+                    marks.push(
+                      <View 
+                        key={`right-${i}`} 
+                        style={[styles.tickWrapper, { 
+                          position: 'absolute', 
+                          left: sliderWidth / 2 + (i / displayRange * sliderWidth / 2) - 1,
+                          opacity: i > displayRange * 0.8 ? 0.3 : 1,
+                        }]}
+                      >
+                        <View style={[styles.tick, { 
+                          backgroundColor: colorScheme === 'dark' ? '#48484A' : '#C7C7CC',
+                          height: 8,
+                        }]} />
+                        {i <= displayRange * 0.8 && (
+                          <ThemedText style={[styles.tickLabel, { opacity: 0.6 }]}>
+                            +${i}
+                          </ThemedText>
+                        )}
+                      </View>
+                    );
+                  }
+                  
+                  return marks;
+                })()}
               </View>
             </View>
 

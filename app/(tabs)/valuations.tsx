@@ -127,14 +127,41 @@ const Valuations = ({ tokens, onUpdateValuation, isLoading, onRefresh, onEditTok
   
   if (tokens.length === 0 && !isLoading) {
     return (
-      <View className="flex-1 items-center justify-center px-8">
-        <View className={`p-8 rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
-          <ThemedText className="text-center text-lg font-medium mb-4">No tokens found</ThemedText>
+      <View className="flex-1 items-center justify-center px-6">
+        <View className={`w-full max-w-sm p-8 rounded-3xl ${isDark ? 'bg-gray-800/50' : 'bg-white'}`}
+          style={{
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: isDark ? 0.3 : 0.08,
+            shadowRadius: 8,
+            elevation: 4,
+          }}
+        >
+          <View className={`w-20 h-20 rounded-full items-center justify-center mx-auto mb-6 ${
+            isDark ? 'bg-gray-700' : 'bg-gray-100'
+          }`}>
+            <ThemedText className="text-3xl">🪙</ThemedText>
+          </View>
+          
+          <ThemedText className="text-center text-2xl font-bold mb-2">No Valuations Yet</ThemedText>
+          <ThemedText className="text-center text-base opacity-60 mb-8">
+            Start by setting your personal valuations for tokens in your wallet
+          </ThemedText>
+          
           <TouchableOpacity 
-            className="bg-blue-500 px-6 py-3 rounded-full"
+            className={`py-4 px-8 rounded-2xl items-center ${
+              isDark ? 'bg-blue-600' : 'bg-blue-500'
+            }`}
             onPress={onRefresh}
+            style={{
+              shadowColor: '#3B82F6',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 8,
+              elevation: 5,
+            }}
           >
-            <Text className="text-white font-semibold text-base">Refresh</Text>
+            <Text className="text-white font-semibold text-lg">Refresh Tokens</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -480,15 +507,40 @@ export default function ValuationsScreen() {
   // If there's an error, show an error message
   if (error) {
     return (
-      <SafeAreaView className={`flex-1 ${colorScheme === 'dark' ? 'bg-black' : 'bg-white'}`}>
-        <View className="flex-1 items-center justify-center px-8">
-          <View className={`p-8 rounded-2xl ${colorScheme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'}`}>
-            <ThemedText className="text-red-500 text-center text-base mb-4">{error}</ThemedText>
+      <SafeAreaView className={`flex-1 ${colorScheme === 'dark' ? 'bg-black' : 'bg-gray-50'}`}>
+        <View className="flex-1 items-center justify-center px-6">
+          <View className={`w-full max-w-sm p-8 rounded-3xl ${colorScheme === 'dark' ? 'bg-gray-800/50' : 'bg-white'}`}
+            style={{
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: colorScheme === 'dark' ? 0.3 : 0.08,
+              shadowRadius: 8,
+              elevation: 4,
+            }}
+          >
+            <View className={`w-20 h-20 rounded-full items-center justify-center mx-auto mb-6 ${
+              colorScheme === 'dark' ? 'bg-red-900/20' : 'bg-red-50'
+            }`}>
+              <ThemedText className="text-3xl">⚠️</ThemedText>
+            </View>
+            
+            <ThemedText className="text-center text-2xl font-bold mb-2">Connection Error</ThemedText>
+            <ThemedText className="text-center text-base opacity-60 mb-8">{error}</ThemedText>
+            
             <TouchableOpacity 
-              className="bg-blue-500 px-6 py-3 rounded-full"
+              className={`py-4 px-8 rounded-2xl items-center ${
+                colorScheme === 'dark' ? 'bg-blue-600' : 'bg-blue-500'
+              }`}
               onPress={loadTokenValuations}
+              style={{
+                shadowColor: '#3B82F6',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 8,
+                elevation: 5,
+              }}
             >
-              <Text className="text-white font-semibold text-base">Retry</Text>
+              <Text className="text-white font-semibold text-lg">Try Again</Text>
             </TouchableOpacity>
           </View>
         </View>
