@@ -1,34 +1,37 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Dimensions, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, SafeAreaView, TouchableOpacity } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import { OnboardingIndicator } from '@/components/onboarding';
 import Animated, { FadeInRight, FadeOutLeft } from 'react-native-reanimated';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
+import { X } from 'lucide-react-native';
 
 const { width } = Dimensions.get('window');
 
 const slides = [
   {
-    title: 'Welcome to Index',
-    description: 'Your secure digital wallet for managing crypto assets',
+    title: 'Welcome to Index Wallets',
+    description: 'Your gateway to values-aligned commerce',
   },
   {
-    title: 'Easy Transactions',
-    description: 'Send and receive crypto with just a few taps',
+    title: 'Donate to Causes You Care About',
+    description: 'Support causes like reforestation or community projects and receive digital donation receipts in your IndexWallet.',
   },
   {
-    title: 'Real-time Tracking',
-    description: 'Monitor your portfolio value and transaction history',
+    title: 'Shop and Save Automatically',
+    description: 'Use your donation receipts at participating merchants - they reduce your purchase price based on how much the merchant values your cause.',
   },
   {
-    title: "Let's Get Started",
-    description: 'Create your wallet and start your crypto journey',
+    title: 'Compare and Choose Values-Aligned Vendors',
+    description: 'See real-time price comparisons showing how much you save at different merchants based on their values alignment with your donations.',
   },
 ];
 
 export default function CustomerSlides() {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const { setOnboardingStep } = useAuth();
+  const { colorScheme } = useTheme();
 
   const handleChange = (index: number) => {
     setSelectedIndex(index);
@@ -43,6 +46,13 @@ export default function CustomerSlides() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
+        <TouchableOpacity 
+          style={styles.exitButton}
+          onPress={() => setOnboardingStep('user-type')}
+        >
+          <X size={24} color={colorScheme === 'dark' ? '#FFFFFF' : '#000000'} />
+        </TouchableOpacity>
+        
         <View style={styles.content}>
           <Animated.View 
             key={selectedIndex}
@@ -77,6 +87,13 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
+  },
+  exitButton: {
+    position: 'absolute',
+    top: 60,
+    right: 20,
+    zIndex: 1,
+    padding: 10,
   },
   content: {
     flex: 1,

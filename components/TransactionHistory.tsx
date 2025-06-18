@@ -5,18 +5,25 @@ import { ThemedView } from './ThemedView';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { PaymentAPI } from '@/services/api';
-import { ArrowUpRight, ArrowDownLeft, Clock, CheckCircle, XCircle, X } from 'lucide-react-native';
+import { ArrowUpRight, ArrowDownLeft, Clock, CheckCircle, XCircle, X, Banknote } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 
-// Transaction type matching the new API response
-interface TransactionHistoryItem {
+// Base activity interface
+interface BaseActivity {
+  type: 'transaction' | 'deposit';
+  created_at: number; // Unix timestamp
+}
+
+// Transaction type from API
+interface TransactionActivity extends BaseActivity {
+  type: 'transaction';
   payment_id: string;
   direction: 'Sent' | 'Received';
   counterparty_address: string;
+  counterparty_username?: string;
   vendor_name?: string;
   status: string;
   price_usd: number;
-  created_at: string | number; // Can be ISO 8601 datetime string or Unix timestamp
   computed_payment?: Array<{
     token_key: string;
     symbol: string;
@@ -24,6 +31,20 @@ interface TransactionHistoryItem {
     token_image_url?: string;
   }>;
 }
+
+// Deposit type from API
+interface DepositActivity extends BaseActivity {
+  type: 'deposit';
+  id: null;
+  wallet_address: string;
+  token_symbol: string;
+  token_image_url: string | null;
+  amount_deposited_usd: number;
+  amount_tokens_received: number;
+}
+
+// Union type for all activities
+type Activity = TransactionActivity | DepositActivity;
 
 interface TransactionHistoryProps {
   limit?: number;
@@ -33,8 +54,8 @@ interface TransactionHistoryProps {
 export default function TransactionHistory({ limit = 10, showTitle = true }: TransactionHistoryProps) {
   const { colorScheme } = useTheme();
   const auth = useAuth();
-  const [transactions, setTransactions] = useState<TransactionHistoryItem[]>([]);
-  const [selectedTransaction, setSelectedTransaction] = useState<TransactionHistoryItem | null>(null);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -53,20 +74,18 @@ export default function TransactionHistory({ limit = 10, showTitle = true }: Tra
     try {
       const response = await PaymentAPI.getTransactionHistory(auth.walletAddress);
       
-      
-      // Log first transaction to see structure
-      if (response.transactions && response.transactions.length > 0) {
-        console.log('Sample transaction structure:', JSON.stringify(response.transactions[0], null, 2));
+      // Log first activity to see structure
+      if (response.activities && response.activities.length > 0) {
+        console.log('Sample activity structure:', JSON.stringify(response.activities[0], null, 2));
       }
       
       // Only show the requested limit
-      const limitedTransactions = (response.transactions || []).slice(0, limit);
-      setTransactions(limitedTransactions);
+      const limitedActivities = (response.activities || []).slice(0, limit);
+      setActivities(limitedActivities);
     } catch (err) {
       console.error('Failed to load transaction history:', err);
       setError('Failed to load transaction history');
-      // For now, set some mock data if the API fails
-      setTransactions([]);
+      setActivities([]);
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -93,54 +112,84 @@ export default function TransactionHistory({ limit = 10, showTitle = true }: Tra
     }
   };
 
-  const getTransactionTypeIcon = (transaction: TransactionHistoryItem) => {
+  const getActivityIcon = (activity: Activity) => {
+    if (activity.type === 'deposit') {
+      // For deposits, check if we have a token image
+      const deposit = activity as DepositActivity;
+      if (deposit.token_image_url) {
+        return (
+          <Image 
+            source={{ uri: deposit.token_image_url }}
+            className="w-6 h-6 rounded-full"
+            style={{ width: 24, height: 24 }}
+          />
+        );
+      }
+      // Fallback to banknote icon if no image
+      return <Banknote size={20} color="#10B981" />;
+    }
+    
+    // For transactions
+    const transaction = activity as TransactionActivity;
     const isIncoming = transaction.direction === 'Received';
     const IconComponent = isIncoming ? ArrowDownLeft : ArrowUpRight;
     const color = isIncoming ? '#10B981' : '#6B7280'; // Green for received, gray for sent
     
     return <IconComponent size={20} color={color} />;
   };
+  
+  const getActivityTitle = (activity: Activity) => {
+    if (activity.type === 'deposit') {
+      return 'Deposit';
+    }
+    
+    const transaction = activity as TransactionActivity;
+    if (isPending(transaction.status)) {
+      return 'Transaction Created';
+    }
+    return transaction.direction === 'Received' ? 'Payment Received' : 'Payment Sent';
+  };
+  
+  const getActivityAmount = (activity: Activity) => {
+    if (activity.type === 'deposit') {
+      return activity.amount_deposited_usd;
+    }
+    return (activity as TransactionActivity).price_usd;
+  };
+  
+  const getActivitySubtitle = (activity: Activity) => {
+    if (activity.type === 'deposit') {
+      return `Donated $${activity.amount_deposited_usd.toFixed(2)}`;
+    }
+    
+    const transaction = activity as TransactionActivity;
+    const prefix = isPending(transaction.status) 
+      ? (transaction.direction === 'Received' ? 'Requested from' : 'Paying to')
+      : (transaction.direction === 'Received' ? 'From' : 'To');
+    
+    return `${prefix} ${transaction.vendor_name || `${transaction.counterparty_address.slice(0, 8)}...`}`;
+  };
+  
+  const getActivityPrimaryAmount = (activity: Activity) => {
+    if (activity.type === 'deposit') {
+      // For deposits, show tokens received (divide by 100 as per backend format)
+      return (activity.amount_tokens_received / 100).toFixed(2);
+    }
+    // For transactions, show USD amount
+    return getActivityAmount(activity).toFixed(2);
+  };
+  
+  const getActivityPrimaryLabel = (activity: Activity) => {
+    if (activity.type === 'deposit') {
+      return activity.token_symbol;
+    }
+    return 'USD';
+  };
 
-  const formatDate = (timestamp: string | number) => {
+  const formatDate = (timestamp: number) => {
     try {
-      let date: Date;
-      
-      if (typeof timestamp === 'number') {
-        // Auto-detect seconds vs milliseconds
-        // Unix timestamps in seconds are typically 10 digits (until 2286)
-        // Unix timestamps in milliseconds are typically 13 digits
-        if (timestamp < 10000000000) {
-          // Likely seconds - multiply by 1000
-          date = new Date(timestamp * 1000);
-        } else {
-          // Likely milliseconds
-          date = new Date(timestamp);
-        }
-      } else if (typeof timestamp === 'string') {
-        // Try to parse as ISO string first
-        date = new Date(timestamp);
-        
-        // If that fails, try parsing as a number
-        if (isNaN(date.getTime())) {
-          const numTimestamp = parseInt(timestamp, 10);
-          if (!isNaN(numTimestamp)) {
-            // Apply same logic for number timestamps
-            date = new Date(numTimestamp < 10000000000 ? numTimestamp * 1000 : numTimestamp);
-          } else {
-            console.warn('Invalid date format:', timestamp);
-            return 'Invalid date';
-          }
-        }
-      } else {
-        console.warn('Unexpected date type:', typeof timestamp, timestamp);
-        return 'Invalid date';
-      }
-      
-      // Check if date is valid
-      if (isNaN(date.getTime())) {
-        console.warn('Invalid date after parsing:', timestamp);
-        return 'Invalid date';
-      }
+      // Unix timestamp in seconds - multiply by 1000
+      const date = new Date(timestamp * 1000);
       
       const now = new Date();
       const diffMs = now.getTime() - date.getTime();
@@ -218,27 +267,29 @@ export default function TransactionHistory({ limit = 10, showTitle = true }: Tra
               <ThemedText className="text-white font-semibold">Retry</ThemedText>
             </TouchableOpacity>
           </View>
-        ) : transactions.length === 0 ? (
+        ) : activities.length === 0 ? (
           <View className="p-8">
             <ThemedText className="text-center text-gray-500 dark:text-gray-400">
-              No transactions yet
+              No activity yet
             </ThemedText>
           </View>
         ) : (
           <View className="px-4 pb-4">
-            {transactions.map((transaction, index) => {
-              const isIncoming = transaction.direction === 'Received';
-              const otherParty = transaction.vendor_name || transaction.counterparty_address;
+            {activities.map((activity, index) => {
+              const amount = getActivityAmount(activity);
+              const isDeposit = activity.type === 'deposit';
+              const isIncoming = isDeposit || (activity.type === 'transaction' && (activity as TransactionActivity).direction === 'Received');
+              const isPendingActivity = activity.type === 'transaction' && isPending((activity as TransactionActivity).status);
               
               return (
                 <TouchableOpacity
-                  key={transaction.payment_id}
+                  key={activity.type === 'deposit' ? `deposit-${activity.created_at}-${index}` : (activity as TransactionActivity).payment_id}
                   className={`
                     bg-gray-50 dark:bg-gray-800 rounded-xl p-4 mb-3
                     ${index === 0 ? 'mt-2' : ''}
                   `}
                   onPress={() => {
-                    setSelectedTransaction(transaction);
+                    setSelectedActivity(activity);
                     setShowDetails(true);
                   }}
                 >
@@ -246,56 +297,53 @@ export default function TransactionHistory({ limit = 10, showTitle = true }: Tra
                     <View className="flex-row items-center flex-1">
                       <View className="relative mr-3">
                         <View className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full items-center justify-center">
-                          {getTransactionTypeIcon(transaction)}
+                          {getActivityIcon(activity)}
                         </View>
-                        <View className="absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-gray-50 dark:border-gray-800"
-                          style={{
-                            backgroundColor: isPending(transaction.status) ? '#F59E0B' : '#10B981'
-                          }}
-                        />
+                        {activity.type === 'transaction' && (
+                          <View className="absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-gray-50 dark:border-gray-800"
+                            style={{
+                              backgroundColor: isPendingActivity ? '#F59E0B' : '#10B981'
+                            }}
+                          />
+                        )}
                       </View>
                       
                       <View className="flex-1">
                         <View className="flex-row items-center">
                           <ThemedText className="font-semibold text-base">
-                            {isPending(transaction.status) 
-                              ? 'Transaction Created' 
-                              : (isIncoming ? 'Payment Received' : 'Payment Sent')
-                            }
+                            {getActivityTitle(activity)}
                           </ThemedText>
-                          <View className="ml-2">
-                            {getStatusIcon(transaction.status)}
-                          </View>
+                          {activity.type === 'transaction' && (
+                            <View className="ml-2">
+                              {getStatusIcon((activity as TransactionActivity).status)}
+                            </View>
+                          )}
                         </View>
                         
                         <ThemedText className="text-sm opacity-60 mt-1">
-                          {(() => {
-                            if (isPending(transaction.status)) {
-                              return isIncoming ? 'Requested from' : 'Paying to';
-                            } else {
-                              return isIncoming ? 'From' : 'To';
-                            }
-                          })()} {transaction.vendor_name || `${transaction.counterparty_address.slice(0, 8)}...`}
+                          {getActivitySubtitle(activity)}
                         </ThemedText>
                         
                         <ThemedText className="text-xs opacity-50 mt-1">
-                          {formatDate(transaction.created_at)}
+                          {formatDate(activity.created_at)}
                         </ThemedText>
                       </View>
                     </View>
                     
                     <View className="items-end">
                       <ThemedText className={`text-lg font-bold ${
-                        isPending(transaction.status)
+                        isPendingActivity
                           ? 'text-gray-400'
                           : (isIncoming ? 'text-green-500' : 'text-gray-700 dark:text-gray-300')
                       }`}>
-                        {isIncoming ? '+' : '-'}${transaction.price_usd.toFixed(2)}
+                        {isIncoming ? '+' : '-'}{getActivityPrimaryAmount(activity)} {getActivityPrimaryLabel(activity)}
                       </ThemedText>
                       
-                      <ThemedText className="text-xs opacity-50 mt-1">
-                        #{transaction.payment_id}
-                      </ThemedText>
+                      {activity.type === 'transaction' && (
+                        <ThemedText className="text-xs opacity-50 mt-1">
+                          #{(activity as TransactionActivity).payment_id}
+                        </ThemedText>
+                      )}
                     </View>
                   </View>
                   
@@ -306,7 +354,7 @@ export default function TransactionHistory({ limit = 10, showTitle = true }: Tra
         )}
       </ScrollView>
       
-      {/* Transaction Details Modal */}
+      {/* Activity Details Modal */}
       <Modal
         animationType="fade"
         transparent={true}
@@ -323,7 +371,7 @@ export default function TransactionHistory({ limit = 10, showTitle = true }: Tra
             padding: 20,
           }}
         >
-          {selectedTransaction && (
+          {selectedActivity && (
             <View 
               className="w-full rounded-3xl p-6 shadow-2xl"
               style={{ 
@@ -337,100 +385,131 @@ export default function TransactionHistory({ limit = 10, showTitle = true }: Tra
                   className="text-2xl font-bold"
                   style={{ color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }}
                 >
-                  Transaction Details
+                  {selectedActivity.type === 'deposit' ? 'Deposit Details' : 'Transaction Details'}
                 </Text>
                 <TouchableOpacity onPress={() => setShowDetails(false)}>
                   <X size={24} color={colorScheme === 'dark' ? '#FFFFFF' : '#000000'} />
                 </TouchableOpacity>
               </View>
               
-              {/* Transaction Info */}
+              {/* Activity Info */}
               <View className="space-y-4">
                 <View className="flex-row items-center justify-between mb-4">
                   <View className="flex-row items-center">
                     <View className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-full items-center justify-center mr-3">
-                      {getTransactionTypeIcon(selectedTransaction)}
+                      {getActivityIcon(selectedActivity)}
                     </View>
                     <View>
                       <ThemedText className={`text-2xl font-bold ${
-                        isPending(selectedTransaction.status)
+                        selectedActivity.type === 'transaction' && isPending((selectedActivity as TransactionActivity).status)
                           ? 'text-gray-400'
-                          : (selectedTransaction.direction === 'Received' ? 'text-green-500' : 'text-gray-700 dark:text-gray-300')
+                          : ((selectedActivity.type === 'deposit' || (selectedActivity.type === 'transaction' && (selectedActivity as TransactionActivity).direction === 'Received')) ? 'text-green-500' : 'text-gray-700 dark:text-gray-300')
                       }`}>
-                        {selectedTransaction.direction === 'Received' ? '+' : '-'}${selectedTransaction.price_usd.toFixed(2)}
+                        {selectedActivity.type === 'deposit' || (selectedActivity.type === 'transaction' && (selectedActivity as TransactionActivity).direction === 'Received') ? '+' : '-'}{getActivityPrimaryAmount(selectedActivity)} {getActivityPrimaryLabel(selectedActivity)}
                       </ThemedText>
                       <ThemedText className="text-sm opacity-60">
-                        {selectedTransaction.direction}
+                        {selectedActivity.type === 'deposit' ? 'Deposit' : (selectedActivity as TransactionActivity).direction}
                       </ThemedText>
                     </View>
                   </View>
-                  <View className="items-center">
-                    {getStatusIcon(selectedTransaction.status)}
-                    <ThemedText className="text-xs mt-1 capitalize">
-                      {selectedTransaction.status}
-                    </ThemedText>
-                  </View>
+                  {selectedActivity.type === 'transaction' && (
+                    <View className="items-center">
+                      {getStatusIcon((selectedActivity as TransactionActivity).status)}
+                      <ThemedText className="text-xs mt-1 capitalize">
+                        {(selectedActivity as TransactionActivity).status}
+                      </ThemedText>
+                    </View>
+                  )}
                 </View>
                 
                 <View className="border-t border-gray-200 dark:border-gray-700 pt-4">
-                  <View className="mb-3">
-                    <ThemedText className="text-sm opacity-60 mb-1">Payment ID</ThemedText>
-                    <ThemedText className="font-mono text-sm">{selectedTransaction.payment_id}</ThemedText>
-                  </View>
-                  
-                  <View className="mb-3">
-                    <ThemedText className="text-sm opacity-60 mb-1">
-                      {(() => {
-                        const isIncoming = selectedTransaction.direction === 'Received';
-                        if (isPending(selectedTransaction.status)) {
-                          return isIncoming ? 'Requested from' : 'Paying to';
-                        } else {
-                          return isIncoming ? 'From' : 'To';
-                        }
-                      })()}
-                    </ThemedText>
-                    <ThemedText className="text-sm">
-                      {selectedTransaction.vendor_name || selectedTransaction.counterparty_address}
-                    </ThemedText>
-                  </View>
+                  {selectedActivity.type === 'deposit' ? (
+                    // Deposit Details
+                    <>
+                      <View className="mb-3">
+                        <ThemedText className="text-sm opacity-60 mb-1">Donation Amount</ThemedText>
+                        <ThemedText className="text-lg font-bold">
+                          ${(selectedActivity as DepositActivity).amount_deposited_usd.toFixed(2)} USD
+                        </ThemedText>
+                      </View>
+                      
+                      <View className="mb-3">
+                        <ThemedText className="text-sm opacity-60 mb-1">Tokens Received</ThemedText>
+                        <View className="flex-row items-center">
+                          {(selectedActivity as DepositActivity).token_image_url && (
+                            <Image 
+                              source={{ uri: (selectedActivity as DepositActivity).token_image_url }}
+                              className="w-8 h-8 rounded-full mr-2"
+                              style={{ width: 32, height: 32 }}
+                            />
+                          )}
+                          <ThemedText className="text-lg font-bold">
+                            {((selectedActivity as DepositActivity).amount_tokens_received / 100).toFixed(2)} {(selectedActivity as DepositActivity).token_symbol}
+                          </ThemedText>
+                        </View>
+                      </View>
+                      
+                      <View className="mb-3">
+                        <ThemedText className="text-sm opacity-60 mb-1">Wallet Address</ThemedText>
+                        <ThemedText className="font-mono text-xs">
+                          {(selectedActivity as DepositActivity).wallet_address}
+                        </ThemedText>
+                      </View>
+                    </>
+                  ) : (
+                    // Transaction Details
+                    <>
+                      <View className="mb-3">
+                        <ThemedText className="text-sm opacity-60 mb-1">Payment ID</ThemedText>
+                        <ThemedText className="font-mono text-sm">{(selectedActivity as TransactionActivity).payment_id}</ThemedText>
+                      </View>
+                      
+                      <View className="mb-3">
+                        <ThemedText className="text-sm opacity-60 mb-1">
+                          {(() => {
+                            const transaction = selectedActivity as TransactionActivity;
+                            const isIncoming = transaction.direction === 'Received';
+                            if (isPending(transaction.status)) {
+                              return isIncoming ? 'Requested from' : 'Paying to';
+                            } else {
+                              return isIncoming ? 'From' : 'To';
+                            }
+                          })()}
+                        </ThemedText>
+                        <ThemedText className="text-sm">
+                          {(selectedActivity as TransactionActivity).vendor_name || (selectedActivity as TransactionActivity).counterparty_address}
+                        </ThemedText>
+                      </View>
+                      
+                      <View className="mb-3">
+                        <ThemedText className="text-sm opacity-60 mb-1">Amount (USD)</ThemedText>
+                        <ThemedText className="text-lg font-bold">
+                          ${(selectedActivity as TransactionActivity).price_usd.toFixed(2)}
+                        </ThemedText>
+                      </View>
+                    </>
+                  )}
                   
                   <View className="mb-3">
                     <ThemedText className="text-sm opacity-60 mb-1">Date</ThemedText>
                     <ThemedText className="text-sm">
-                      {(() => {
-                        const timestamp = selectedTransaction.created_at;
-                        let date: Date;
-                        if (typeof timestamp === 'number' && timestamp < 10000000000) {
-                          date = new Date(timestamp * 1000);
-                        } else {
-                          date = new Date(timestamp);
-                        }
-                        return date.toLocaleString();
-                      })()}
+                      {new Date(selectedActivity.created_at * 1000).toLocaleString()}
                     </ThemedText>
                   </View>
                   
-                  {/* Enhanced Transaction Details */}
-                  <View className="mb-3">
-                    <ThemedText className="text-sm opacity-60 mb-1">Amount (USD)</ThemedText>
-                    <ThemedText className="text-lg font-bold">
-                      ${selectedTransaction.price_usd.toFixed(2)}
-                    </ThemedText>
-                  </View>
-                  
-                  {/* Token Details */}
-                  {selectedTransaction.computed_payment && selectedTransaction.computed_payment.length > 0 && (
+                  {/* Token Details for Transactions */}
+                  {selectedActivity.type === 'transaction' && (selectedActivity as TransactionActivity).computed_payment && (selectedActivity as TransactionActivity).computed_payment!.length > 0 && (
                     <View className="mt-4">
                       <ThemedText className="text-sm opacity-60 mb-2">Token Breakdown</ThemedText>
                       
-                      {selectedTransaction.computed_payment.map((payment, index) => {
+                      {(selectedActivity as TransactionActivity).computed_payment!.map((payment, index) => {
                         const [tokenAddress] = payment.token_key.split(',');
                         // Calculate USD value proportionally
-                        const totalAmount = selectedTransaction.computed_payment!.reduce(
+                        const totalAmount = (selectedActivity as TransactionActivity).computed_payment!.reduce(
                           (sum, p) => sum + p.amount_to_pay, 0
                         );
                         const proportion = totalAmount > 0 ? (payment.amount_to_pay / totalAmount) : 0;
-                        const usdValue = selectedTransaction.price_usd * proportion;
+                        const usdValue = (selectedActivity as TransactionActivity).price_usd * proportion;
                         
                         return (
                           <View key={`${payment.token_key}-${index}`} className="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg mb-2">

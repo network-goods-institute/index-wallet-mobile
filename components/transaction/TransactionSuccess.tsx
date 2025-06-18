@@ -12,6 +12,7 @@ import {
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useBalance } from '@/contexts/BalanceContext';
 import { CheckCircle, Copy, ExternalLink } from 'lucide-react-native';
 
 const { width, height } = Dimensions.get('window');
@@ -79,6 +80,7 @@ const ConfettiParticle = ({ delay }: { delay: number }) => {
 
 const TransactionSuccess: React.FC<TransactionSuccessProps> = ({ transaction, onClose, isVendor = false }) => {
   const { colorScheme } = useTheme();
+  const { refreshBalances } = useBalance();
   const checkAnimation = useRef(new Animated.Value(0)).current;
   const contentAnimation = useRef(new Animated.Value(0)).current;
   
@@ -118,6 +120,17 @@ const TransactionSuccess: React.FC<TransactionSuccessProps> = ({ transaction, on
       delay: 300,
       useNativeDriver: true,
     }).start();
+    
+    // Refresh balances after successful transaction with a small delay
+    // to ensure backend has processed the transaction
+    const refreshTimer = setTimeout(() => {
+      console.log('TransactionSuccess: Refreshing balances after successful transaction');
+      refreshBalances().catch(error => {
+        console.error('Failed to refresh balances after transaction:', error);
+      });
+    }, 1500); // 1.5 second delay
+    
+    return () => clearTimeout(refreshTimer);
   }, []);
 
   const checkScale = checkAnimation.interpolate({
@@ -275,13 +288,6 @@ const TransactionSuccess: React.FC<TransactionSuccessProps> = ({ transaction, on
                 <ThemedText className="text-white text-center font-semibold text-lg">
                   Done
                 </ThemedText>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.viewDetailsButton}>
-                <ThemedText className="text-center font-medium opacity-60">
-                  View on Explorer
-                </ThemedText>
-                <ExternalLink size={16} color={colorScheme === 'dark' ? '#9CA3AF' : '#6B7280'} />
               </TouchableOpacity>
             </View>
           </Animated.View>

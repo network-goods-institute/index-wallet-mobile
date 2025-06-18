@@ -204,9 +204,43 @@ export const PaymentAPI = {
       const response = await api.post(`/api/payments/${paymentId}/supplement`, supplementData);
       console.log('Payment supplemented response:', response.data);
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error supplementing payment:', error);
-      throw error;
+      
+      // Handle specific error cases
+      if (error.response) {
+        const { status, data } = error.response;
+        
+        if (status === 400 && data?.code === 'VALIDATION_ERROR') {
+          // Extract the specific validation error message
+          const message = data.message || 'Validation error';
+          
+          if (message.includes('Insufficient funds')) {
+            throw new Error('INSUFFICIENT_FUNDS');
+          } else if (message.includes('Payment code not found')) {
+            throw new Error('PAYMENT_NOT_FOUND');
+          } else if (message.includes('Transaction already fulfilled')) {
+            throw new Error('PAYMENT_ALREADY_COMPLETED');
+          } else if (message.includes('Payer already assigned')) {
+            throw new Error('PAYMENT_ALREADY_ASSIGNED');
+          } else {
+            throw new Error(message);
+          }
+        } else if (status === 404 && data?.code === 'NOT_FOUND') {
+          const message = data.message || 'Not found';
+          // Check if it's a payment not found error
+          if (message.includes('Payment with ID') && message.includes('not found')) {
+            throw new Error('PAYMENT_NOT_FOUND');
+          } else {
+            throw new Error('USER_NOT_FOUND');
+          }
+        } else if (status === 500) {
+          throw new Error('SERVER_ERROR');
+        }
+      }
+      
+      // Generic error
+      throw new Error('Failed to process payment');
     }
   },
 
@@ -271,6 +305,25 @@ export const PaymentAPI = {
       return response.data;
     } catch (error) {
       console.error('Error getting transaction history:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Delete/Cancel a payment request (vendor only)
+   * @param paymentId Payment ID to delete
+   * @param vendorAddress Vendor's wallet address
+   */
+  deletePayment: async (paymentId: string, vendorAddress: string) => {
+    try {
+      const response = await api.delete(`/api/payments/${paymentId}`, {
+        data: {
+          vendor_address: vendorAddress
+        }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error deleting payment:', error);
       throw error;
     }
   },

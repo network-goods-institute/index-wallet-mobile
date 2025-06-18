@@ -10,6 +10,8 @@ const POLLING_INTERVALS = {
   ACTIVE_TRANSACTION: 2000,  // 2s for active transactions
 };
 
+const MAX_POLL_ATTEMPTS = 150; // 5 minutes at 2s intervals
+
 interface ActiveTransactionContextType {
   // Separate states for pay and receive flows
   activePayment: Transaction | null;
@@ -21,6 +23,7 @@ interface ActiveTransactionContextType {
   
   // Receive flow methods  
   createRequest: (amount: number) => Promise<string>;
+  deleteRequest: (paymentId: string) => Promise<boolean>;
   
   // Shared methods
   clearActivePayment: () => void;
@@ -37,6 +40,7 @@ export const ActiveTransactionContext = createContext<ActiveTransactionContextTy
   initiatePayment: async () => ({} as Transaction),
   completePayment: async () => false,
   createRequest: async () => '',
+  deleteRequest: async () => false,
   clearActivePayment: () => {},
   clearActiveRequest: () => {},
   isLoading: false,
@@ -56,6 +60,7 @@ export const ActiveTransactionProvider: React.FC<{ children: React.ReactNode }> 
   
   const paymentPollingRef = useRef<NodeJS.Timeout | null>(null);
   const requestPollingRef = useRef<NodeJS.Timeout | null>(null);
+  const pollAttemptsRef = useRef<Map<string, number>>(new Map());
 
   // Cleanup on unmount
   useEffect(() => {
@@ -95,6 +100,21 @@ export const ActiveTransactionProvider: React.FC<{ children: React.ReactNode }> 
     type: 'payment' | 'request'
   ) => {
     try {
+      // Check poll attempts
+      const attempts = pollAttemptsRef.current.get(transactionId) || 0;
+      if (attempts >= MAX_POLL_ATTEMPTS) {
+        console.log(`Max poll attempts reached for ${transactionId}, stopping`);
+        if (type === 'payment') {
+          stopPaymentPolling();
+        } else {
+          stopRequestPolling();
+        }
+        pollAttemptsRef.current.delete(transactionId);
+        return;
+      }
+      
+      pollAttemptsRef.current.set(transactionId, attempts + 1);
+      
       const response = await PaymentAPI.getPaymentStatus(transactionId);
       
       if (response) {
@@ -122,6 +142,8 @@ export const ActiveTransactionProvider: React.FC<{ children: React.ReactNode }> 
             stopRequestPolling();
           }
           
+          pollAttemptsRef.current.delete(transactionId);
+          
           // Only remove from pending if completed (not if failed/cancelled)
           if (isCompletedStatus(response.status)) {
             removePendingTransaction(transactionId);
@@ -140,6 +162,9 @@ export const ActiveTransactionProvider: React.FC<{ children: React.ReactNode }> 
   const startPaymentPolling = useCallback((transactionId: string) => {
     stopPaymentPolling();
     
+    // Reset poll attempts for this transaction
+    pollAttemptsRef.current.set(transactionId, 0);
+    
     // Initial poll
     pollTransaction(transactionId, 'payment');
     
@@ -153,6 +178,9 @@ export const ActiveTransactionProvider: React.FC<{ children: React.ReactNode }> 
   // Start polling for request
   const startRequestPolling = useCallback((transactionId: string) => {
     stopRequestPolling();
+    
+    // Reset poll attempts for this transaction
+    pollAttemptsRef.current.set(transactionId, 0);
     
     // Initial poll
     pollTransaction(transactionId, 'request');
@@ -213,9 +241,39 @@ export const ActiveTransactionProvider: React.FC<{ children: React.ReactNode }> 
       
       return transaction;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to initiate payment';
-      setError(errorMessage);
-      throw new Error(errorMessage);
+      let errorMessage = 'Failed to initiate payment';
+      let userFriendlyMessage = errorMessage;
+      
+      if (err instanceof Error) {
+        errorMessage = err.message;
+        
+        // Handle specific error codes with user-friendly messages
+        switch (errorMessage) {
+          case 'INSUFFICIENT_FUNDS':
+            userFriendlyMessage = 'Insufficient funds to complete this payment';
+            break;
+          case 'PAYMENT_NOT_FOUND':
+            userFriendlyMessage = 'Payment code not found or expired';
+            break;
+          case 'PAYMENT_ALREADY_COMPLETED':
+            userFriendlyMessage = 'This payment has already been completed';
+            break;
+          case 'PAYMENT_ALREADY_ASSIGNED':
+            userFriendlyMessage = 'This payment is already being processed by another user';
+            break;
+          case 'USER_NOT_FOUND':
+            userFriendlyMessage = 'User account not found';
+            break;
+          case 'SERVER_ERROR':
+            userFriendlyMessage = 'Server error. Please try again later';
+            break;
+          default:
+            userFriendlyMessage = errorMessage;
+        }
+      }
+      
+      setError(userFriendlyMessage);
+      throw new Error(userFriendlyMessage);
     } finally {
       setIsLoading(false);
     }
@@ -308,6 +366,41 @@ export const ActiveTransactionProvider: React.FC<{ children: React.ReactNode }> 
     }
   };
 
+  // RECEIVE FLOW: Delete/Cancel payment request
+  const deleteRequest = async (paymentId: string): Promise<boolean> => {
+    if (!auth?.walletAddress) {
+      throw new Error('Vendor wallet address not available');
+    }
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      await PaymentAPI.deletePayment(paymentId, auth.walletAddress);
+      
+      // Stop polling
+      stopRequestPolling();
+      
+      // Remove from pending transactions
+      removePendingTransaction(paymentId);
+      
+      // Clear active request if it matches
+      if (activeRequest?.payment_id === paymentId) {
+        setActiveRequest(null);
+      }
+      
+      console.log(`Payment ${paymentId} deleted successfully`);
+      return true;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete payment';
+      setError(errorMessage);
+      console.error('Failed to delete payment:', err);
+      throw new Error(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Clear methods
   const clearActivePayment = () => {
     stopPaymentPolling();
@@ -327,6 +420,7 @@ export const ActiveTransactionProvider: React.FC<{ children: React.ReactNode }> 
         initiatePayment,
         completePayment,
         createRequest,
+        deleteRequest,
         clearActivePayment,
         clearActiveRequest,
         isLoading,

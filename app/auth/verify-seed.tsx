@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, TextInput, SafeAreaView } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, TextInput, SafeAreaView, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { ThemedView } from '@/components/ThemedView';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,6 +12,8 @@ export default function VerifySeedScreen() {
   const [verificationInputs, setVerificationInputs] = useState<{[key: number]: string}>({});
   const [missingIndices, setMissingIndices] = useState<number[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const inputRefs = useRef<{[key: number]: TextInput | null}>({});
+  const scrollViewRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     if (seedPhrase) {
@@ -50,6 +52,17 @@ export default function VerifySeedScreen() {
     setError(null);
     const newInputs = { ...verificationInputs, [index]: value.toLowerCase().trim() };
     setVerificationInputs(newInputs);
+    
+    // Auto-focus next input if current word is complete
+    if (value.trim().length >= 3 && value.includes(' ') === false) {
+      const currentIdx = missingIndices.indexOf(index);
+      if (currentIdx < missingIndices.length - 1) {
+        const nextIndex = missingIndices[currentIdx + 1];
+        setTimeout(() => {
+          inputRefs.current[nextIndex]?.focus();
+        }, 100);
+      }
+    }
   };
 
   const handlePaste = async (index: number) => {
@@ -107,12 +120,14 @@ export default function VerifySeedScreen() {
 
   const renderWord = (word: string, index: number) => {
     if (missingIndices.includes(index)) {
+      const currentIdx = missingIndices.indexOf(index);
       return (
         <View key={index} className="w-[30%] bg-gray-100 dark:bg-gray-800 rounded-xl p-4 mb-4 relative">
           <Text className="text-gray-500 dark:text-gray-400 text-xs absolute top-2 left-2">
             {(index + 1).toString().padStart(2, '0')}
           </Text>
           <TextInput
+            ref={(ref) => { inputRefs.current[index] = ref; }}
             className="text-gray-900 dark:text-white text-lg font-medium text-center mt-2 h-7 bg-transparent"
             value={verificationInputs[index] || ''}
             onChangeText={(text) => handleInputChange(index, text)}
@@ -120,14 +135,38 @@ export default function VerifySeedScreen() {
             placeholderTextColor={colorScheme === 'dark' ? '#4B5563' : '#9CA3AF'}
             autoCapitalize="none"
             autoCorrect={false}
+            autoComplete="off"
+            returnKeyType={currentIdx < missingIndices.length - 1 ? "next" : "done"}
+            onSubmitEditing={() => {
+              if (currentIdx < missingIndices.length - 1) {
+                const nextIndex = missingIndices[currentIdx + 1];
+                inputRefs.current[nextIndex]?.focus();
+              } else {
+                Keyboard.dismiss();
+                if (areAllInputsFilled()) {
+                  handleContinue();
+                }
+              }
+            }}
+            onFocus={() => {
+              // Scroll to make the input visible when keyboard appears
+              setTimeout(() => {
+                scrollViewRef.current?.scrollTo({
+                  y: Math.floor(index / 3) * 80,
+                  animated: true
+                });
+              }, 300);
+            }}
             style={{ outline: 'none' }}
           />
-          <TouchableOpacity
-            onPress={() => handlePaste(index)}
-            className="absolute top-2 right-2"
-          >
-            <Copy size={12} color={colorScheme === 'dark' ? '#4B5563' : '#9CA3AF'} />
-          </TouchableOpacity>
+          {verificationInputs[index] && (
+            <TouchableOpacity
+              onPress={() => handleClearInput(index)}
+              className="absolute top-2 right-2"
+            >
+              <X size={12} color={colorScheme === 'dark' ? '#4B5563' : '#9CA3AF'} />
+            </TouchableOpacity>
+          )}
         </View>
       );
     }
@@ -149,65 +188,77 @@ export default function VerifySeedScreen() {
   return (
     <ThemedView className="flex-1">
       <SafeAreaView className="flex-1">
-        <View className="px-6 pt-6">
-          <TouchableOpacity onPress={() => setOnboardingStep('create-seed')} className="mb-16">
-            <ArrowLeft size={32} color={colorScheme === 'dark' ? '#FFFFFF' : '#000000'} />
-          </TouchableOpacity>
+        <KeyboardAvoidingView 
+          className="flex-1"
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        >
+          <View className="px-6 pt-6">
+            <TouchableOpacity onPress={() => setOnboardingStep('create-seed')} className="mb-16">
+              <ArrowLeft size={32} color={colorScheme === 'dark' ? '#FFFFFF' : '#000000'} />
+            </TouchableOpacity>
 
-          <Text className="text-5xl font-bold text-black dark:text-white leading-tight mb-12">
-            Fill in the blanks{'\n'}to verify
-          </Text>
-        </View>
-
-        <ScrollView className="flex-1 px-6">
-          <View className="flex-row flex-wrap justify-between mb-8">
-            {words.map((word, index) => renderWord(word, index))}
+            <Text className="text-5xl font-bold text-black dark:text-white leading-tight mb-8">
+              Fill in the blanks{'\n'}to verify
+            </Text>
           </View>
 
-          {error && (
-            <View className="bg-red-900/20 p-4 rounded-xl mb-8">
-              <Text className="text-red-400 text-center">{error}</Text>
-            </View>
-          )}
-
-          <View className="flex-row justify-center gap-4 mb-8">
-            <TouchableOpacity
-              onPress={handleClear}
-              className="flex-row items-center justify-center gap-2 py-3 px-6 rounded-xl bg-gray-100 dark:bg-gray-800"
-            >
-              <X size={16} color={colorScheme === 'dark' ? '#9CA3AF' : '#4B5563'} />
-              <Text className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                Clear All
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              onPress={() => handlePaste(-1)}
-              className="flex-row items-center justify-center gap-2 py-3 px-6 rounded-xl bg-gray-100 dark:bg-gray-800"
-            >
-              <Copy size={16} color={colorScheme === 'dark' ? '#9CA3AF' : '#4B5563'} />
-              <Text className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                Paste All
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-
-        <View className="absolute bottom-12 right-6">
-          <TouchableOpacity
-            onPress={handleContinue}
-            disabled={!areAllInputsFilled()}
-            className={`w-16 h-16 rounded-full items-center justify-center ${
-              areAllInputsFilled() ? 'bg-yellow-400' : 'bg-gray-200 dark:bg-gray-800'
-            }`}
+          <ScrollView 
+            ref={scrollViewRef}
+            className="flex-1 px-6"
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            onScrollBeginDrag={() => Keyboard.dismiss()}
           >
-            <ArrowLeft
-              size={32}
-              color={areAllInputsFilled() ? '#000000' : (colorScheme === 'dark' ? '#4B5563' : '#9CA3AF')}
-              style={{ transform: [{ rotate: '180deg' }] }}
-            />
-          </TouchableOpacity>
-        </View>
+            <View className="flex-row flex-wrap justify-between mb-4">
+              {words.map((word, index) => renderWord(word, index))}
+            </View>
+
+            {error && (
+              <View className="bg-red-900/20 p-4 rounded-xl mb-4">
+                <Text className="text-red-400 text-center">{error}</Text>
+              </View>
+            )}
+
+            <View className="flex-row justify-center gap-4 mb-20">
+              <TouchableOpacity
+                onPress={handleClear}
+                className="flex-row items-center justify-center gap-2 py-3 px-6 rounded-xl bg-gray-100 dark:bg-gray-800"
+              >
+                <X size={16} color={colorScheme === 'dark' ? '#9CA3AF' : '#4B5563'} />
+                <Text className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                  Clear All
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                onPress={() => handlePaste(-1)}
+                className="flex-row items-center justify-center gap-2 py-3 px-6 rounded-xl bg-gray-100 dark:bg-gray-800"
+              >
+                <Copy size={16} color={colorScheme === 'dark' ? '#9CA3AF' : '#4B5563'} />
+                <Text className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                  Paste All
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+
+          <View className="px-6 pb-8">
+            <TouchableOpacity
+              onPress={handleContinue}
+              disabled={!areAllInputsFilled()}
+              className={`w-full py-4 rounded-2xl items-center justify-center ${
+                areAllInputsFilled() ? 'bg-yellow-400' : 'bg-gray-200 dark:bg-gray-800'
+              }`}
+            >
+              <Text className={`text-lg font-semibold ${
+                areAllInputsFilled() ? 'text-black' : 'text-gray-500 dark:text-gray-400'
+              }`}>
+                Continue
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     </ThemedView>
   );

@@ -19,7 +19,6 @@ import '../global.css';
 
 import WelcomeScreen from '../app/auth/welcome';
 import OnboardingFlow from '@/components/OnboardingFlow';
-import { WalletDebugger } from '@/components/WalletDebugger';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -110,7 +109,6 @@ function AppContent() {
     <NavigationThemeProvider value={DefaultTheme}>
       {renderByAuthStatus(status)}
       <StatusBar style="dark" />
-      {status === 'authenticated' && <WalletDebugger />}
     </NavigationThemeProvider>
   );
 }

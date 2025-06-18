@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, TextInput, TouchableOpacity, ActivityIndicator, Alert, ScrollView, SafeAreaView } from 'react-native';
+import { View, TextInput, TouchableOpacity, ActivityIndicator, Alert, ScrollView, SafeAreaView, Modal } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -8,12 +8,16 @@ import { usePendingTransactionManager } from '@/contexts/PendingTransactionManag
 import { useTransactionHistory } from '@/contexts/TransactionHistoryStore';
 import { useAuth } from '@/contexts/AuthContext';
 import QRCode from 'react-native-qrcode-svg';
-import { QrCode, Copy, Check, ArrowLeft } from 'lucide-react-native';
+import { QrCode, Copy, Check, ArrowLeft, History, Clock, X } from 'lucide-react-native';
 import TransactionSuccess from '@/components/transaction/TransactionSuccess';
 
-export default function Receive() {
+interface ReceiveProps {
+  onSuccessStateChange?: (isSuccess: boolean) => void;
+}
+
+export default function Receive({ onSuccessStateChange }: ReceiveProps) {
   const { colorScheme } = useTheme();
-  const { activeRequest, createRequest, clearActiveRequest, isLoading, error } = useActiveTransaction();
+  const { activeRequest, createRequest, deleteRequest, clearActiveRequest, isLoading, error } = useActiveTransaction();
   const { pendingTransactions, syncTransactions } = usePendingTransactionManager();
   const { transactions: historyTransactions, loadTransactionHistory } = useTransactionHistory();
   const auth = useAuth();
@@ -23,15 +27,29 @@ export default function Receive() {
   const [transactionDetails, setTransactionDetails] = useState<any>(null);
   const [copied, setCopied] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   
-  // Filter vendor's pending transactions (excluding the active one)
+  // Filter vendor's pending transactions (excluding the active one and expired)
+  const MAX_TRANSACTION_AGE = 60 * 60 * 1000; // 1 hour
+  const now = Date.now();
+  
   const vendorPendingTransactions = pendingTransactions
-    .filter(
-      t => t.vendor_address === auth?.walletAddress && 
-           t.payment_id !== activeRequest?.payment_id &&
-           t.status !== 'completed' && 
-           t.status !== 'Completed'
-    )
+    .filter(t => {
+      // Check if vendor's transaction
+      if (t.vendor_address !== auth?.walletAddress) return false;
+      if (t.payment_id === activeRequest?.payment_id) return false;
+      if (t.status === 'completed' || t.status === 'Completed') return false;
+      
+      // Check if expired (older than 1 hour)
+      const createdAtMs = t.created_at < 10000000000 ? t.created_at * 1000 : t.created_at;
+      const age = now - createdAtMs;
+      if (age > MAX_TRANSACTION_AGE) {
+        return false;
+      }
+      
+      return true;
+    })
     .sort((a, b) => b.created_at - a.created_at); // Sort by newest first
     
   // Filter vendor's completed transactions from both history and pending (as fallback)
@@ -58,8 +76,9 @@ export default function Receive() {
   // Debug effect to see pending transactions
   useEffect(() => {
     console.log('Pending transactions updated in Receive:', pendingTransactions.length);
+    console.log('Vendor pending transactions:', vendorPendingTransactions.length);
     console.log('Active request:', activeRequest?.payment_id);
-  }, [pendingTransactions, activeRequest]);
+  }, [pendingTransactions, vendorPendingTransactions, activeRequest]);
 
   // Note: We don't clear active request on unmount anymore
   // The ActiveTransactionContext is scoped to TransactScreen level
@@ -75,6 +94,11 @@ export default function Receive() {
       }
     }
   }, [activeRequest?.status]);
+  
+  // Notify parent about success state
+  useEffect(() => {
+    onSuccessStateChange?.(showSuccess);
+  }, [showSuccess, onSuccessStateChange]);
 
   const handleCreatePayment = async () => {
     if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
@@ -85,15 +109,18 @@ export default function Receive() {
     try {
       const newPaymentId = await createRequest(parseFloat(amount));
       setPaymentId(newPaymentId);
-      // Don't automatically show QR - let user see it in the list
-      setQrVisible(false);
-      setAmount(''); // Clear amount for next request
+      // Auto-show QR code after creating
+      setQrVisible(true);
+      // Keep amount to show in QR view
       // Polling starts automatically in createRequest
       setTransactionDetails({
         paymentId: newPaymentId,
         amount: parseFloat(amount),
         createdAt: new Date().toISOString()
       });
+      
+      // Force a sync to update the pending transactions list immediately
+      await syncTransactions();
     } catch (error) {
       console.error('Failed to create payment:', error);
       Alert.alert('Error', 'Failed to create payment request');
@@ -112,21 +139,65 @@ export default function Receive() {
     setTransactionDetails(null);
     setAmount('');
     setShowSuccess(false);
+    onSuccessStateChange?.(false);
+  };
+  
+  const handleCancel = async () => {
+    if (paymentId && activeRequest) {
+      setIsCancelling(true);
+      try {
+        // Delete the payment request from backend
+        await deleteRequest(paymentId);
+        console.log(`Payment ${paymentId} cancelled and deleted`);
+        
+        // Clear the form
+        setQrVisible(false);
+        setPaymentId(null);
+        setTransactionDetails(null);
+        setAmount('');
+        
+        // Sync to update the pending list
+        await syncTransactions();
+      } catch (error) {
+        console.error('Failed to cancel payment:', error);
+        Alert.alert('Error', 'Failed to cancel payment. Please try again.');
+        // Even if delete fails, clear the UI
+        clearActiveRequest();
+        setQrVisible(false);
+        setPaymentId(null);
+        setTransactionDetails(null);
+        setAmount('');
+      } finally {
+        setIsCancelling(false);
+      }
+    } else {
+      // No active request, just clear the form
+      clearActiveRequest();
+      setQrVisible(false);
+      setPaymentId(null);
+      setTransactionDetails(null);
+      setAmount('');
+    }
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colorScheme === 'dark' ? '#000000' : '#FFFFFF' }}>
-      <ThemedView className="flex-1">
-        {showSuccess && activeRequest ? (
+    <>
+      {showSuccess && activeRequest ? (
+        <View style={{ flex: 1, backgroundColor: colorScheme === 'dark' ? '#000000' : '#FFFFFF' }}>
           <TransactionSuccess 
             transaction={activeRequest}
             onClose={resetForm}
             isVendor={true}
           />
-        ) : !qrVisible ? (
-          <ScrollView 
-            className="flex-1" 
-            contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24 }}
+        </View>
+      ) : (
+        <SafeAreaView style={{ flex: 1, backgroundColor: colorScheme === 'dark' ? '#000000' : '#FFFFFF' }}>
+          <ThemedView className="flex-1 relative">
+            {!qrVisible ? (
+              <>
+                <ScrollView 
+            className="flex-1 px-6 pt-16" 
+            contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
             showsVerticalScrollIndicator={false}
           >
             {/* Header */}
@@ -183,142 +254,49 @@ export default function Receive() {
                 </View>
               </TouchableOpacity>
               
-              {/* Debug: Refresh button */}
-              <TouchableOpacity
-                className="mt-2 py-2"
-                onPress={() => {
-                  console.log('Manual sync triggered');
-                  syncTransactions();
-                }}
-              >
-                <ThemedText className="text-center text-sm opacity-60">
-                  Tap to refresh pending list
-                </ThemedText>
-              </TouchableOpacity>
             </View>
 
-            {/* Latest Request - Show prominently if exists */}
-            {activeRequest && (
-              <View className="mx-4 mt-6">
-                <ThemedText className="text-lg font-semibold mb-3">Latest Request</ThemedText>
-                <TouchableOpacity
-                  className="p-4 bg-green-100 dark:bg-green-900 rounded-xl border-2 border-green-500"
-                  onPress={() => {
-                    setPaymentId(activeRequest.payment_id);
-                    setAmount(activeRequest.price_usd.toString());
-                    setQrVisible(true);
-                  }}
-                >
-                  <View className="flex-row items-center justify-between mb-2">
-                    <ThemedText className="text-2xl font-bold">${activeRequest.price_usd}</ThemedText>
-                    <View className="bg-yellow-500 px-3 py-1 rounded-full">
-                      <ThemedText className="text-white text-sm font-semibold">Waiting</ThemedText>
-                    </View>
-                  </View>
-                  <View className="flex-row items-center justify-between">
-                    <ThemedText className="text-sm opacity-80">ID: {activeRequest.payment_id}</ThemedText>
-                    <ThemedText className="text-sm font-medium text-green-600 dark:text-green-400">
-                      Tap to show QR →
-                    </ThemedText>
-                  </View>
-                </TouchableOpacity>
-              </View>
-            )}
-
-            {/* All Pending Requests */}
-            {vendorPendingTransactions.length > 0 && (
-              <View className="mx-4 mt-6">
-                <ThemedText className="text-lg font-semibold mb-3">All Waiting Payments ({vendorPendingTransactions.length})</ThemedText>
-                <View className="space-y-2">
-                  {vendorPendingTransactions.map((transaction) => {
-                    const age = Date.now() - transaction.created_at;
-                    const ageMinutes = Math.floor(age / 60000);
-                    const ageText = ageMinutes < 1 ? 'Just now' : `${ageMinutes} min ago`;
-                    
-                    return (
-                      <TouchableOpacity
-                        key={transaction.payment_id}
-                        className="p-4 bg-gray-100 dark:bg-gray-800 rounded-xl flex-row items-center justify-between"
-                        onPress={() => {
-                          setPaymentId(transaction.payment_id);
-                          setAmount(transaction.price_usd.toString());
-                          setQrVisible(true);
-                        }}
-                      >
-                        <View className="flex-1">
-                          <ThemedText className="text-lg font-semibold">${transaction.price_usd}</ThemedText>
-                          <ThemedText className="text-sm opacity-60">{ageText} • {transaction.status}</ThemedText>
-                        </View>
-                        <View className={`w-3 h-3 rounded-full ${
-                          transaction.status === 'pending' || transaction.status === 'Created' ? 'bg-yellow-500' :
-                          transaction.status === 'calculated' || transaction.status === 'Supplemented' ? 'bg-blue-500' :
-                          'bg-gray-400'
-                        }`} />
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-            )}
-            
-            {/* Completed Transactions */}
-            {vendorCompletedTransactions.length > 0 && (
-              <View className="mx-4 mt-6 mb-8">
-                <ThemedText className="text-lg font-semibold mb-3">Completed Payments ({vendorCompletedTransactions.length})</ThemedText>
-                <View className="space-y-2">
-                  {vendorCompletedTransactions.slice(0, 5).map((transaction) => {
-                    const age = Date.now() - transaction.created_at;
-                    const ageMinutes = Math.floor(age / 60000);
-                    const ageHours = Math.floor(age / 3600000);
-                    const ageDays = Math.floor(age / 86400000);
-                    
-                    let ageText = 'Just now';
-                    if (ageDays > 0) {
-                      ageText = `${ageDays} day${ageDays > 1 ? 's' : ''} ago`;
-                    } else if (ageHours > 0) {
-                      ageText = `${ageHours} hour${ageHours > 1 ? 's' : ''} ago`;
-                    } else if (ageMinutes > 0) {
-                      ageText = `${ageMinutes} min ago`;
-                    }
-                    
-                    return (
-                      <TouchableOpacity
-                        key={transaction.payment_id}
-                        className="p-4 bg-gray-100 dark:bg-gray-800 rounded-xl flex-row items-center justify-between opacity-75"
-                        disabled={true} // Completed transactions are view-only
-                      >
-                        <View className="flex-1">
-                          <ThemedText className="text-lg font-semibold">${transaction.price_usd}</ThemedText>
-                          <ThemedText className="text-sm opacity-60">{ageText} • Completed</ThemedText>
-                          {transaction.customer_address && (
-                            <ThemedText className="text-xs opacity-50 mt-1">
-                              From: {transaction.customer_address.slice(0, 8)}...
-                            </ThemedText>
-                          )}
-                        </View>
-                        <View className="bg-green-500 w-3 h-3 rounded-full" />
-                      </TouchableOpacity>
-                    );
-                  })}
-                  {vendorCompletedTransactions.length > 5 && (
-                    <ThemedText className="text-sm text-center opacity-60 mt-2">
-                      +{vendorCompletedTransactions.length - 5} more completed payments
-                    </ThemedText>
-                  )}
-                </View>
-              </View>
-            )}
-          </ScrollView>
+                  {/* Bottom padding to prevent overlap with Pay/Receive toggle */}
+                  <View className="h-24" />
+                </ScrollView>
+                
+                {/* Transaction History Icon - Outside ScrollView */}
+                {(vendorPendingTransactions.length > 0 || vendorCompletedTransactions.length > 0) && (
+                  <TouchableOpacity
+                    className="absolute top-20 right-4 bg-gray-100 dark:bg-gray-800 p-3 rounded-full shadow-lg z-10"
+                    onPress={() => setShowHistoryModal(true)}
+                  >
+                    <Clock size={24} color={colorScheme === 'dark' ? '#9CA3AF' : '#6B7280'} />
+                    {vendorPendingTransactions.length > 0 && (
+                      <View className={`absolute -top-1 -right-1 w-5 h-5 rounded-full items-center justify-center ${
+                        vendorPendingTransactions.some(t => {
+                          const createdAtMs = t.created_at < 10000000000 ? t.created_at * 1000 : t.created_at;
+                          const ageMinutes = Math.floor((now - createdAtMs) / 60000);
+                          return ageMinutes > 30;
+                        }) ? 'bg-orange-500' : 'bg-yellow-500'
+                      }`}>
+                        <ThemedText className="text-white text-xs font-bold">
+                          {vendorPendingTransactions.length}
+                        </ThemedText>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                )}
+              </>
         ) : (
           <ScrollView 
-            className="flex-1" 
-            contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24 }}
+            className="flex-1 px-6" 
+            contentContainerStyle={{ flexGrow: 1 }}
             showsVerticalScrollIndicator={false}
           >
             {/* Back Button */}
             <TouchableOpacity
-              className="flex-row items-center mb-4 mt-4"
-              onPress={() => setQrVisible(false)}
+              className="flex-row items-center mb-4 mt-20"
+              onPress={() => {
+                setQrVisible(false);
+                // Sync transactions when going back to ensure list is updated
+                syncTransactions();
+              }}
             >
               <ArrowLeft size={24} color={colorScheme === 'dark' ? '#FFFFFF' : '#000000'} />
               <ThemedText className="text-lg font-medium ml-2">Back to Requests</ThemedText>
@@ -387,19 +365,151 @@ export default function Receive() {
               {/* Action Buttons */}
               <View className="w-full max-w-sm space-y-3">
                 <TouchableOpacity
-                  className="bg-blue-500 py-4 px-8 rounded-xl"
-                  onPress={() => setQrVisible(false)}
+                  className={`py-4 px-8 rounded-xl ${isCancelling ? 'bg-gray-400' : 'bg-red-500'}`}
+                  onPress={handleCancel}
+                  disabled={isCancelling}
                 >
-                  <ThemedText className="text-white text-center text-lg font-semibold">
-                    Done
-                  </ThemedText>
+                  {isCancelling ? (
+                    <ActivityIndicator color="#ffffff" size="small" />
+                  ) : (
+                    <ThemedText className="text-white text-center text-lg font-semibold">
+                      Cancel Payment
+                    </ThemedText>
+                  )}
                 </TouchableOpacity>
               </View>
             </View>
           </ScrollView>
         )}
       </ThemedView>
-    </SafeAreaView>
+      
+      {/* Transaction History Modal */}
+      <Modal
+        visible={showHistoryModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowHistoryModal(false)}
+      >
+        <View className="flex-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <View className="flex-1 mt-20 rounded-t-3xl" style={{ backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF' }}>
+            {/* Modal Header */}
+            <View className="flex-row items-center justify-between p-4 border-b" style={{ borderBottomColor: colorScheme === 'dark' ? '#48484A' : '#E5E5EA' }}>
+              <ThemedText className="text-xl font-bold">Payment History</ThemedText>
+              <TouchableOpacity onPress={() => setShowHistoryModal(false)}>
+                <X size={24} color={colorScheme === 'dark' ? '#FFFFFF' : '#000000'} />
+              </TouchableOpacity>
+            </View>
+            
+            {/* Modal Content */}
+            <ScrollView className="flex-1 p-4">
+              {/* Pending Payments */}
+              {vendorPendingTransactions.length > 0 && (
+                <View className="mb-6">
+                  <ThemedText className="text-lg font-semibold mb-3">Waiting Payments ({vendorPendingTransactions.length})</ThemedText>
+                  {vendorPendingTransactions.map((transaction) => {
+                    // Convert to milliseconds if created_at is in seconds
+                    const createdAtMs = transaction.created_at < 10000000000 ? transaction.created_at * 1000 : transaction.created_at;
+                    const age = Date.now() - createdAtMs;
+                    const ageMinutes = Math.floor(age / 60000);
+                    const ageHours = Math.floor(age / 3600000);
+                    const ageDays = Math.floor(age / 86400000);
+                    
+                    let ageText = 'Just now';
+                    if (ageDays > 0) {
+                      ageText = `${ageDays}d ago`;
+                    } else if (ageHours > 0) {
+                      ageText = `${ageHours}h ago`;
+                    } else if (ageMinutes > 0) {
+                      ageText = `${ageMinutes}m ago`;
+                    }
+                    
+                    // Mark as stale if older than 30 minutes
+                    const isStale = ageMinutes > 30;
+                    const statusColor = isStale ? 'bg-orange-500' : 'bg-yellow-500';
+                    const statusText = isStale ? 'Expiring soon' : 'Waiting';
+                    
+                    return (
+                      <TouchableOpacity
+                        key={transaction.payment_id}
+                        className={`p-4 rounded-xl mb-2 flex-row items-center justify-between ${
+                          isStale 
+                            ? 'bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800' 
+                            : 'bg-gray-100 dark:bg-gray-800'
+                        }`}
+                        onPress={() => {
+                          setPaymentId(transaction.payment_id);
+                          setAmount(transaction.price_usd.toString());
+                          setQrVisible(true);
+                          setShowHistoryModal(false);
+                        }}
+                      >
+                        <View className="flex-1">
+                          <ThemedText className="text-lg font-semibold">${transaction.price_usd}</ThemedText>
+                          <ThemedText className="text-sm opacity-60">{ageText} • {statusText}</ThemedText>
+                        </View>
+                        <View className={`${statusColor} w-3 h-3 rounded-full`} />
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
+              
+              {/* Completed Payments */}
+              {vendorCompletedTransactions.length > 0 && (
+                <View className="mb-6">
+                  <ThemedText className="text-lg font-semibold mb-3">Completed Payments</ThemedText>
+                  {vendorCompletedTransactions.slice(0, 10).map((transaction) => {
+                    // Convert to milliseconds if created_at is in seconds
+                    const createdAtMs = transaction.created_at < 10000000000 ? transaction.created_at * 1000 : transaction.created_at;
+                    const age = Date.now() - createdAtMs;
+                    const ageMinutes = Math.floor(age / 60000);
+                    const ageHours = Math.floor(age / 3600000);
+                    const ageDays = Math.floor(age / 86400000);
+                    
+                    let ageText = 'Just now';
+                    if (ageDays > 0) {
+                      ageText = `${ageDays}d ago`;
+                    } else if (ageHours > 0) {
+                      ageText = `${ageHours}h ago`;
+                    } else if (ageMinutes > 0) {
+                      ageText = `${ageMinutes}m ago`;
+                    }
+                    
+                    return (
+                      <View
+                        key={transaction.payment_id}
+                        className="p-4 bg-gray-100 dark:bg-gray-800 rounded-xl mb-2 flex-row items-center justify-between opacity-75"
+                      >
+                        <View className="flex-1">
+                          <ThemedText className="text-lg font-semibold">${transaction.price_usd}</ThemedText>
+                          <ThemedText className="text-sm opacity-60">{ageText}</ThemedText>
+                          {transaction.customer_address && (
+                            <ThemedText className="text-xs opacity-50 mt-1">
+                              From: {transaction.customer_address.slice(0, 8)}...
+                            </ThemedText>
+                          )}
+                        </View>
+                        <View className="bg-green-500 w-3 h-3 rounded-full" />
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
+              
+              {/* Empty State */}
+              {vendorPendingTransactions.length === 0 && vendorCompletedTransactions.length === 0 && (
+                <View className="flex-1 items-center justify-center py-20">
+                  <Clock size={48} color={colorScheme === 'dark' ? '#6B7280' : '#9CA3AF'} />
+                  <ThemedText className="text-lg mt-4">No payment history yet</ThemedText>
+                </View>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+        </SafeAreaView>
+      )}
+    </>
   );
 }
 

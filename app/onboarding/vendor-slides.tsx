@@ -1,34 +1,37 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Dimensions, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, SafeAreaView, TouchableOpacity } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import { OnboardingIndicator } from '@/components/onboarding';
 import Animated, { FadeInRight, FadeOutLeft } from 'react-native-reanimated';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
+import { X } from 'lucide-react-native';
 
 const { width } = Dimensions.get('window');
 
 const slides = [
   {
-    title: 'Welcome to Index Business',
-    description: 'Accept crypto payments seamlessly in your business',
+    title: 'Welcome to Index Wallets',
+    description: 'Your gateway to values-aligned commerce',
   },
   {
-    title: 'Easy Integration',
-    description: 'Set up payment terminals and QR codes in minutes',
+    title: 'Accept Value-Based Payments',
+    description: 'Join IndexWallets to accept customer donation receipts as partial payment, enabling 0% transaction fees while attracting values-aligned customers.',
   },
   {
-    title: 'Real-time Settlement',
-    description: 'Get instant confirmations and automatic conversions',
+    title: 'Value What Your Customers Value',
+    description: 'Set your acceptance rate for causes your customers care about - the more you value their donations, the more business you attract.',
   },
   {
-    title: 'Start Accepting Payments',
-    description: 'Create your business wallet to begin',
+    title: 'Grow Through Community Alignment',
+    description: 'Watch your business grow as customers choose you over competitors because it\'s literally cheaper for them to buy from values-aligned vendors.',
   },
 ];
 
 export default function VendorSlides() {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const { setOnboardingStep } = useAuth();
+  const { colorScheme } = useTheme();
 
   const handleChange = (index: number) => {
     setSelectedIndex(index);
@@ -43,6 +46,13 @@ export default function VendorSlides() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
+        <TouchableOpacity 
+          style={styles.exitButton}
+          onPress={() => setOnboardingStep('user-type')}
+        >
+          <X size={24} color={colorScheme === 'dark' ? '#FFFFFF' : '#000000'} />
+        </TouchableOpacity>
+        
         <View style={styles.content}>
           <Animated.View 
             key={selectedIndex}
@@ -77,6 +87,13 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
+  },
+  exitButton: {
+    position: 'absolute',
+    top: 60,
+    right: 20,
+    zIndex: 1,
+    padding: 10,
   },
   content: {
     flex: 1,

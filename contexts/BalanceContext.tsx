@@ -122,6 +122,7 @@ export const BalanceProvider: React.FC<{ children: ReactNode }> = ({ children })
   
   // Refresh balances function that can be called from components
   const refreshBalances = async (): Promise<void> => {
+    console.log('BalanceContext: Manual refresh requested');
     await fetchBalances();
   };
   
