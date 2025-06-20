@@ -10,22 +10,29 @@ const { width } = Dimensions.get('window');
 const slides = [
   {
     key: '1',
-    title: 'Accept Payments Anywhere',
-    description: 'With Index Wallet, you can accept crypto payments from customers in-store or online with just a few taps.',
+    title: 'Your gateway to values-aligned commerce.',
+    description: 'Accept payments from customers who share your values and want to support businesses like yours.',
     image: <Store size={120} color="#2196F3" />,
     textColor: '#2196F3'
   },
   {
     key: '2',
-    title: 'Instant Settlement',
-    description: 'Receive funds instantly in your wallet without waiting for traditional payment processing times.',
+    title: 'Attract Index Wallets Customers',
+    description: 'Attract high value customers who prefer to pay with Index Wallets',
     image: <CreditCard size={120} color="#2196F3" />,
     textColor: '#2196F3'
   },
   {
     key: '3',
-    title: 'Secure Your Business',
-    description: 'Your wallet is protected by advanced cryptography and your private keys never leave your device.',
+    title: 'Local Business Friendly',
+    description: 'Benefit and improve your competitiveness as a local business',
+    image: <Store size={120} color="#2196F3" />,
+    textColor: '#2196F3'
+  },
+  {
+    key: '4',
+    title: '0% Transaction Fees, Forever',
+    description: 'Pay 0% transaction fees, while funding causes that benefit you and your community.',
     image: <ShieldCheck size={120} color="#2196F3" />,
     textColor: '#2196F3'
   },

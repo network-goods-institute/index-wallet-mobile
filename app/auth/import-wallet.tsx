@@ -96,7 +96,7 @@ export default function ImportWalletScreen(): JSX.Element {
         
         if (loginSuccess) {
           console.log('Login successful, private keys derived and stored');
-          setOnboardingStep('security-settings');
+          setOnboardingStep('complete');
         } else {
           setError('Failed to complete login process. Please try again.');
         }
@@ -138,13 +138,13 @@ export default function ImportWalletScreen(): JSX.Element {
           >
             <View className="flex-row flex-wrap justify-between mb-4">
               {seedWords.map((word, index) => (
-                <View key={index} className="w-[30%] bg-gray-100 dark:bg-gray-800 rounded-xl p-4 mb-4 relative">
+                <View key={index} className="w-[30%] bg-gray-100 dark:bg-gray-800 rounded-xl p-3 pb-4 mb-4 relative" style={{ minHeight: 72 }}>
                   <Text className="text-gray-500 dark:text-gray-400 text-xs absolute top-2 left-2">
                     {(index + 1).toString().padStart(2, '0')}
                   </Text>
                   <TextInput
                     ref={ref => inputRefs.current[index] = ref}
-                    className="text-gray-900 dark:text-white text-lg font-medium text-center mt-2 h-7 bg-transparent"
+                    className="text-gray-900 dark:text-white text-base font-medium text-center mt-4 bg-transparent"
                     value={word}
                     onChangeText={(text) => handleWordChange(text, index)}
                     onFocus={() => {
@@ -171,7 +171,7 @@ export default function ImportWalletScreen(): JSX.Element {
                     }}
                     placeholder="..."
                     placeholderTextColor={colorScheme === 'dark' ? '#4B5563' : '#9CA3AF'}
-                    style={{ outline: 'none' }}
+                    style={{ outline: 'none', minHeight: 28, paddingVertical: 4 }}
                   />
                   {word && (
                     <TouchableOpacity

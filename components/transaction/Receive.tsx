@@ -201,7 +201,7 @@ export default function Receive({ onSuccessStateChange }: ReceiveProps) {
             showsVerticalScrollIndicator={false}
           >
             {/* Header */}
-            <View className="items-center mb-12">
+            <View className="items-center mb-12 mt-4">
               <View className="w-20 h-20 bg-blue-100 dark:bg-blue-900 rounded-full items-center justify-center mb-6">
                 <QrCode size={40} color={colorScheme === 'dark' ? '#60A5FA' : '#3B82F6'} />
               </View>
@@ -263,7 +263,7 @@ export default function Receive({ onSuccessStateChange }: ReceiveProps) {
                 {/* Transaction History Icon - Outside ScrollView */}
                 {(vendorPendingTransactions.length > 0 || vendorCompletedTransactions.length > 0) && (
                   <TouchableOpacity
-                    className="absolute top-20 right-4 bg-gray-100 dark:bg-gray-800 p-3 rounded-full shadow-lg z-10"
+                    className="absolute top-12 right-4 bg-gray-100 dark:bg-gray-800 p-3 rounded-full shadow-lg z-10"
                     onPress={() => setShowHistoryModal(true)}
                   >
                     <Clock size={24} color={colorScheme === 'dark' ? '#9CA3AF' : '#6B7280'} />
@@ -291,7 +291,7 @@ export default function Receive({ onSuccessStateChange }: ReceiveProps) {
           >
             {/* Back Button */}
             <TouchableOpacity
-              className="flex-row items-center mb-4 mt-20"
+              className="flex-row items-center mb-6 mt-8"
               onPress={() => {
                 setQrVisible(false);
                 // Sync transactions when going back to ensure list is updated
@@ -303,7 +303,7 @@ export default function Receive({ onSuccessStateChange }: ReceiveProps) {
             </TouchableOpacity>
             
             {/* QR Code Display */}
-            <View className="items-center mt-8">
+            <View className="items-center mt-2">
               <ThemedText className="text-2xl font-bold text-center mb-2">
                 Payment Request
               </ThemedText>

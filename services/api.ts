@@ -276,24 +276,6 @@ export const PaymentAPI = {
   },
 
 
-  /**
-   * Sync transactions (pending and recent)
-   * @param params Sync parameters
-   */
-  syncTransactions: async (params: {
-    wallet_address: string;
-    include_pending: boolean;
-    include_recent: boolean;
-    if_modified_since?: number;
-  }) => {
-    try {
-      const response = await api.get('/api/transactions/sync', { params });
-      return response.data;
-    } catch (error) {
-      console.error('Error syncing transactions:', error);
-      throw error;
-    }
-  },
 
   /**
    * Get transaction history for a user

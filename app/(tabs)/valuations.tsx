@@ -507,7 +507,7 @@ export default function ValuationsScreen() {
   // If there's an error, show an error message
   if (error) {
     return (
-      <SafeAreaView className={`flex-1 ${colorScheme === 'dark' ? 'bg-black' : 'bg-gray-50'}`}>
+      <SafeAreaView className={`flex-1 ${colorScheme === 'dark' ? 'bg-black' : 'bg-gray-50'}`} style={{ paddingBottom: 80 }}>
         <View className="flex-1 items-center justify-center px-6">
           <View className={`w-full max-w-sm p-8 rounded-3xl ${colorScheme === 'dark' ? 'bg-gray-800/50' : 'bg-white'}`}
             style={{
@@ -549,7 +549,7 @@ export default function ValuationsScreen() {
   }
   
   return (
-    <SafeAreaView className={`flex-1 ${colorScheme === 'dark' ? 'bg-black' : 'bg-white'}`}>
+    <SafeAreaView className={`flex-1 ${colorScheme === 'dark' ? 'bg-black' : 'bg-white'}`} style={{ paddingBottom: 80 }}>
       <Valuations 
         tokens={tokens}
         onUpdateValuation={updateTokenValuation}

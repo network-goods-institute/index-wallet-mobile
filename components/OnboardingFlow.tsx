@@ -4,7 +4,6 @@ import { OnboardingStep } from '@/contexts/AuthContext';
 import WelcomeScreen from '../app/auth/welcome';
 import CreateWalletScreen from '../app/auth/create-wallet';
 import ImportWalletScreen from '../app/auth/import-wallet';
-import SecuritySettingsScreen from '../app/auth/security-settings';
 import VerifySeedScreen from '../app/auth/verify-seed';
 import UserTypeScreen from '../app/auth/user-type';
 import UserNameScreen from '../app/auth/user-name';
@@ -32,7 +31,6 @@ export default function OnboardingFlow({ step }: { step: OnboardingStep }) {
     case 'import-seed':
       return <ImportWalletScreen />;
     case 'create-passkey':
-      return <SecuritySettingsScreen />;
     case 'complete':
       return <CreateWalletScreen />; // Could be replaced with a dedicated completion screen
     default:

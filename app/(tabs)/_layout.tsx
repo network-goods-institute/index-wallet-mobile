@@ -1,53 +1,49 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { Platform } from 'react-native';
-
-import { HapticTab } from '@/components/HapticTab';
-import { IconSymbol } from '@/components/ui/IconSymbol';
-import TabBarBackground from '@/components/ui/TabBarBackground';
-import { Colors } from '@/constants/Colors';
+import { Platform, View } from 'react-native';
+import FloatingTabBar from '@/components/FloatingTabBar';
 
 export default function TabLayout() {
   return (
     <Tabs
+      tabBar={(props) => <FloatingTabBar {...props} />}
       screenOptions={{
-        tabBarActiveTintColor: Colors['light'].tint,
         headerShown: false,
-        tabBarButton: HapticTab,
-        tabBarBackground: TabBarBackground,
-        tabBarStyle: Platform.select({
-          ios: {
-            // Use a transparent background on iOS to show the blur effect
-            // Removed absolute positioning to prevent content overlap
-          },
-          default: {},
-        }),
+        tabBarStyle: {
+          position: 'absolute',
+          elevation: 0,
+          borderTopWidth: 0,
+          backgroundColor: 'transparent',
+        },
       }}>
       <Tabs.Screen
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
         }}
       />
       <Tabs.Screen
         name="valuations"
         options={{
-          title: 'Valuations',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="chart.line.uptrend.xyaxis" color={color} />,
+          title: 'Market',
         }}
       />
       <Tabs.Screen
         name="transact"
         options={{
-          title: 'Transact',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="arrow.left.arrow.right" color={color} />,
+          title: 'Pay',
         }}
-      />      <Tabs.Screen
+      />
+      <Tabs.Screen
+        name="vendors"
+        options={{
+          title: 'Accepted Stores',
+        }}
+      />
+      <Tabs.Screen
         name="settings"
         options={{
           title: 'Settings',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="gearshape.fill" color={color} />,
         }}
       />
     </Tabs>

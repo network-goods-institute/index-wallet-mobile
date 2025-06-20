@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View, FlatList, Image, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, FlatList, Image, TouchableOpacity, ScrollView, SafeAreaView, Text } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -56,93 +56,55 @@ const mockVendors: Vendor[] = [
 
 export default function VendorsScreen() {
   const { colorScheme } = useTheme();
+  const isDark = colorScheme === 'dark';
   
-  const renderVendorItem = ({ item }: { item: Vendor }) => (
-    <TouchableOpacity 
-      style={[
-        styles.vendorCard, 
-        { backgroundColor: colorScheme === 'dark' ? '#1F2937' : '#FFFFFF' }
-      ]}
-      onPress={() => console.log(`Selected vendor: ${item.name}`)}
-    >
-      <Image source={{ uri: item.logoUrl }} style={styles.vendorLogo} />
-      <View style={styles.vendorInfo}>
-        <ThemedText className="text-lg font-bold">{item.name}</ThemedText>
-        <ThemedText className="text-sm opacity-70">{item.category}</ThemedText>
-        <ThemedText className="text-sm mt-1">{item.description}</ThemedText>
-      </View>
-    </TouchableOpacity>
-  );
-
-  const renderHeader = () => (
-    <View style={styles.header}>
-      <TouchableOpacity 
-        style={styles.backButton}
-        onPress={() => router.back()}
-      >
-        <ArrowLeft size={24} color={colorScheme === 'dark' ? '#FFFFFF' : '#000000'} />
-      </TouchableOpacity>
-      <View style={styles.headerTextContainer}>
-        <ThemedText className="text-2xl font-bold">Partnered Vendors</ThemedText>
-        <ThemedText className="text-sm opacity-70 mt-1">
-          Support these businesses with your tokens
-        </ThemedText>
-      </View>
-    </View>
-  );
-
   return (
-    <ThemedView style={styles.container}>
-      <FlatList
-        data={mockVendors}
-        renderItem={renderVendorItem}
-        keyExtractor={item => item.id}
-        ListHeaderComponent={renderHeader}
-        contentContainerStyle={styles.listContent}
-      />
+    <ThemedView className="flex-1">
+      <View className="pt-16 pb-5 px-5">
+        <Text className="text-3xl font-bold text-black dark:text-white">Partnered Vendors</Text>
+      </View>
+      
+      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 80 }}>
+        <View className="mb-6">
+          <Text className="text-lg font-semibold mb-2 px-5 text-blue-600 dark:text-blue-400">
+            Accepted Stores
+          </Text>
+          
+          <View className="mx-4 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800">
+            {mockVendors.map((vendor, index) => (
+              <TouchableOpacity
+                key={vendor.id}
+                onPress={() => console.log(`Selected vendor: ${vendor.name}`)}
+                className={`flex-row items-center justify-between py-4 px-4 ${index < mockVendors.length - 1 ? 'border-b border-gray-200 dark:border-gray-700' : ''}`}
+              >
+                <View className="flex-row items-center flex-1">
+                  <Image 
+                    source={{ uri: vendor.logoUrl }} 
+                    className="w-10 h-10 rounded-full"
+                    style={{ backgroundColor: isDark ? '#374151' : '#E5E7EB' }}
+                  />
+                  <View className="ml-4 flex-1">
+                    <Text className="text-base font-medium text-black dark:text-white">
+                      {vendor.name}
+                    </Text>
+                    <Text className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      {vendor.category}
+                    </Text>
+                  </View>
+                </View>
+                
+                <View className="ml-2">
+                  <Text className="text-sm text-gray-500 dark:text-gray-400">
+                    ›
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      </ScrollView>
     </ThemedView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 60,
-    paddingBottom: 20,
-  },
-  backButton: {
-    padding: 8,
-  },
-  headerTextContainer: {
-    marginLeft: 8,
-  },
-  listContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 20,
-  },
-  vendorCard: {
-    flexDirection: 'row',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  vendorLogo: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-  },
-  vendorInfo: {
-    marginLeft: 16,
-    flex: 1,
-  },
-});
+const styles = StyleSheet.create({});

@@ -11,7 +11,7 @@ const slides = [
   {
     key: '1',
     title: 'Pay Anywhere, Anytime',
-    description: 'With Index Wallet, you can make payments to any vendor quickly and securely using cryptocurrency.',
+    description: 'With Index Wallets, you can make payments to any vendor quickly and securely using cryptocurrency.',
     image: <Wallet size={120} color="#7B1FA2" />,
     textColor: '#7B1FA2'
   },

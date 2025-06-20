@@ -68,6 +68,13 @@ export default function UserNameScreen() {
               <Text className="text-red-500 text-lg mt-4">{error}</Text>
             ) : null}
 
+            <Text className="text-gray-400 text-base mt-6">
+              {isVendor 
+                ? "Customers will be able to see your store name on transactions"
+                : "Vendors will be able to see your username on transactions"
+              }
+            </Text>
+
             <View className="absolute bottom-12 left-6 right-6">
               <TouchableOpacity
                 onPress={handleContinue}

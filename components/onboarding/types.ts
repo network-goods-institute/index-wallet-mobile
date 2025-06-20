@@ -11,6 +11,7 @@ export type OnboardingIndicatorProps = {
   data: number[];
   selectedIndex: number;
   onChange: (index: number) => void;
+  onComplete?: () => void;
 };
 
 export type PaginationProps = {

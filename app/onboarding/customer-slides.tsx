@@ -6,6 +6,7 @@ import Animated, { FadeInRight, FadeOutLeft } from 'react-native-reanimated';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { X } from 'lucide-react-native';
+import LottieView from 'lottie-react-native';
 
 const { width } = Dimensions.get('window');
 
@@ -13,18 +14,22 @@ const slides = [
   {
     title: 'Welcome to Index Wallets',
     description: 'Your gateway to values-aligned commerce',
+    animation: require('@/assets/animations/1.json'),
   },
   {
     title: 'Donate to Causes You Care About',
-    description: 'Support causes like reforestation or community projects and receive digital donation receipts in your IndexWallet.',
+    description: 'Support causes like reforestation or community projects and receive digital donation receipts in your Index Wallets.',
+    animation: require('@/assets/animations/2.json'),
   },
   {
     title: 'Shop and Save Automatically',
     description: 'Use your donation receipts at participating merchants - they reduce your purchase price based on how much the merchant values your cause.',
+    animation: require('@/assets/animations/3.json'),
   },
   {
     title: 'Compare and Choose Values-Aligned Vendors',
     description: 'See real-time price comparisons showing how much you save at different merchants based on their values alignment with your donations.',
+    animation: require('@/assets/animations/4.json'),
   },
 ];
 
@@ -35,12 +40,6 @@ export default function CustomerSlides() {
 
   const handleChange = (index: number) => {
     setSelectedIndex(index);
-    if (index === slides.length - 1) {
-      // Delay navigation to allow the animation to complete
-      setTimeout(() => {
-        setOnboardingStep('user-name');
-      }, 1000);
-    }
   };
 
   return (
@@ -60,6 +59,12 @@ export default function CustomerSlides() {
             exiting={FadeOutLeft.springify().damping(18).stiffness(200)}
             style={styles.slide}
           >
+            <LottieView
+              source={slides[selectedIndex].animation}
+              autoPlay
+              loop
+              style={styles.animation}
+            />
             <Text style={styles.title} className="text-black dark:text-white">
               {slides[selectedIndex].title}
             </Text>
@@ -74,6 +79,7 @@ export default function CustomerSlides() {
             data={[...Array(slides.length).keys()]}
             selectedIndex={selectedIndex}
             onChange={handleChange}
+            onComplete={() => setOnboardingStep('user-name')}
           />
         </View>
       </SafeAreaView>
@@ -105,6 +111,11 @@ const styles = StyleSheet.create({
     width: width - 40,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  animation: {
+    width: 200,
+    height: 200,
+    marginBottom: 24,
   },
   title: {
     fontSize: 32,

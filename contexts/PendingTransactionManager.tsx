@@ -24,10 +24,11 @@ interface PendingTransactionManagerContextType {
   lastSyncTime: number | null;
 }
 
-const STORAGE_KEYS = {
-  PENDING_TRANSACTIONS: '@transactions/pending',
-  LAST_SYNC: '@transactions/last_sync',
-};
+// Storage keys are now functions that include wallet address
+const getStorageKeys = (walletAddress: string) => ({
+  PENDING_TRANSACTIONS: `@transactions/pending/${walletAddress}`,
+  LAST_SYNC: `@transactions/last_sync/${walletAddress}`,
+});
 
 export const PendingTransactionManagerContext = createContext<PendingTransactionManagerContextType>({
   pendingTransactions: [],
@@ -49,7 +50,7 @@ export const PendingTransactionManagerProvider: React.FC<{ children: React.React
   const syncIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const requestCacheRef = useRef<Map<string, Promise<any>>>(new Map());
 
-  // Load cached data on mount
+  // Load cached data on mount and when wallet changes
   useEffect(() => {
     loadCachedData();
     
@@ -61,7 +62,7 @@ export const PendingTransactionManagerProvider: React.FC<{ children: React.React
         clearInterval(syncIntervalRef.current);
       }
     };
-  }, []);
+  }, [auth?.walletAddress]); // Reload when wallet address changes
 
   // Handle app state changes
   const handleAppStateChange = (nextAppState: AppStateStatus) => {
@@ -70,30 +71,49 @@ export const PendingTransactionManagerProvider: React.FC<{ children: React.React
 
   // Load cached pending transactions
   const loadCachedData = async () => {
+    if (!auth?.walletAddress) {
+      console.log('No wallet address, skipping cache load');
+      return;
+    }
+    
     try {
+      const storageKeys = getStorageKeys(auth.walletAddress);
       const [cachedPending, cachedLastSync] = await Promise.all([
-        AsyncStorage.getItem(STORAGE_KEYS.PENDING_TRANSACTIONS),
-        AsyncStorage.getItem(STORAGE_KEYS.LAST_SYNC),
+        AsyncStorage.getItem(storageKeys.PENDING_TRANSACTIONS),
+        AsyncStorage.getItem(storageKeys.LAST_SYNC),
       ]);
 
       if (cachedPending) {
-        setPendingTransactions(JSON.parse(cachedPending));
+        const transactions = JSON.parse(cachedPending);
+        console.log(`Loaded ${transactions.length} cached transactions for wallet ${auth.walletAddress.slice(0, 8)}...`);
+        setPendingTransactions(transactions);
+      } else {
+        console.log('No cached transactions found for this wallet');
+        setPendingTransactions([]);
       }
+      
       if (cachedLastSync) {
         setLastSyncTime(parseInt(cachedLastSync, 10));
       }
     } catch (error) {
       console.error('Failed to load cached data:', error);
+      setPendingTransactions([]);
     }
   };
 
   // Save to cache
   const saveToCache = async (transactions: Transaction[], syncTime: number) => {
+    if (!auth?.walletAddress) {
+      console.log('No wallet address, skipping cache save');
+      return;
+    }
+    
     try {
-      console.log(`Saving ${transactions.length} transactions to cache`);
+      const storageKeys = getStorageKeys(auth.walletAddress);
+      console.log(`Saving ${transactions.length} transactions to cache for wallet ${auth.walletAddress.slice(0, 8)}...`);
       await Promise.all([
-        AsyncStorage.setItem(STORAGE_KEYS.PENDING_TRANSACTIONS, JSON.stringify(transactions)),
-        AsyncStorage.setItem(STORAGE_KEYS.LAST_SYNC, syncTime.toString()),
+        AsyncStorage.setItem(storageKeys.PENDING_TRANSACTIONS, JSON.stringify(transactions)),
+        AsyncStorage.setItem(storageKeys.LAST_SYNC, syncTime.toString()),
       ]);
       console.log('Cache saved successfully');
     } catch (error) {
@@ -149,25 +169,48 @@ export const PendingTransactionManagerProvider: React.FC<{ children: React.React
       setError(null);
       
       try {
-        // For now, just ensure we have the latest from cache
-        // In the future, this would sync with backend
-        console.log('Syncing transactions from cache...');
+        console.log('Syncing transactions from backend...');
         
-        // The cached data should already be loaded, but let's make sure
-        if (pendingTransactions.length === 0) {
-          await loadCachedData();
+        // Fetch transaction history from backend
+        const response = await PaymentAPI.getTransactionHistory(auth.walletAddress);
+        
+        if (response && response.transactions) {
+          // Filter for pending transactions
+          const pendingStatuses = ['pending', 'created', 'assigned', 'Pending', 'Created', 'Assigned'];
+          const pendingTxs = response.transactions.filter((tx: Transaction) => 
+            pendingStatuses.includes(tx.status)
+          );
+          
+          console.log(`Found ${pendingTxs.length} pending transactions from ${response.transactions.length} total`);
+          
+          // Update state with new pending transactions
+          setPendingTransactions(pendingTxs);
+          
+          // Update last sync time
+          const newSyncTime = Date.now();
+          setLastSyncTime(newSyncTime);
+          
+          // Save to cache
+          await saveToCache(pendingTxs, newSyncTime);
+          
+          // Update polling interval based on transaction ages
+          const newInterval = calculatePollingInterval(pendingTxs);
+          updatePollingInterval(newInterval);
+          
+          if (newInterval) {
+            console.log(`Polling interval updated to ${newInterval}ms based on transaction ages`);
+          }
         }
-        
-        // Still update the polling interval based on current pending transactions
-        const newInterval = calculatePollingInterval(pendingTransactions);
-        updatePollingInterval(newInterval);
-        
-        console.log(`Found ${pendingTransactions.length} pending transactions in cache`);
         
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Sync failed';
         setError(errorMessage);
         console.error('Transaction sync error:', err);
+        
+        // Fall back to cached data on error
+        if (pendingTransactions.length === 0) {
+          await loadCachedData();
+        }
       } finally {
         setIsLoading(false);
       }

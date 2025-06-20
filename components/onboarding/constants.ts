@@ -10,7 +10,7 @@ export const DOT_SIZE = DOT_CONTAINER / 3;
 export const ACTIVE_DOT_COLOR = "#fff";
 export const INACTIVE_DOT_COLOR = "#aaa";
 export const PRIMARY_COLOR = "#036BFB";
-export const SUCCESS_COLOR = "#29BE56";
+export const SUCCESS_COLOR = "#FFD700";
 export const GRAY_COLOR = "#ddd";
 
 // Animations

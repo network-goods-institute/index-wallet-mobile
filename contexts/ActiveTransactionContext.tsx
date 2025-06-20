@@ -7,10 +7,13 @@ import { useTransactionHistory } from './TransactionHistoryStore';
 import { Transaction } from './TransactionContext';
 
 const POLLING_INTERVALS = {
-  ACTIVE_TRANSACTION: 2000,  // 2s for active transactions
+  ACTIVE_TRANSACTION: 2000,      // 2s - User actively transacting
+  PENDING_RECENT: 5000,          // 5s - Transaction < 2 min old
+  PENDING_STANDARD: 15000,       // 15s - Transaction 2-10 min old  
+  PENDING_STALE: 60000,          // 60s - Transaction > 10 min old
 };
 
-const MAX_POLL_ATTEMPTS = 150; // 5 minutes at 2s intervals
+const MAX_POLL_DURATION = 30 * 60 * 1000; // 30 minutes max polling
 
 interface ActiveTransactionContextType {
   // Separate states for pay and receive flows
@@ -60,7 +63,8 @@ export const ActiveTransactionProvider: React.FC<{ children: React.ReactNode }> 
   
   const paymentPollingRef = useRef<NodeJS.Timeout | null>(null);
   const requestPollingRef = useRef<NodeJS.Timeout | null>(null);
-  const pollAttemptsRef = useRef<Map<string, number>>(new Map());
+  const pollStartTimeRef = useRef<Map<string, number>>(new Map());
+  const transactionCreatedAtRef = useRef<Map<string, number>>(new Map());
 
   // Cleanup on unmount
   useEffect(() => {
@@ -73,6 +77,19 @@ export const ActiveTransactionProvider: React.FC<{ children: React.ReactNode }> 
       }
     };
   }, []);
+
+  // Calculate appropriate polling interval based on transaction age
+  const calculatePollingInterval = (transactionId: string): number => {
+    const createdAt = transactionCreatedAtRef.current.get(transactionId);
+    if (!createdAt) return POLLING_INTERVALS.ACTIVE_TRANSACTION;
+    
+    const age = Date.now() - createdAt;
+    
+    if (age < 2 * 60 * 1000) return POLLING_INTERVALS.ACTIVE_TRANSACTION;  // < 2 min
+    if (age < 10 * 60 * 1000) return POLLING_INTERVALS.PENDING_RECENT;     // 2-10 min
+    if (age < 30 * 60 * 1000) return POLLING_INTERVALS.PENDING_STANDARD;   // 10-30 min
+    return POLLING_INTERVALS.PENDING_STALE;  // > 30 min
+  };
 
   // Check if status is terminal
   const isTerminalStatus = (status: string): boolean => {
@@ -100,20 +117,19 @@ export const ActiveTransactionProvider: React.FC<{ children: React.ReactNode }> 
     type: 'payment' | 'request'
   ) => {
     try {
-      // Check poll attempts
-      const attempts = pollAttemptsRef.current.get(transactionId) || 0;
-      if (attempts >= MAX_POLL_ATTEMPTS) {
-        console.log(`Max poll attempts reached for ${transactionId}, stopping`);
+      // Check if we've exceeded max polling duration
+      const startTime = pollStartTimeRef.current.get(transactionId);
+      if (startTime && Date.now() - startTime > MAX_POLL_DURATION) {
+        console.log(`Max poll duration reached for ${transactionId}, stopping`);
         if (type === 'payment') {
           stopPaymentPolling();
         } else {
           stopRequestPolling();
         }
-        pollAttemptsRef.current.delete(transactionId);
+        pollStartTimeRef.current.delete(transactionId);
+        transactionCreatedAtRef.current.delete(transactionId);
         return;
       }
-      
-      pollAttemptsRef.current.set(transactionId, attempts + 1);
       
       const response = await PaymentAPI.getPaymentStatus(transactionId);
       
@@ -142,7 +158,8 @@ export const ActiveTransactionProvider: React.FC<{ children: React.ReactNode }> 
             stopRequestPolling();
           }
           
-          pollAttemptsRef.current.delete(transactionId);
+          pollStartTimeRef.current.delete(transactionId);
+          transactionCreatedAtRef.current.delete(transactionId);
           
           // Only remove from pending if completed (not if failed/cancelled)
           if (isCompletedStatus(response.status)) {
@@ -151,24 +168,44 @@ export const ActiveTransactionProvider: React.FC<{ children: React.ReactNode }> 
             addToHistory(response);
             console.log('Transaction completed and added to history:', transactionId);
           }
+        } else {
+          // Update the polling interval based on transaction age
+          const currentInterval = calculatePollingInterval(transactionId);
+          
+          if (type === 'payment' && paymentPollingRef.current) {
+            clearInterval(paymentPollingRef.current);
+            paymentPollingRef.current = setInterval(
+              () => pollTransaction(transactionId, 'payment'),
+              currentInterval
+            );
+            console.log(`Updated payment polling interval to ${currentInterval}ms`);
+          } else if (type === 'request' && requestPollingRef.current) {
+            clearInterval(requestPollingRef.current);
+            requestPollingRef.current = setInterval(
+              () => pollTransaction(transactionId, 'request'),
+              currentInterval
+            );
+            console.log(`Updated request polling interval to ${currentInterval}ms`);
+          }
         }
       }
     } catch (err) {
       console.error(`Failed to poll ${type} transaction:`, err);
     }
-  }, [updateTransaction, removePendingTransaction]);
+  }, [updateTransaction, removePendingTransaction, calculatePollingInterval]);
 
   // Start polling for payment
-  const startPaymentPolling = useCallback((transactionId: string) => {
+  const startPaymentPolling = useCallback((transactionId: string, createdAt?: number) => {
     stopPaymentPolling();
     
-    // Reset poll attempts for this transaction
-    pollAttemptsRef.current.set(transactionId, 0);
+    // Set up timestamps
+    pollStartTimeRef.current.set(transactionId, Date.now());
+    transactionCreatedAtRef.current.set(transactionId, createdAt || Date.now());
     
     // Initial poll
     pollTransaction(transactionId, 'payment');
     
-    // Set up interval
+    // Set up interval with initial fast polling
     paymentPollingRef.current = setInterval(
       () => pollTransaction(transactionId, 'payment'),
       POLLING_INTERVALS.ACTIVE_TRANSACTION
@@ -176,11 +213,12 @@ export const ActiveTransactionProvider: React.FC<{ children: React.ReactNode }> 
   }, [pollTransaction]);
 
   // Start polling for request
-  const startRequestPolling = useCallback((transactionId: string) => {
+  const startRequestPolling = useCallback((transactionId: string, createdAt?: number) => {
     stopRequestPolling();
     
-    // Reset poll attempts for this transaction
-    pollAttemptsRef.current.set(transactionId, 0);
+    // Set up timestamps
+    pollStartTimeRef.current.set(transactionId, Date.now());
+    transactionCreatedAtRef.current.set(transactionId, createdAt || Date.now());
     
     // Initial poll
     pollTransaction(transactionId, 'request');
@@ -237,7 +275,7 @@ export const ActiveTransactionProvider: React.FC<{ children: React.ReactNode }> 
       setActivePayment(transaction);
       
       // Start polling for updates
-      startPaymentPolling(transaction.payment_id);
+      startPaymentPolling(transaction.payment_id, transaction.created_at);
       
       return transaction;
     } catch (err) {
@@ -354,7 +392,7 @@ export const ActiveTransactionProvider: React.FC<{ children: React.ReactNode }> 
       updateTransaction(transaction);
       
       // Start polling for updates
-      startRequestPolling(transaction.payment_id);
+      startRequestPolling(transaction.payment_id, transaction.created_at);
       
       return transaction.payment_id;
     } catch (err) {

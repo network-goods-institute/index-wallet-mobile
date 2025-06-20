@@ -179,6 +179,7 @@ export default function Pay({ onSuccessStateChange }: PayProps) {
     setShowInput(false);
     setShowSuccess(false);
     setCompletedTransaction(null);
+    setScanned(false); // Reset scan state
     clearActivePayment();
     onSuccessStateChange?.(false);
   };
@@ -430,7 +431,7 @@ export default function Pay({ onSuccessStateChange }: PayProps) {
 
   // Handle barcode scan
   const handleBarCodeScanned = ({ type, data }: BarcodeScanningResult) => {
-    if (scanned || processing || isLoading) return;
+    if (scanned || processing || isLoading || showModal) return;
     
     setScanned(true);
     console.log(`QR code scanned with type ${type} and data ${data}`);
@@ -443,8 +444,9 @@ export default function Pay({ onSuccessStateChange }: PayProps) {
   if (!permission) {
     // Camera permissions are still loading
     return (
-      <View className={`flex-1 items-center justify-center ${colorScheme === 'dark' ? 'bg-black' : 'bg-white'}`}>
+      <View className={`flex-1 items-center justify-center ${colorScheme === 'dark' ? 'bg-black' : 'bg-gray-50'}`}>
         <ActivityIndicator size="large" color={colorScheme === 'dark' ? '#60A5FA' : '#3B82F6'} />
+        <ThemedText className="mt-4 text-base opacity-60">Loading camera...</ThemedText>
       </View>
     );
   }
@@ -452,31 +454,42 @@ export default function Pay({ onSuccessStateChange }: PayProps) {
   if (!permission.granted) {
     // Camera permissions are not granted yet
     return (
-      <SafeAreaView className={`flex-1 ${colorScheme === 'dark' ? 'bg-black' : 'bg-white'}`}>
-        <View className="flex-1 justify-center items-center p-5">
-          <View className={`p-10 rounded-3xl items-center shadow-lg max-w-md w-full ${
-            colorScheme === 'dark' ? 'bg-gray-800' : 'bg-white'
-          }`}>
-            <View className={`w-24 h-24 rounded-full items-center justify-center mb-6 ${
+      <SafeAreaView className={`flex-1 ${colorScheme === 'dark' ? 'bg-black' : 'bg-gray-50'}`}>
+        <View className="flex-1 items-center justify-center px-6">
+          <View className={`w-full max-w-sm p-8 rounded-3xl ${colorScheme === 'dark' ? 'bg-gray-800/50' : 'bg-white'}`}
+            style={{
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: colorScheme === 'dark' ? 0.3 : 0.08,
+              shadowRadius: 8,
+              elevation: 4,
+            }}
+          >
+            <View className={`w-20 h-20 rounded-full items-center justify-center mx-auto mb-6 ${
               colorScheme === 'dark' ? 'bg-gray-700' : 'bg-gray-100'
             }`}>
-              <Ionicons 
-                name="camera" 
-                size={48} 
-                color={colorScheme === 'dark' ? '#9CA3AF' : '#6B7280'} 
-              />
+              <ThemedText className="text-3xl">📷</ThemedText>
             </View>
-            <ThemedText className="text-2xl font-bold text-center mb-3">
-              Camera Access Required
-            </ThemedText>
-            <ThemedText className="text-base text-center opacity-60 mb-8 px-4">
+            
+            <ThemedText className="text-center text-2xl font-bold mb-2">Camera Access Required</ThemedText>
+            <ThemedText className="text-center text-base opacity-60 mb-8">
               To scan QR codes, please allow camera access
             </ThemedText>
-            <TouchableOpacity
-              className="py-4 px-8 bg-blue-500 rounded-full"
+            
+            <TouchableOpacity 
+              className={`py-4 px-8 rounded-2xl items-center ${
+                colorScheme === 'dark' ? 'bg-blue-600' : 'bg-blue-500'
+              }`}
               onPress={requestPermission}
+              style={{
+                shadowColor: '#3B82F6',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 8,
+                elevation: 5,
+              }}
             >
-              <ThemedText className="text-white text-base font-semibold">Grant Permission</ThemedText>
+              <ThemedText className="text-white font-semibold text-lg">Grant Permission</ThemedText>
             </TouchableOpacity>
           </View>
         </View>
@@ -500,7 +513,7 @@ export default function Pay({ onSuccessStateChange }: PayProps) {
           <CameraView
             style={StyleSheet.absoluteFillObject}
             facing="back"
-            onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+            onBarcodeScanned={scanned || showModal ? undefined : handleBarCodeScanned}
             barcodeScannerSettings={{
               barcodeTypes: ["qr", "pdf417"],
             }}
@@ -529,18 +542,18 @@ export default function Pay({ onSuccessStateChange }: PayProps) {
                   />
                 </Mask>
               </Defs>
-              <Rect x="0" y="0" width={width} height={height} fill="rgba(0, 0, 0, 0.8)" mask="url(#mask)" />
+              <Rect x="0" y="0" width={width} height={height} fill="rgba(255, 255, 255, 0.5)" mask="url(#mask)" />
             </Svg>
             
             {/* Text below scan area */}
             <View 
               className="absolute left-0 right-0 items-center"
               style={{ 
-                top: (height - width * 0.7) / 2 + width * 0.7 + 20, // Position below scan frame
+                top: (height - width * 0.7) / 2 + width * 0.7 + 40, // Position below scan frame
               }}
             >
-              <ThemedText className="text-white text-xl font-semibold text-center">Scan Code to Pay</ThemedText>
-              <ThemedText className="text-white/80 text-base text-center mt-1">Position code within frame</ThemedText>
+              <ThemedText className="text-gray-800 text-xl font-semibold text-center">Scan Code to Pay</ThemedText>
+              <ThemedText className="text-gray-600 text-base text-center mt-1">Position code within frame</ThemedText>
             </View>
             
             {/* Corner markers */}
@@ -555,7 +568,7 @@ export default function Pay({ onSuccessStateChange }: PayProps) {
             <View 
               className="absolute left-0 right-0 px-5" 
               style={{ 
-                top: (height - width * 0.7) / 2 - 80, // Position above scan frame
+                top: (height - width * 0.7) / 2 - 140, // Position above scan frame
               }}
             >
               <View style={{ height: 56 }}> {/* Fixed height container */}
@@ -572,11 +585,18 @@ export default function Pay({ onSuccessStateChange }: PayProps) {
                 >
                   {!showInput ? (
                     <TouchableOpacity 
-                      className="flex-row items-center justify-center bg-white/15 py-4 px-6 rounded-full border border-white/30"
+                      className="flex-row items-center justify-center bg-white py-4 px-6 rounded-full"
+                      style={{
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.25,
+                        shadowRadius: 4,
+                        elevation: 5,
+                      }}
                       onPress={() => setShowInput(true)}
                     >
-                      <Ionicons name="keypad" size={24} color="#FFFFFF" />
-                      <ThemedText className="text-white text-base font-semibold ml-3">Enter Code Manually</ThemedText>
+                      <Ionicons name="keypad" size={24} color="#6B7280" />
+                      <ThemedText className="text-gray-700 text-base font-semibold ml-3">Enter Code Manually</ThemedText>
                     </TouchableOpacity>
                   ) : null}
                 </Animated.View>
@@ -592,22 +612,22 @@ export default function Pay({ onSuccessStateChange }: PayProps) {
                 {showInput ? (
                   <View className="flex-row items-center gap-3">
                     <TouchableOpacity 
-                      className="w-12 h-12 bg-white/10 rounded-full items-center justify-center"
+                      className="w-12 h-12 bg-gray-200 rounded-full items-center justify-center"
                       onPress={() => {
                         setShowInput(false);
                         setPaymentCode('');
                       }}
                     >
-                      <Ionicons name="close" size={24} color="#FFFFFF" />
+                      <Ionicons name="close" size={24} color="#374151" />
                     </TouchableOpacity>
                     <TextInput
                       ref={inputRef}
-                      className="flex-1 bg-white/15 border border-white/30 rounded-full py-3.5 px-5 text-base text-white"
+                      className="flex-1 bg-white border border-gray-300 rounded-full py-3.5 px-5 text-base text-gray-900"
                       placeholder="Enter payment code"
-                      placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                      placeholderTextColor="#9CA3AF"
                       value={paymentCode}
                       onChangeText={setPaymentCode}
-                      autoCapitalize="none"
+                      autoCapitalize="characters"
                       autoCorrect={false}
                       editable={!isLoading && !processing}
                       returnKeyType="done"

@@ -102,48 +102,6 @@ export default function SettingsScreen() {
       ],
     },
     {
-      title: 'Security',
-      items: [
-        {
-          title: 'Biometric Authentication',
-          description: 'Use Face ID or Touch ID to unlock the app',
-          type: 'toggle',
-          value: biometricsEnabled,
-          onValueChange: (value: boolean) => {
-            setBiometricsEnabled(value);
-            // In a real implementation, we would update the auth context
-            // and store the preference
-            Alert.alert(
-              'Biometric Authentication',
-              value ? 'Biometric authentication enabled' : 'Biometric authentication disabled'
-            );
-          },
-          icon: 'faceid',
-        },
-        {
-          title: 'Auto-Lock',
-          description: 'Automatically lock the app when inactive',
-          type: 'toggle',
-          value: autoLockEnabled,
-          onValueChange: (value: boolean) => setAutoLockEnabled(value),
-          icon: 'lock.fill',
-        },
-      ],
-    },
-    {
-      title: 'Notifications',
-      items: [
-        {
-          title: 'Push Notifications',
-          description: 'Receive alerts about important updates',
-          type: 'toggle',
-          value: notificationsEnabled,
-          onValueChange: (value: boolean) => setNotificationsEnabled(value),
-          icon: 'bell.fill',
-        },
-      ],
-    },
-    {
       title: 'About',
       items: [
         {
@@ -174,7 +132,7 @@ export default function SettingsScreen() {
         <Text className="text-3xl font-bold text-black dark:text-white">Settings</Text>
       </View>
       
-      <ScrollView className="flex-1">
+      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 80 }}>
         {sections.map((section, sectionIndex) => (
           <View key={`section-${sectionIndex}`} className="mb-6">
             <Text className="text-lg font-semibold mb-2 px-5 text-blue-600 dark:text-blue-400">

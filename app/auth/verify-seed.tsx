@@ -7,7 +7,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { ArrowLeft, X, Copy } from 'lucide-react-native';
 
 export default function VerifySeedScreen() {
-  const { seedPhrase, setOnboardingStep } = useAuth();
+  const { seedPhrase, setOnboardingStep, completeOnboarding } = useAuth();
   const { colorScheme } = useTheme();
   const [verificationInputs, setVerificationInputs] = useState<{[key: number]: string}>({});
   const [missingIndices, setMissingIndices] = useState<number[]>([]);
@@ -52,17 +52,6 @@ export default function VerifySeedScreen() {
     setError(null);
     const newInputs = { ...verificationInputs, [index]: value.toLowerCase().trim() };
     setVerificationInputs(newInputs);
-    
-    // Auto-focus next input if current word is complete
-    if (value.trim().length >= 3 && value.includes(' ') === false) {
-      const currentIdx = missingIndices.indexOf(index);
-      if (currentIdx < missingIndices.length - 1) {
-        const nextIndex = missingIndices[currentIdx + 1];
-        setTimeout(() => {
-          inputRefs.current[nextIndex]?.focus();
-        }, 100);
-      }
-    }
   };
 
   const handlePaste = async (index: number) => {
@@ -105,14 +94,20 @@ export default function VerifySeedScreen() {
     setError(null);
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (!areAllInputsFilled()) {
       setError('Please fill in all missing words');
       return;
     }
     
     if (verifyInputs()) {
-      setOnboardingStep('create-passkey');
+      if (seedPhrase) {
+        // Complete the onboarding process
+        const success = await completeOnboarding(seedPhrase, false);
+        if (!success) {
+          setError('Failed to complete setup. Please try again.');
+        }
+      }
     } else {
       setError('Incorrect words. Please check and try again.');
     }
@@ -122,13 +117,13 @@ export default function VerifySeedScreen() {
     if (missingIndices.includes(index)) {
       const currentIdx = missingIndices.indexOf(index);
       return (
-        <View key={index} className="w-[30%] bg-gray-100 dark:bg-gray-800 rounded-xl p-4 mb-4 relative">
+        <View key={index} className="w-[30%] bg-gray-100 dark:bg-gray-800 rounded-xl p-3 pb-4 mb-4 relative" style={{ minHeight: 72 }}>
           <Text className="text-gray-500 dark:text-gray-400 text-xs absolute top-2 left-2">
             {(index + 1).toString().padStart(2, '0')}
           </Text>
           <TextInput
             ref={(ref) => { inputRefs.current[index] = ref; }}
-            className="text-gray-900 dark:text-white text-lg font-medium text-center mt-2 h-7 bg-transparent"
+            className="text-gray-900 dark:text-white text-base font-medium text-center mt-4 bg-transparent"
             value={verificationInputs[index] || ''}
             onChangeText={(text) => handleInputChange(index, text)}
             placeholder="..."
@@ -152,12 +147,12 @@ export default function VerifySeedScreen() {
               // Scroll to make the input visible when keyboard appears
               setTimeout(() => {
                 scrollViewRef.current?.scrollTo({
-                  y: Math.floor(index / 3) * 80,
+                  y: Math.floor(index / 3) * 100,
                   animated: true
                 });
               }, 300);
             }}
-            style={{ outline: 'none' }}
+            style={{ outline: 'none', minHeight: 28, paddingVertical: 4 }}
           />
           {verificationInputs[index] && (
             <TouchableOpacity
@@ -172,11 +167,11 @@ export default function VerifySeedScreen() {
     }
 
     return (
-      <View key={index} className="w-[30%] bg-gray-100 dark:bg-gray-800 rounded-xl p-4 mb-4">
+      <View key={index} className="w-[30%] bg-gray-100 dark:bg-gray-800 rounded-xl p-3 pb-4 mb-4" style={{ minHeight: 72 }}>
         <Text className="text-gray-500 dark:text-gray-400 text-xs absolute top-2 left-2">
           {(index + 1).toString().padStart(2, '0')}
         </Text>
-        <Text className="text-gray-900 dark:text-white text-lg font-medium text-center mt-2">
+        <Text className="text-gray-900 dark:text-white text-base font-medium text-center mt-4">
           {word}
         </Text>
       </View>

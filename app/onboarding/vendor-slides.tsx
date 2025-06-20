@@ -6,25 +6,30 @@ import Animated, { FadeInRight, FadeOutLeft } from 'react-native-reanimated';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { X } from 'lucide-react-native';
+import LottieView from 'lottie-react-native';
 
 const { width } = Dimensions.get('window');
 
 const slides = [
   {
-    title: 'Welcome to Index Wallets',
-    description: 'Your gateway to values-aligned commerce',
+    title: 'Your gateway to values-aligned commerce.',
+    description: 'Accept payments from customers who share your values and want to support businesses like yours.',
+    animation: require('@/assets/animations/1.json'),
   },
   {
-    title: 'Accept Value-Based Payments',
-    description: 'Join IndexWallets to accept customer donation receipts as partial payment, enabling 0% transaction fees while attracting values-aligned customers.',
+    title: 'Attract Index Wallets Customers',
+    description: 'Attract high value customers who prefer to pay with Index Wallets',
+    animation: require('@/assets/animations/2.json'),
   },
   {
-    title: 'Value What Your Customers Value',
-    description: 'Set your acceptance rate for causes your customers care about - the more you value their donations, the more business you attract.',
+    title: 'Local Business Friendly',
+    description: 'Benefit and improve your competitiveness as a local business',
+    animation: require('@/assets/animations/3.json'),
   },
   {
-    title: 'Grow Through Community Alignment',
-    description: 'Watch your business grow as customers choose you over competitors because it\'s literally cheaper for them to buy from values-aligned vendors.',
+    title: '0% Transaction Fees, Forever',
+    description: 'Pay 0% transaction fees, while funding causes that benefit you and your community.',
+    animation: require('@/assets/animations/4.json'),
   },
 ];
 
@@ -35,12 +40,6 @@ export default function VendorSlides() {
 
   const handleChange = (index: number) => {
     setSelectedIndex(index);
-    if (index === slides.length - 1) {
-      // Delay navigation to allow the animation to complete
-      setTimeout(() => {
-        setOnboardingStep('user-name');
-      }, 1000);
-    }
   };
 
   return (
@@ -60,6 +59,12 @@ export default function VendorSlides() {
             exiting={FadeOutLeft.springify().damping(18).stiffness(200)}
             style={styles.slide}
           >
+            <LottieView
+              source={slides[selectedIndex].animation}
+              autoPlay
+              loop
+              style={styles.animation}
+            />
             <Text style={styles.title} className="text-black dark:text-white">
               {slides[selectedIndex].title}
             </Text>
@@ -74,6 +79,7 @@ export default function VendorSlides() {
             data={[...Array(slides.length).keys()]}
             selectedIndex={selectedIndex}
             onChange={handleChange}
+            onComplete={() => setOnboardingStep('user-name')}
           />
         </View>
       </SafeAreaView>
@@ -105,6 +111,11 @@ const styles = StyleSheet.create({
     width: width - 40,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  animation: {
+    width: 200,
+    height: 200,
+    marginBottom: 24,
   },
   title: {
     fontSize: 32,

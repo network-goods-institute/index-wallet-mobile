@@ -258,20 +258,64 @@ export default function TransactionHistory({ limit = 10, showTitle = true }: Tra
         showsVerticalScrollIndicator={false}
       >
         {error ? (
-          <View className="p-4">
-            <ThemedText className="text-center text-red-500">{error}</ThemedText>
-            <TouchableOpacity 
-              className="mt-4 bg-blue-500 py-3 px-6 rounded-xl self-center"
-              onPress={() => loadTransactions()}
+          <View className="flex-1 items-center justify-center px-6 py-16">
+            <View className={`w-full max-w-sm p-8 rounded-3xl ${colorScheme === 'dark' ? 'bg-gray-800/50' : 'bg-white'}`}
+              style={{
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: colorScheme === 'dark' ? 0.3 : 0.08,
+                shadowRadius: 8,
+                elevation: 4,
+              }}
             >
-              <ThemedText className="text-white font-semibold">Retry</ThemedText>
-            </TouchableOpacity>
+              <View className={`w-20 h-20 rounded-full items-center justify-center mx-auto mb-6 ${
+                colorScheme === 'dark' ? 'bg-red-900/20' : 'bg-red-50'
+              }`}>
+                <ThemedText className="text-3xl">⚠️</ThemedText>
+              </View>
+              
+              <ThemedText className="text-center text-2xl font-bold mb-2">Unable to Load</ThemedText>
+              <ThemedText className="text-center text-base opacity-60 mb-8">{error}</ThemedText>
+              
+              <TouchableOpacity 
+                className={`py-4 px-8 rounded-2xl items-center ${
+                  colorScheme === 'dark' ? 'bg-blue-600' : 'bg-blue-500'
+                }`}
+                onPress={() => loadTransactions()}
+                style={{
+                  shadowColor: '#3B82F6',
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 8,
+                  elevation: 5,
+                }}
+              >
+                <ThemedText className="text-white font-semibold text-lg">Try Again</ThemedText>
+              </TouchableOpacity>
+            </View>
           </View>
         ) : activities.length === 0 ? (
-          <View className="p-8">
-            <ThemedText className="text-center text-gray-500 dark:text-gray-400">
-              No activity yet
-            </ThemedText>
+          <View className="flex-1 items-center justify-center px-6 py-16">
+            <View className={`w-full max-w-sm p-8 rounded-3xl ${colorScheme === 'dark' ? 'bg-gray-800/50' : 'bg-white'}`}
+              style={{
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: colorScheme === 'dark' ? 0.3 : 0.08,
+                shadowRadius: 8,
+                elevation: 4,
+              }}
+            >
+              <View className={`w-20 h-20 rounded-full items-center justify-center mx-auto mb-6 ${
+                colorScheme === 'dark' ? 'bg-gray-700' : 'bg-gray-100'
+              }`}>
+                <ThemedText className="text-3xl">💸</ThemedText>
+              </View>
+              
+              <ThemedText className="text-center text-2xl font-bold mb-2">No Activity Yet</ThemedText>
+              <ThemedText className="text-center text-base opacity-60">
+                Your transaction history will appear here once you start making payments
+              </ThemedText>
+            </View>
           </View>
         ) : (
           <View className="px-4 pb-4">

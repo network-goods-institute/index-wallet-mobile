@@ -49,19 +49,23 @@ function TransactContent() {
         <Pay onSuccessStateChange={handleSuccessStateChange} />
         {!hideToggle && (
           <View 
-            className="absolute bottom-0 left-0 right-0 flex-row justify-center items-center pb-12 gap-12 bg-transparent"
-            style={{ zIndex: 1 }}
+            className="absolute left-0 right-0 flex-row justify-center items-center"
+            style={{ zIndex: 10, bottom: 120 }}
           >
-            <TouchableOpacity onPress={() => switchView('pay')}>
-              <Animated.View style={payTextStyle}>
-                <ThemedText className="text-base text-white">Pay</ThemedText>
-              </Animated.View>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => switchView('receive')}>
-              <Animated.View style={receiveTextStyle}>
-                <ThemedText className="text-base text-white">Receive</ThemedText>
-              </Animated.View>
-            </TouchableOpacity>
+            <View className="flex-row bg-white/90 rounded-full p-1 shadow-lg">
+              <TouchableOpacity 
+                onPress={() => switchView('pay')}
+                className={`px-8 py-3 rounded-full ${transactionType === 'pay' ? 'bg-gray-200' : ''}`}
+              >
+                <ThemedText className={`text-base font-semibold ${transactionType === 'pay' ? 'text-gray-900' : 'text-gray-600'}`}>Pay</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={() => switchView('receive')}
+                className={`px-8 py-3 rounded-full ${transactionType === 'receive' ? 'bg-gray-200' : ''}`}
+              >
+                <ThemedText className={`text-base font-semibold ${transactionType === 'receive' ? 'text-gray-900' : 'text-gray-600'}`}>Receive</ThemedText>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
       </View>
@@ -74,19 +78,23 @@ function TransactContent() {
       <Receive onSuccessStateChange={handleSuccessStateChange} />
       {!hideToggle && (
         <View 
-          className="absolute bottom-0 left-0 right-0 flex-row justify-center items-center pb-12 gap-12 bg-transparent"
-          style={{ zIndex: 1 }}
+          className="absolute left-0 right-0 flex-row justify-center items-center"
+          style={{ zIndex: 10, bottom: 120 }}
         >
-          <TouchableOpacity onPress={() => switchView('pay')}>
-            <Animated.View style={payTextStyle}>
-              <ThemedText className="text-base">Pay</ThemedText>
-            </Animated.View>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => switchView('receive')}>
-            <Animated.View style={receiveTextStyle}>
-              <ThemedText className="text-base">Receive</ThemedText>
-            </Animated.View>
-          </TouchableOpacity>
+          <View className={`flex-row ${colorScheme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'} rounded-full p-1 shadow-lg`}>
+            <TouchableOpacity 
+              onPress={() => switchView('pay')}
+              className={`px-8 py-3 rounded-full ${transactionType === 'pay' ? (colorScheme === 'dark' ? 'bg-gray-700' : 'bg-white') : ''}`}
+            >
+              <ThemedText className={`text-base font-semibold ${transactionType === 'pay' ? '' : 'opacity-60'}`}>Pay</ThemedText>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              onPress={() => switchView('receive')}
+              className={`px-8 py-3 rounded-full ${transactionType === 'receive' ? (colorScheme === 'dark' ? 'bg-gray-700' : 'bg-white') : ''}`}
+            >
+              <ThemedText className={`text-base font-semibold ${transactionType === 'receive' ? '' : 'opacity-60'}`}>Receive</ThemedText>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
     </View>

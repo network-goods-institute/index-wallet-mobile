@@ -10,6 +10,7 @@ export function OnboardingIndicator({
   data,
   onChange,
   selectedIndex,
+  onComplete,
 }: OnboardingIndicatorProps) {
   return (
     <View style={{ gap: SPACING }}>
@@ -32,9 +33,10 @@ export function OnboardingIndicator({
           style={{ backgroundColor: PRIMARY_COLOR, flex: 1 }}
           onPress={() => {
             if (selectedIndex === data.length - 1) {
-              return;
+              onComplete?.();
+            } else {
+              onChange(selectedIndex + 1);
             }
-            onChange(selectedIndex + 1);
           }}>
           {selectedIndex === data.length - 1 ? (
             <Animated.View
@@ -53,7 +55,7 @@ export function OnboardingIndicator({
                 <CircleCheck color="white" size={18} />
               </Animated.View>
               <Text style={{ color: "white", fontWeight: "600" }}>
-                Finished
+                Continue
               </Text>
             </Animated.View>
           ) : (

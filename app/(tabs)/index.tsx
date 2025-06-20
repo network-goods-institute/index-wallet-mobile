@@ -94,6 +94,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    paddingBottom: 80, // Space for floating tab bar
   },
   mockButton: {
     position: 'absolute',
