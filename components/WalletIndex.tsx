@@ -24,6 +24,7 @@ interface WalletIndexProps {
   onBuyPress?: () => void;
   onSwapPress?: () => void;
   onCopyPress?: () => void;
+  showCopyCheckmark?: boolean;
   isRefreshing?: boolean;
   onRefresh?: () => void;
 }
@@ -34,6 +35,7 @@ export function WalletIndex({
   onBuyPress,
   onSwapPress,
   onCopyPress,
+  showCopyCheckmark = false,
   isRefreshing = false,
   onRefresh,
 }: WalletIndexProps) {
@@ -67,6 +69,7 @@ export function WalletIndex({
           onSwapPress={onSwapPress}
           onHistoryPress={() => router.push('/history')}
           onCopyPress={onCopyPress}
+          showCopyCheckmark={showCopyCheckmark}
         />
 
         {/* Token list */}
@@ -474,11 +477,13 @@ function ActionButtonRow({
   onSwapPress,
   onHistoryPress,
   onCopyPress,
+  showCopyCheckmark,
 }: {
   onBuyPress?: () => void;
   onSwapPress?: () => void;
   onHistoryPress?: () => void;
   onCopyPress?: () => void;
+  showCopyCheckmark?: boolean;
 }) {
   const { colorScheme } = useTheme();
   return (
@@ -494,8 +499,11 @@ function ActionButtonRow({
         onPress={onHistoryPress} 
       />
       <ActionButton 
-        icon={<Copy size={24} color={colorScheme === 'dark' ? '#FFFFFF' : '#374151'} />} 
-        label="Copy"
+        icon={showCopyCheckmark ? 
+          <Check size={24} color={colorScheme === 'dark' ? '#10B981' : '#059669'} /> : 
+          <Copy size={24} color={colorScheme === 'dark' ? '#FFFFFF' : '#374151'} />
+        } 
+        label={showCopyCheckmark ? "Copied" : "Copy"}
         onPress={onCopyPress} 
       />
     </View>

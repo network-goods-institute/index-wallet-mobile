@@ -176,7 +176,7 @@ const Valuations = ({ tokens, onUpdateValuation, isLoading, onRefresh, onEditTok
         
         {/* Main explanation text */}
         <ThemedText className="text-base opacity-80 leading-relaxed mt-3 mb-4">
-          If a user pays you $10 in a certain token, you can apply a $2 premium or discount to it. You can adjust and set the amount of discounts and premiums you provide here.
+          For every $10 a user pays in a certain cause, you will either donate or tax a cause $2. You can adjust and set the total amount here for each cause.
         </ThemedText>
         
         {/* Legend with gap and switched order */}

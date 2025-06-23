@@ -9,7 +9,7 @@ const isDevelopment = process.env.NODE_ENV === 'development';
 const getLocalApiUrl = () => {
   // Use platform-specific localhost URLs for development
   return Platform.select({
-    ios: 'http://localhost:8080',
+    ios: 'https://1470-207-38-194-26.ngrok-free.app',
     android: 'http://10.0.2.2:8080', // Android emulator localhost
     default: 'http://localhost:8080'
   }) || 'http://localhost:8080';
@@ -28,7 +28,7 @@ export const API_URL = isDevelopment ? LOCAL_BACKEND_SERVER_URL : PRODUCTION_API
 // console.log('  - Platform:', Platform.OS);
 // console.log('  - App Ownership:', Constants.appOwnership);
 
-// console.log('  - API URL:', API_URL);
+console.log('  - API URL:', API_URL);
 
 // App configuration from app.json
 export const APP_CONFIG = Constants.expoConfig || {};

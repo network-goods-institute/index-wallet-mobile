@@ -196,12 +196,12 @@ export default function Receive({ onSuccessStateChange }: ReceiveProps) {
             {!qrVisible ? (
               <>
                 <ScrollView 
-            className="flex-1 px-6 pt-16" 
-            contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
+            className="flex-1 px-6 pt-8" 
+            contentContainerStyle={{ flexGrow: 1 }}
             showsVerticalScrollIndicator={false}
           >
             {/* Header */}
-            <View className="items-center mb-12 mt-4">
+            <View className="items-center mb-8 mt-8">
               <View className="w-20 h-20 bg-blue-100 dark:bg-blue-900 rounded-full items-center justify-center mb-6">
                 <QrCode size={40} color={colorScheme === 'dark' ? '#60A5FA' : '#3B82F6'} />
               </View>
@@ -214,7 +214,7 @@ export default function Receive({ onSuccessStateChange }: ReceiveProps) {
             </View>
 
             {/* Amount Input */}
-            <View className="mb-12">
+            <View className="mb-8">
               <View className="flex-row items-center justify-center bg-gray-50 dark:bg-gray-900 rounded-2xl p-6 mx-4">
                 <ThemedText className="text-3xl font-bold mr-2">$</ThemedText>
                 <TextInput
@@ -344,26 +344,8 @@ export default function Receive({ onSuccessStateChange }: ReceiveProps) {
                 </View>
               )}
 
-              {/* Status Indicator */}
-              <View className="flex-row items-center mb-8">
-                <View className={`w-3 h-3 rounded-full mr-3 ${
-                  activeRequest?.status === 'pending' ? 'bg-yellow-500' :
-                  activeRequest?.status === 'calculated' ? 'bg-blue-500' :
-                  activeRequest?.status === 'confirmed' ? 'bg-green-500' :
-                  activeRequest?.status === 'error' ? 'bg-red-500' :
-                  'bg-gray-400'
-                }`} />
-                <ThemedText className="text-base font-medium">
-                  {activeRequest?.status === 'pending' ? 'Waiting for payment...' :
-                   activeRequest?.status === 'calculated' ? 'Payment calculated' :
-                   activeRequest?.status === 'confirmed' ? 'Payment confirmed!' :
-                   activeRequest?.status === 'error' ? 'Error checking status' :
-                   'Waiting...'}
-                </ThemedText>
-              </View>
-
-              {/* Action Buttons */}
-              <View className="w-full max-w-sm space-y-3">
+              {/* Action Buttons - Moved up */}
+              <View className="w-full max-w-sm mt-4">
                 <TouchableOpacity
                   className={`py-4 px-8 rounded-xl ${isCancelling ? 'bg-gray-400' : 'bg-red-500'}`}
                   onPress={handleCancel}

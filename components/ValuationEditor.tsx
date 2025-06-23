@@ -23,6 +23,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { X, TrendingUp, TrendingDown, Edit3 } from 'lucide-react-native';
 import { ThemedView } from './ThemedView';
 import { ThemedText } from './ThemedText';
+import { GestureHandlerRootView, ScrollView as GHScrollView } from 'react-native-gesture-handler';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -53,7 +54,6 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
   const [inputValue, setInputValue] = useState('');
   const inputRef = useRef<TextInput>(null);
   const scrollViewRef = useRef<ScrollView>(null);
-  const [isScrolling, setIsScrolling] = useState(false);
   const isProgrammaticScroll = useRef(false);
 
   // Update adjustment when token changes
@@ -120,20 +120,23 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
   
   // Update input value when adjustment changes from slider
   useEffect(() => {
-    if (!isEditingValue && !isScrolling) {
+    if (!isEditingValue) {
       setInputValue(Math.abs(adjustment).toFixed(2));
     }
-  }, [adjustment, isEditingValue, isScrolling]);
+  }, [adjustment, isEditingValue]);
 
   // Animate modal in/out
   useEffect(() => {
     if (visible) {
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        useNativeDriver: true,
-        tension: 65,
-        friction: 11,
-      }).start();
+      // Small delay to ensure modal is ready
+      InteractionManager.runAfterInteractions(() => {
+        Animated.spring(slideAnim, {
+          toValue: 0,
+          useNativeDriver: true,
+          tension: 65,
+          friction: 11,
+        }).start();
+      });
     } else {
       Animated.spring(slideAnim, {
         toValue: SCREEN_HEIGHT,
@@ -172,7 +175,7 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
 
   // Handle scroll events with better performance
   const lastValue = useRef(adjustment);
-  const scrollTimeout = useRef<NodeJS.Timeout>();
+  const scrollTimeout = useRef<NodeJS.Timeout | null>(null);
   const lastHapticValue = useRef<number>(adjustment);
   
   const handleScroll = useCallback((event: any) => {
@@ -249,21 +252,21 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
       visible={visible}
       onRequestClose={onClose}
     >
-      <View style={styles.modalContainer}>
-        <TouchableOpacity 
-          style={styles.backdrop} 
-          activeOpacity={1} 
-          onPress={onClose}
-        >
-          <BlurView
-            intensity={20}
-            tint={colorScheme === 'dark' ? 'dark' : 'light'}
-            style={StyleSheet.absoluteFillObject}
-          />
-        </TouchableOpacity>
+      <GestureHandlerRootView style={styles.modalContainer}>
+        <View style={styles.modalContainer} pointerEvents="box-none">
+          <TouchableWithoutFeedback onPress={onClose}>
+            <View style={styles.backdrop}>
+              <BlurView
+                intensity={20}
+                tint={colorScheme === 'dark' ? 'dark' : 'light'}
+                style={StyleSheet.absoluteFillObject}
+              />
+            </View>
+          </TouchableWithoutFeedback>
 
-        <Animated.View
-          style={[
+          <Animated.View
+            pointerEvents="box-none"
+            style={[
             styles.bottomSheet,
             {
               transform: [{ translateY: slideAnim }],
@@ -310,11 +313,7 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
             </View>
           </View>
 
-          <ScrollView 
-            style={styles.content} 
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
+          <View style={styles.content}>
             <TouchableWithoutFeedback onPress={() => {
               if (isEditingValue) {
                 Keyboard.dismiss();
@@ -399,6 +398,9 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
                     let absValue = Math.abs(adjustment);
                     if (isEditingValue && inputValue) {
                       absValue = parseFloat(inputValue) || 0;
+                      // Close the text input
+                      setIsEditingValue(false);
+                      Keyboard.dismiss();
                     }
                     
                     const newValue = -absValue;
@@ -434,6 +436,9 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
                     let absValue = Math.abs(adjustment);
                     if (isEditingValue && inputValue) {
                       absValue = parseFloat(inputValue) || 0;
+                      // Close the text input
+                      setIsEditingValue(false);
+                      Keyboard.dismiss();
                     }
                     
                     lastValue.current = absValue;
@@ -475,8 +480,9 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
                 </View>
               </View>
 
-              {/* Scale Container */}
-              <View style={{ height: 80, position: 'relative' }}>
+              {/* Scale Container - Increased height for better touch area */}
+              <View style={{ height: 100, position: 'relative', marginVertical: 10 }}>
+                
                 {/* Center Line Indicator - more delicate */}
                 <View 
                   style={{
@@ -485,30 +491,31 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
                     top: 0,
                     bottom: 0,
                     width: 1,
-                    backgroundColor: colorScheme === 'dark' ? '#60A5FA' : '#3B82F6',
+                    backgroundColor: colorScheme === 'dark' ? '#E5E7EB' : '#374151',
                     opacity: 0.8,
                     zIndex: 10,
+                    pointerEvents: 'none',
                   }}
                 />
                 
                 {/* Scrollable Scale */}
-                <ScrollView
+                <GHScrollView
                   ref={scrollViewRef}
-                  horizontal
+                  horizontal={true}
                   showsHorizontalScrollIndicator={false}
                   onScroll={handleScroll}
-                  onScrollBeginDrag={() => setIsScrolling(true)}
-                  onScrollEndDrag={() => setIsScrolling(false)}
-                  scrollEventThrottle={1}
-                  snapToInterval={3}
+                  scrollEventThrottle={16}
                   decelerationRate="fast"
+                  snapToInterval={3}
+                  bounces={false}
+                  overScrollMode="never"
                   contentContainerStyle={{
                     paddingHorizontal: SCREEN_WIDTH / 2,
                   }}
                 >
                   <View style={{ 
                     width: 60000, // 20000 values * 3 pixels each
-                    height: 80,
+                    height: 100,
                     flexDirection: 'row',
                     alignItems: 'center',
                   }}>
@@ -521,7 +528,7 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
                         top: 0,
                         bottom: 0,
                         backgroundColor: '#EAB308',
-                        opacity: 0.05,
+                        opacity: 0.15,
                       }}
                     />
                     <View
@@ -532,7 +539,7 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
                         top: 0,
                         bottom: 0,
                         backgroundColor: '#22C55E',
-                        opacity: 0.05,
+                        opacity: 0.15,
                       }}
                     />
                     
@@ -549,15 +556,13 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
                             style={{
                               position: 'absolute',
                               left: (value + 10000) * 3, // Convert to pixel position
-                              width: isZero ? 2 : (isMajor ? 1.5 : 1),
-                              height: isMajor ? 30 : 20,
-                              backgroundColor: isZero 
-                                ? (colorScheme === 'dark' ? '#60A5FA' : '#3B82F6')
-                                : value < 0
-                                  ? '#EAB308' // Yellow for premium
-                                  : '#22C55E', // Green for discount
-                              opacity: isMajor ? 0.6 : 0.3,
-                              bottom: 15,
+                              width: isMajor ? 2 : 1,
+                              height: isZero ? 50 : (isMajor ? 40 : 25),
+                              backgroundColor: value < 0
+                                ? '#EAB308' // Yellow for premium
+                                : '#22C55E', // Green for discount
+                              opacity: isMajor ? 1 : 0.7,
+                              bottom: isZero ? 10 : 15,
                             }}
                           />
                           {isMajor && (
@@ -565,12 +570,12 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
                               style={{
                                 position: 'absolute',
                                 left: (value + 10000) * 3 - 20,
-                                bottom: 0,
+                                bottom: isZero ? -10 : -5,
                                 width: 40,
                                 textAlign: 'center',
-                                fontSize: 11,
-                                color: colorScheme === 'dark' ? '#9CA3AF' : '#6B7280',
-                                fontWeight: isZero ? '600' : '400',
+                                fontSize: 12,
+                                color: colorScheme === 'dark' ? '#E5E7EB' : '#374151',
+                                fontWeight: isZero ? '700' : '500',
                               }}
                             >
                               {value === 0 ? '0' : `${Math.abs(value)}`}
@@ -580,7 +585,7 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
                       );
                     })}
                   </View>
-                </ScrollView>
+                </GHScrollView>
                 
                 {/* Gradient Fade Edges - using gradients would be better but using solid for now */}
                 <View
@@ -612,7 +617,7 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
 
               </View>
             </TouchableWithoutFeedback>
-          </ScrollView>
+          </View>
 
           {/* Action buttons with spacing */}
           <View className="flex-row px-5 pt-5 pb-2 gap-4">
@@ -640,7 +645,8 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
             </TouchableOpacity>
           </View>
         </Animated.View>
-      </View>
+        </View>
+      </GestureHandlerRootView>
     </Modal>
   );
 }
@@ -661,6 +667,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
     paddingBottom: Platform.OS === 'ios' ? 34 : 24,
     maxHeight: SCREEN_HEIGHT * 0.85,
+    overflow: 'hidden',
   },
   handleContainer: {
     alignItems: 'center',

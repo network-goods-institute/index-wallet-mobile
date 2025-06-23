@@ -1,11 +1,68 @@
-import React from 'react';
-import { Image, TouchableOpacity, SafeAreaView, Text, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Image, TouchableOpacity, SafeAreaView, Text, View, StyleSheet, Dimensions, Animated } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import { StyledText } from '@/components/StyledText';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
+import Svg, { Path } from 'react-native-svg';
+
+const { width, height } = Dimensions.get('window');
+
+const GridBackground = ({ color }: { color: string }) => {
+  const gridSize = 30;
+  const strokeWidth = 0.5;
+  
+  return (
+    <View style={StyleSheet.absoluteFillObject}>
+      <Svg width={width} height={height} style={StyleSheet.absoluteFillObject}>
+        {/* Vertical lines */}
+        {Array.from({ length: Math.ceil(width / gridSize) }).map((_, i) => (
+          <Path
+            key={`v-${i}`}
+            d={`M ${i * gridSize} 0 L ${i * gridSize} ${height}`}
+            stroke={color}
+            strokeWidth={strokeWidth}
+            opacity={0.05}
+          />
+        ))}
+        {/* Horizontal lines */}
+        {Array.from({ length: Math.ceil(height / gridSize) }).map((_, i) => (
+          <Path
+            key={`h-${i}`}
+            d={`M 0 ${i * gridSize} L ${width} ${i * gridSize}`}
+            stroke={color}
+            strokeWidth={strokeWidth}
+            opacity={0.05}
+          />
+        ))}
+      </Svg>
+    </View>
+  );
+};
 
 const WelcomeScreen = () => {
   const { startOnboarding, setOnboardingStep } = useAuth();
+  const { colorScheme } = useTheme();
+  const isDark = colorScheme === 'dark';
+  const bounceAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Subtle bounce animation
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(bounceAnim, {
+          toValue: -10,
+          duration: 1200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(bounceAnim, {
+          toValue: 0,
+          duration: 1200,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, []);
 
   const handleCreateWallet = () => {
     startOnboarding();
@@ -19,16 +76,25 @@ const WelcomeScreen = () => {
   
   return (
     <ThemedView className="flex-1">
+      <GridBackground color={isDark ? '#FFFFFF' : '#000000'} />
       <SafeAreaView className="flex-1 mx-12 p-6 justify-center">
         <View className="my-48 items-center">
-          <Image
-            source={require('@/assets/images/Logo.png')}
-            className="w-50 h-50 my-12"
-          />
+          <Animated.View
+            style={{
+              transform: [{ translateY: bounceAnim }],
+            }}
+          >
+            <Image
+              source={require('@/assets/images/Logo.png')}
+              className="w-50 h-50 mb-12"
+            />
+          </Animated.View>
 
           <Text 
-            className="text-5xl font-black text-center text-yellow-900 dark:text-yellow-400"
-            style={{ fontFamily: 'SF-Pro-Rounded-Black' }}
+            className="text-5xl font-black text-center text-yellow-500 dark:text-yellow-400 mt-8"
+            style={{ 
+              fontFamily: 'SF-Pro-Rounded-Black'
+            }}
           >
             Index Wallets
           </Text>
@@ -37,11 +103,18 @@ const WelcomeScreen = () => {
         <View className="flex-1 justify-end">
           <View className="gap-4">
             <TouchableOpacity 
-              className="bg-blue-600 py-4 px-6 rounded-xl items-center"
+              className="bg-yellow-500 dark:bg-yellow-400 py-4 px-6 rounded-xl items-center"
+              style={{
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.25,
+                shadowRadius: 3.84,
+                elevation: 5,
+              }}
               onPress={handleCreateWallet}
             >
               <Text 
-                className="text-base font-semibold text-white"
+                className="text-base font-semibold text-black"
                 style={{ fontFamily: 'SF-Pro-Rounded-Bold' }}
               >
                 Create a New Wallet
@@ -49,11 +122,11 @@ const WelcomeScreen = () => {
             </TouchableOpacity>
 
             <TouchableOpacity 
-              className="border border-gray-300 dark:border-gray-700 py-4 px-6 rounded-xl items-center"
+              className="bg-white dark:bg-gray-800 border-2 border-yellow-500 dark:border-yellow-400 py-4 px-6 rounded-xl items-center"
               onPress={handleImportWallet}
             >
               <Text 
-                className="text-base font-semibold text-black dark:text-white"
+                className="text-base font-semibold text-yellow-600 dark:text-yellow-400"
                 style={{ fontFamily: 'SF-Pro-Rounded-Bold' }}
               >
                 Import Existing Wallet

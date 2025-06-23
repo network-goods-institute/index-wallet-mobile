@@ -89,8 +89,12 @@ export const TransactionHistoryStoreProvider: React.FC<{ children: React.ReactNo
 
       if (cachedHistory) {
         const parsed = JSON.parse(cachedHistory);
-        console.log(`Loaded ${parsed.length} cached history transactions for wallet ${auth.walletAddress.slice(0, 8)}...`);
-        setTransactions(parsed);
+        // Filter out cancelled and expired transactions from cache
+        const filtered = parsed.filter((tx: Transaction) => 
+          !['cancelled', 'Cancelled', 'expired', 'Expired'].includes(tx.status)
+        );
+        console.log(`Loaded ${filtered.length} cached history transactions for wallet ${auth.walletAddress.slice(0, 8)}...`);
+        setTransactions(filtered);
       } else {
         console.log('No cached transaction history found for this wallet');
         setTransactions([]);
@@ -140,15 +144,19 @@ export const TransactionHistoryStoreProvider: React.FC<{ children: React.ReactNo
     try {
       const response = await PaymentAPI.getTransactionHistory(auth.walletAddress);
       
-      const newTransactions = response.transactions || [];
+      const allTransactions = response.transactions || [];
+      // Filter out cancelled and expired transactions completely
+      const filteredTransactions = allTransactions.filter(tx => 
+        !['cancelled', 'Cancelled', 'expired', 'Expired'].includes(tx.status)
+      );
       const newCursor = response.cursor || null;
       
-      setTransactions(newTransactions);
+      setTransactions(filteredTransactions);
       setCursor(newCursor);
       setHasMore(!!newCursor);
       
       // Save to cache
-      await saveToCache(newTransactions, newCursor);
+      await saveToCache(filteredTransactions, newCursor);
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load transaction history';
@@ -173,11 +181,15 @@ export const TransactionHistoryStoreProvider: React.FC<{ children: React.ReactNo
         cursor: cursor,
       });
       
-      const newTransactions = response.transactions || [];
+      const allTransactions = response.transactions || [];
+      // Filter out cancelled and expired transactions completely
+      const filteredTransactions = allTransactions.filter(tx => 
+        !['cancelled', 'Cancelled', 'expired', 'Expired'].includes(tx.status)
+      );
       const newCursor = response.cursor || null;
       
       // Append to existing transactions
-      const combined = [...transactions, ...newTransactions];
+      const combined = [...transactions, ...filteredTransactions];
       
       setTransactions(combined);
       setCursor(newCursor);

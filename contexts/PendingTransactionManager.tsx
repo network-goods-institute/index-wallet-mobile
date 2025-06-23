@@ -28,6 +28,7 @@ interface PendingTransactionManagerContextType {
 const getStorageKeys = (walletAddress: string) => ({
   PENDING_TRANSACTIONS: `@transactions/pending/${walletAddress}`,
   LAST_SYNC: `@transactions/last_sync/${walletAddress}`,
+  CANCELLED_TRANSACTIONS: `@transactions/cancelled/${walletAddress}`,
 });
 
 export const PendingTransactionManagerContext = createContext<PendingTransactionManagerContextType>({
@@ -49,10 +50,12 @@ export const PendingTransactionManagerProvider: React.FC<{ children: React.React
   const [appState, setAppState] = useState<AppStateStatus>(AppState.currentState);
   const syncIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const requestCacheRef = useRef<Map<string, Promise<any>>>(new Map());
+  const recentlyCancelledRef = useRef<Set<string>>(new Set());
 
   // Load cached data on mount and when wallet changes
   useEffect(() => {
     loadCachedData();
+    loadCancelledTransactions();
     
     // App state listener
     const subscription = AppState.addEventListener('change', handleAppStateChange);
@@ -67,6 +70,36 @@ export const PendingTransactionManagerProvider: React.FC<{ children: React.React
   // Handle app state changes
   const handleAppStateChange = (nextAppState: AppStateStatus) => {
     setAppState(nextAppState);
+  };
+
+  // Load cancelled transactions blacklist
+  const loadCancelledTransactions = async () => {
+    if (!auth?.walletAddress) return;
+    
+    try {
+      const storageKeys = getStorageKeys(auth.walletAddress);
+      const cancelled = await AsyncStorage.getItem(storageKeys.CANCELLED_TRANSACTIONS);
+      if (cancelled) {
+        const cancelledIds = JSON.parse(cancelled) as string[];
+        recentlyCancelledRef.current = new Set(cancelledIds);
+        // console.log(`Loaded ${cancelledIds.length} cancelled transaction IDs`);
+      }
+    } catch (error) {
+      console.error('Failed to load cancelled transactions:', error);
+    }
+  };
+
+  // Save cancelled transactions blacklist
+  const saveCancelledTransactions = async () => {
+    if (!auth?.walletAddress) return;
+    
+    try {
+      const storageKeys = getStorageKeys(auth.walletAddress);
+      const cancelledIds = Array.from(recentlyCancelledRef.current);
+      await AsyncStorage.setItem(storageKeys.CANCELLED_TRANSACTIONS, JSON.stringify(cancelledIds));
+    } catch (error) {
+      console.error('Failed to save cancelled transactions:', error);
+    }
   };
 
   // Load cached pending transactions
@@ -85,8 +118,12 @@ export const PendingTransactionManagerProvider: React.FC<{ children: React.React
 
       if (cachedPending) {
         const transactions = JSON.parse(cachedPending);
-        // console.log(`Loaded ${transactions.length} cached transactions for wallet ${auth.walletAddress.slice(0, 8)}...`);
-        setPendingTransactions(transactions);
+        // Filter out recently cancelled transactions
+        const filteredTransactions = transactions.filter((tx: Transaction) => 
+          !recentlyCancelledRef.current.has(tx.payment_id)
+        );
+        // console.log(`Loaded ${filteredTransactions.length} cached transactions for wallet ${auth.walletAddress.slice(0, 8)}...`);
+        setPendingTransactions(filteredTransactions);
       } else {
         // console.log('No cached transactions found for this wallet');
         setPendingTransactions([]);
@@ -178,7 +215,8 @@ export const PendingTransactionManagerProvider: React.FC<{ children: React.React
           // Filter for pending transactions
           const pendingStatuses = ['pending', 'created', 'assigned', 'Pending', 'Created', 'Assigned'];
           const pendingTxs = response.transactions.filter((tx: Transaction) => 
-            pendingStatuses.includes(tx.status)
+            pendingStatuses.includes(tx.status) && 
+            !recentlyCancelledRef.current.has(tx.payment_id) // Exclude recently cancelled
           );
           
           // console.log(`Found ${pendingTxs.length} pending transactions from ${response.transactions.length} total`);
@@ -263,6 +301,12 @@ export const PendingTransactionManagerProvider: React.FC<{ children: React.React
 
   // Remove completed/failed transaction from pending
   const removePendingTransaction = useCallback((transactionId: string) => {
+    // Add to cancelled set permanently
+    recentlyCancelledRef.current.add(transactionId);
+    
+    // Save to persistent storage
+    saveCancelledTransactions();
+    
     setPendingTransactions(prev => {
       const filtered = prev.filter(t => t.payment_id !== transactionId);
       

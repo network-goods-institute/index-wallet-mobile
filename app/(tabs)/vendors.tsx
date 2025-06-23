@@ -1,62 +1,61 @@
-import React from 'react';
-import { StyleSheet, View, FlatList, Image, TouchableOpacity, ScrollView, SafeAreaView, Text } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, View, FlatList, Image, TouchableOpacity, ScrollView, SafeAreaView, Text, ActivityIndicator, Linking } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { useTheme } from '@/contexts/ThemeContext';
-import { ArrowLeft } from 'lucide-react-native';
+import { ArrowLeft, ExternalLink, MapPin, Store } from 'lucide-react-native';
 import { router } from 'expo-router';
+import { VendorAPI } from '@/services/api';
 
-// Define vendor interface
-interface Vendor {
-  id: string;
+// Define vendor interface matching API response
+interface PartneredVendor {
+  _id: string;
   name: string;
   description: string;
-  logoUrl: string;
-  category: string;
+  google_maps_link: string;
+  website_link: string;
+  image_url: string;
 }
 
-// Mock data for partnered vendors
-const mockVendors: Vendor[] = [
-  {
-    id: '1',
-    name: 'Green Earth Cafe',
-    description: 'Sustainable coffee shop with plant-based options',
-    logoUrl: 'https://placehold.co/200x200/orange/white?text=GE',
-    category: 'Food & Beverage',
-  },
-  {
-    id: '2',
-    name: 'EcoMarket',
-    description: 'Zero-waste grocery store with local products',
-    logoUrl: 'https://placehold.co/200x200/green/white?text=EM',
-    category: 'Retail',
-  },
-  {
-    id: '3',
-    name: 'Renewable Energy Co-op',
-    description: 'Community-owned renewable energy provider',
-    logoUrl: 'https://placehold.co/200x200/blue/white?text=REC',
-    category: 'Utilities',
-  },
-  {
-    id: '4',
-    name: 'Sustainable Transport',
-    description: 'Electric bike and scooter rentals',
-    logoUrl: 'https://placehold.co/200x200/purple/white?text=ST',
-    category: 'Transportation',
-  },
-  {
-    id: '5',
-    name: 'Community Garden',
-    description: 'Local urban farming initiative',
-    logoUrl: 'https://placehold.co/200x200/darkgreen/white?text=CG',
-    category: 'Agriculture',
-  },
-];
+// Mock vendor for styling purposes
+const mockVendor: PartneredVendor = {
+  _id: 'mock-1',
+  name: "Joe's Coffee Shop",
+  description: 'Family-owned coffee shop serving organic fair-trade coffee since 1995',
+  google_maps_link: 'https://maps.google.com/?q=Joe\'s+Coffee+Shop+NYC',
+  website_link: 'https://joescoffeeshop.com',
+  image_url: 'https://placehold.co/200x200/8B4513/white?text=JC',
+};
 
 export default function VendorsScreen() {
   const { colorScheme } = useTheme();
   const isDark = colorScheme === 'dark';
+  const [vendors, setVendors] = useState<PartneredVendor[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchVendors();
+  }, []);
+
+  const fetchVendors = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await VendorAPI.getPartneredVendors();
+      setVendors(data);
+    } catch (err) {
+      console.error('Failed to fetch vendors:', err);
+      setError('Failed to load partnered vendors');
+      setVendors([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const openLink = (url: string) => {
+    Linking.openURL(url).catch(err => console.error('Failed to open URL:', err));
+  };
   
   return (
     <ThemedView className="flex-1">
@@ -66,41 +65,106 @@ export default function VendorsScreen() {
       
       <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 80 }}>
         <View className="mb-6">
-          <Text className="text-lg font-semibold mb-2 px-5 text-blue-600 dark:text-blue-400">
+          <Text className="text-lg font-semibold mb-4 px-5 text-blue-600 dark:text-blue-400">
             Accepted Stores
           </Text>
           
-          <View className="mx-4 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800">
-            {mockVendors.map((vendor, index) => (
-              <TouchableOpacity
-                key={vendor.id}
-                onPress={() => console.log(`Selected vendor: ${vendor.name}`)}
-                className={`flex-row items-center justify-between py-4 px-4 ${index < mockVendors.length - 1 ? 'border-b border-gray-200 dark:border-gray-700' : ''}`}
-              >
-                <View className="flex-row items-center flex-1">
-                  <Image 
-                    source={{ uri: vendor.logoUrl }} 
-                    className="w-10 h-10 rounded-full"
-                    style={{ backgroundColor: isDark ? '#374151' : '#E5E7EB' }}
-                  />
-                  <View className="ml-4 flex-1">
-                    <Text className="text-base font-medium text-black dark:text-white">
-                      {vendor.name}
-                    </Text>
-                    <Text className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                      {vendor.category}
-                    </Text>
+          {loading ? (
+            <View className="mx-4 p-8 rounded-xl bg-white dark:bg-gray-800" 
+              style={{
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: isDark ? 0.3 : 0.08,
+                shadowRadius: 8,
+                elevation: 4,
+              }}>
+              <View className="items-center">
+                <ActivityIndicator size="large" color={isDark ? '#60A5FA' : '#3B82F6'} />
+                <Text className="text-gray-500 dark:text-gray-400 mt-4 text-base">Loading vendors...</Text>
+              </View>
+            </View>
+          ) : error && vendors.length === 0 ? (
+            <View className="mx-4 p-8 rounded-xl bg-white dark:bg-gray-800"
+              style={{
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: isDark ? 0.3 : 0.08,
+                shadowRadius: 8,
+                elevation: 4,
+              }}>
+              <View className="items-center">
+                <View className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/20 items-center justify-center mb-4">
+                  <Store size={32} color={isDark ? '#FCA5A5' : '#EF4444'} />
+                </View>
+                <Text className="text-gray-900 dark:text-gray-100 font-semibold text-lg mb-2">Unable to Load Vendors</Text>
+                <Text className="text-gray-500 dark:text-gray-400 text-center mb-6">{error}</Text>
+                <TouchableOpacity 
+                  onPress={fetchVendors}
+                  activeOpacity={0.7}
+                  className="bg-blue-500 dark:bg-blue-600 px-6 py-3 rounded-xl"
+                >
+                  <Text className="text-white font-semibold">Try Again</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <View className="mx-4">
+              {vendors.map((vendor, index) => (
+                <View
+                  key={vendor._id}
+                  className={`bg-white dark:bg-gray-800 rounded-xl overflow-hidden ${index < vendors.length - 1 ? 'mb-3' : ''}`}
+                  style={{
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: isDark ? 0.3 : 0.08,
+                    shadowRadius: 8,
+                    elevation: 4,
+                  }}
+                >
+                  <View className="p-4">
+                    <View className="flex-row items-center">
+                      <View 
+                        className="w-14 h-14 rounded-xl overflow-hidden items-center justify-center"
+                        style={{ backgroundColor: isDark ? '#374151' : '#F3F4F6' }}
+                      >
+                        <Image 
+                          source={{ uri: vendor.image_url }} 
+                          className="w-14 h-14"
+                          resizeMode="cover"
+                        />
+                      </View>
+                      <View className="ml-4 flex-1">
+                        <Text className="text-lg font-semibold text-gray-900 dark:text-white">
+                          {vendor.name}
+                        </Text>
+                        <Text className="text-sm text-gray-600 dark:text-gray-300 mt-1 opacity-80" numberOfLines={2}>
+                          {vendor.description}
+                        </Text>
+                        <View className="flex-row mt-3 gap-4">
+                          <TouchableOpacity 
+                            onPress={() => openLink(vendor.google_maps_link)}
+                            activeOpacity={0.7}
+                            className="flex-row items-center bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-lg"
+                          >
+                            <MapPin size={14} color={isDark ? '#60A5FA' : '#3B82F6'} />
+                            <Text className="text-xs font-medium text-blue-600 dark:text-blue-400 ml-1.5">Directions</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity 
+                            onPress={() => openLink(vendor.website_link)}
+                            activeOpacity={0.7}
+                            className="flex-row items-center bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-lg"
+                          >
+                            <ExternalLink size={14} color={isDark ? '#60A5FA' : '#3B82F6'} />
+                            <Text className="text-xs font-medium text-blue-600 dark:text-blue-400 ml-1.5">Website</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    </View>
                   </View>
                 </View>
-                
-                <View className="ml-2">
-                  <Text className="text-sm text-gray-500 dark:text-gray-400">
-                    ›
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
+              ))}
+            </View>
+          )}
         </View>
       </ScrollView>
     </ThemedView>

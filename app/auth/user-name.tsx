@@ -50,6 +50,13 @@ export default function UserNameScreen() {
           </View>
 
           <View className="flex-1 px-6 pt-16">
+            <Text className="text-gray-400 text-base mb-8">
+              {isVendor 
+                ? "Customers will be able to see your store name on transactions"
+                : "Vendors will be able to see your username on transactions"
+              }
+            </Text>
+
             <TextInput
               className="dark:text-white light:text-black text-3xl font-medium py-4"
               placeholder={isVendor ? "Enter business name" : "Enter your name"}
@@ -67,13 +74,6 @@ export default function UserNameScreen() {
             {error ? (
               <Text className="text-red-500 text-lg mt-4">{error}</Text>
             ) : null}
-
-            <Text className="text-gray-400 text-base mt-6">
-              {isVendor 
-                ? "Customers will be able to see your store name on transactions"
-                : "Vendors will be able to see your username on transactions"
-              }
-            </Text>
 
             <View className="absolute bottom-12 left-6 right-6">
               <TouchableOpacity

@@ -4,10 +4,12 @@ import { ThemedView } from '@/components/ThemedView';
 import { TokenBalance, useBalance } from '@/contexts/BalanceContext';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import * as Clipboard from 'expo-clipboard';
 
 export default function HomeScreen() {
   const { balances, totalValueUSD, isLoading, error, refreshBalances, lastUpdated } = useBalance();
   const [refreshing, setRefreshing] = useState(false);
+  const [showCheckmark, setShowCheckmark] = useState(false);
   const { keyPair } = useAuth();
 
   useEffect(() => {
@@ -36,8 +38,14 @@ export default function HomeScreen() {
     return;
   };
 
-  const handleCopy = () => {
-    Alert.alert('Copy', 'Address copied to clipboard!');
+  const handleCopy = async () => {
+    if (keyPair?.publicKey) {
+      await Clipboard.setStringAsync(keyPair.publicKey);
+      setShowCheckmark(true);
+      setTimeout(() => {
+        setShowCheckmark(false);
+      }, 1500);
+    }
   };
 
   // Handle pull-to-refresh
@@ -65,6 +73,7 @@ export default function HomeScreen() {
         onBuyPress={handleBuy}
         onSwapPress={handleSwap}
         onCopyPress={handleCopy}
+        showCopyCheckmark={showCheckmark}
         isRefreshing={refreshing}
         onRefresh={handleRefresh}
       />

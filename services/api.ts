@@ -327,6 +327,23 @@ export const PaymentAPI = {
   },
 };
 
+// Vendor API functions
+export const VendorAPI = {
+  /**
+   * Get list of partnered vendors
+   * @returns Array of partnered vendor objects
+   */
+  getPartneredVendors: async () => {
+    try {
+      const response = await api.get('/vendors/partnered');
+      return response.data;
+    } catch (error) {
+      console.error('Error getting partnered vendors:', error);
+      throw error;
+    }
+  },
+};
+
 // Authentication interceptors
 export const setAuthToken = (token: string | null) => {
   if (token) {
