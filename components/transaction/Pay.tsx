@@ -74,15 +74,15 @@ export default function Pay({ onSuccessStateChange }: PayProps) {
   // Show modal when activePayment is available
   useEffect(() => {
     if (activePayment) {
-      console.log('==========================================');
-      console.log('ACTIVE PAYMENT IN PAY COMPONENT:');
-      console.log('==========================================');
-      console.log(JSON.stringify(activePayment, null, 2));
-      console.log('==========================================');
-      console.log('Transaction type:', typeof activePayment);
-      console.log('Has payment_bundle:', !!activePayment.payment_bundle);
-      console.log('Payment bundle length:', activePayment.payment_bundle?.length || 0);
-      console.log('==========================================');
+      // console.log('==========================================');
+      // console.log('ACTIVE PAYMENT IN PAY COMPONENT:');
+      // console.log('==========================================');
+      // console.log(JSON.stringify(activePayment, null, 2));
+      // console.log('==========================================');
+      // console.log('Transaction type:', typeof activePayment);
+      // console.log('Has payment_bundle:', !!activePayment.payment_bundle);
+      // console.log('Payment bundle length:', activePayment.payment_bundle?.length || 0);
+      // console.log('==========================================');
       setShowModal(true);
     }
   }, [activePayment]);
@@ -133,7 +133,7 @@ export default function Pay({ onSuccessStateChange }: PayProps) {
     
     setProcessing(true);
     console.log('==========================================');
-    console.log(`PAYMENT CODE SUBMITTED: ${codeToUse}`);
+    // console.log(`PAYMENT CODE SUBMITTED: ${codeToUse}`);
     console.log('==========================================');
     
     try {
@@ -149,7 +149,7 @@ export default function Pay({ onSuccessStateChange }: PayProps) {
       setScanned(false); // Reset scan state
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to process payment';
-      console.log('Payment error:', errorMessage);
+      // console.log('Payment error:', errorMessage);
       
       // Show user-friendly error alert
       Alert.alert(
@@ -434,7 +434,7 @@ export default function Pay({ onSuccessStateChange }: PayProps) {
     if (scanned || processing || isLoading || showModal) return;
     
     setScanned(true);
-    console.log(`QR code scanned with type ${type} and data ${data}`);
+    // console.log(`QR code scanned with type ${type} and data ${data}`);
     
     // Process the payment code
     handlePaymentCodeSubmit(data);

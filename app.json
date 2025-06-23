@@ -24,17 +24,19 @@
     ],
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.indexwallets.mobile",
       "jsEngine": "hermes",
+      "config": {
+        "usesNonExemptEncryption": false
+      },
       "infoPlist": {
+        "NSCameraUsageDescription": "IndexWallets needs camera access to scan QR codes for payments",
+        "NSFaceIDUsageDescription": "IndexWallets uses Face ID for secure authentication to your wallet",
         "NSAppTransportSecurity": {
-          "NSAllowsArbitraryLoads": true,
+          "NSAllowsArbitraryLoads": false,
           "NSAllowsLocalNetworking": true,
-          "NSAllowsArbitraryLoadsInWebContent": true,
+          "NSAllowsArbitraryLoadsInWebContent": false,
           "NSExceptionDomains": {
-            "172.20.10.2": {
-              "NSExceptionAllowsInsecureHTTPLoads": true,
-              "NSExceptionMinimumTLSVersion": "TLSv1.0"
-            },
             "localhost": {
               "NSExceptionAllowsInsecureHTTPLoads": true,
               "NSExceptionMinimumTLSVersion": "TLSv1.0",
@@ -45,6 +47,7 @@
       }
     },
     "android": {
+      "package": "com.indexwallets.mobile",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"

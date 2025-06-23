@@ -5,6 +5,7 @@ import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { Home, TrendingUp, ArrowLeftRight, Settings, ShoppingBag } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -28,6 +29,9 @@ const FloatingTabBar: React.FC<TabBarProps> = ({ state, descriptors, navigation 
   const scaleValues = useRef(
     state.routes.map(() => new Animated.Value(1))
   ).current;
+  
+  // Pulse animation for transact button
+  const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     // Animate the active tab
@@ -49,6 +53,27 @@ const FloatingTabBar: React.FC<TabBarProps> = ({ state, descriptors, navigation 
         }).start();
       }
     });
+    
+    // Pulse animation for transact button when selected
+    const transactIndex = state.routes.findIndex((r: any) => r.name === 'transact');
+    if (state.index === transactIndex) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.05,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    } else {
+      pulseAnim.setValue(1);
+    }
   }, [state.index]);
 
   const getIcon = (routeName: string, isFocused: boolean, isTransact: boolean = false) => {
@@ -99,32 +124,49 @@ const FloatingTabBar: React.FC<TabBarProps> = ({ state, descriptors, navigation 
           const isFocused = state.index === index;
           
           return (
-            <TouchableOpacity
+            <Animated.View
               key={route.key}
-              onPress={() => handlePress(route, isFocused)}
-              style={[
-                styles.centerButton,
-                {
-                  backgroundColor: isFocused 
-                    ? '#F59E0B' // Index Wallets yellow
-                    : (isDark ? '#374151' : '#E5E7EB'),
-                  shadowColor: isFocused ? '#F59E0B' : '#000',
-                }
-              ]}
+              style={{
+                transform: [{ scale: pulseAnim }],
+              }}
             >
-              <Animated.View
-                style={{
-                  transform: [{
-                    scale: animatedValues[index].interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0.9, 1],
-                    })
-                  }],
-                }}
+              <TouchableOpacity
+                onPress={() => handlePress(route, isFocused)}
+                activeOpacity={0.8}
               >
-                {getIcon(route.name, isFocused, true)}
-              </Animated.View>
-            </TouchableOpacity>
+                <LinearGradient
+                  colors={
+                    isFocused
+                      ? ['#F59E0B', '#FB923C'] // Orange gradient when selected
+                      : isDark
+                      ? ['#4B5563', '#374151'] // Dark mode unselected
+                      : ['#E5E7EB', '#D1D5DB'] // Light mode unselected
+                  }
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={[
+                    styles.centerButton,
+                    {
+                      shadowColor: isFocused ? '#F59E0B' : '#000',
+                      shadowOpacity: isFocused ? 0.5 : 0.3,
+                    }
+                  ]}
+                >
+                  <Animated.View
+                    style={{
+                      transform: [{
+                        scale: animatedValues[index].interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0.9, 1],
+                        })
+                      }],
+                    }}
+                  >
+                    {getIcon(route.name, isFocused, true)}
+                  </Animated.View>
+                </LinearGradient>
+              </TouchableOpacity>
+            </Animated.View>
           );
         })}
       </View>

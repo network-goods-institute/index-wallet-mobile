@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl, Modal, Text, Image } from 'react-native';
+import { View, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl, Modal, Text, Image, SafeAreaView } from 'react-native';
 import { ThemedText } from './ThemedText';
 import { ThemedView } from './ThemedView';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -405,39 +405,44 @@ export default function TransactionHistory({ limit = 10, showTitle = true }: Tra
         visible={showDetails}
         onRequestClose={() => setShowDetails(false)}
       >
-        <BlurView
-          intensity={20}
-          tint={colorScheme === 'dark' ? 'dark' : 'light'}
-          style={{
-            flex: 1,
-            justifyContent: 'center',
-            alignItems: 'center',
-            padding: 20,
-          }}
-        >
-          {selectedActivity && (
-            <View 
-              className="w-full rounded-3xl p-6 shadow-2xl"
-              style={{ 
-                backgroundColor: colorScheme === 'dark' ? 'rgba(31, 41, 55, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-                maxWidth: 400,
-              }}
-            >
-              {/* Modal Header */}
-              <View className="flex-row justify-between items-center mb-6">
-                <Text 
-                  className="text-2xl font-bold"
-                  style={{ color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }}
+        <SafeAreaView className={`flex-1 ${colorScheme === 'dark' ? 'bg-black/50' : 'bg-black/30'}`}>
+          <TouchableOpacity 
+            className="flex-1 justify-center items-center px-6"
+            activeOpacity={1}
+            onPress={() => setShowDetails(false)}
+          >
+            {selectedActivity && (
+              <TouchableOpacity
+                activeOpacity={1}
+                className={`w-full max-w-sm p-8 rounded-3xl ${colorScheme === 'dark' ? 'bg-gray-800/95' : 'bg-white'}`}
+                style={{
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: colorScheme === 'dark' ? 0.3 : 0.08,
+                  shadowRadius: 8,
+                  elevation: 4,
+                }}
+              >
+                {/* Close button */}
+                <TouchableOpacity 
+                  className="absolute top-4 right-4 p-2"
+                  onPress={() => setShowDetails(false)}
                 >
+                  <X size={24} color={colorScheme === 'dark' ? '#9CA3AF' : '#6B7280'} />
+                </TouchableOpacity>
+                
+                <View className={`w-20 h-20 rounded-full items-center justify-center mx-auto mb-6 ${
+                  colorScheme === 'dark' ? 'bg-gray-700' : 'bg-gray-100'
+                }`}>
+                  <Text className="text-3xl">{selectedActivity.type === 'deposit' ? '💰' : '📧'}</Text>
+                </View>
+                
+                <Text className={`text-center text-2xl font-bold mb-2 ${colorScheme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
                   {selectedActivity.type === 'deposit' ? 'Deposit Details' : 'Transaction Details'}
                 </Text>
-                <TouchableOpacity onPress={() => setShowDetails(false)}>
-                  <X size={24} color={colorScheme === 'dark' ? '#FFFFFF' : '#000000'} />
-                </TouchableOpacity>
-              </View>
-              
-              {/* Activity Info */}
-              <View className="space-y-4">
+                
+                {/* Activity Info */}
+                <View className="space-y-4">
                 <View className="flex-row items-center justify-between mb-4">
                   <View className="flex-row items-center">
                     <View className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-full items-center justify-center mr-3">
@@ -597,10 +602,11 @@ export default function TransactionHistory({ limit = 10, showTitle = true }: Tra
                   )}
                   
                 </View>
-              </View>
-            </View>
-          )}
-        </BlurView>
+                </View>
+              </TouchableOpacity>
+            )}
+          </TouchableOpacity>
+        </SafeAreaView>
       </Modal>
     </ThemedView>
   );

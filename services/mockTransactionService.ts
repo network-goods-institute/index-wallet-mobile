@@ -27,16 +27,16 @@ const decryptData = async (encryptedData: string): Promise<string> => {
 // Function to fetch a mock transaction from the backend
 export const fetchMockTransaction = async () => {
   try {
-    console.log('Fetching mock transaction from backend...');
+    // console.log('Fetching mock transaction from backend...');
     
     try {
       // Make sure we're using the correct endpoint as defined in the backend code
-      console.log(`Calling endpoint: ${API_BASE_URL}/create-mock-transaction`);
+      // console.log(`Calling endpoint: ${API_BASE_URL}/create-mock-transaction`);
       const response = await axios.get(`${API_BASE_URL}/create-mock-transaction`);
       
       // Log the response for debugging
-      console.log('Backend response status:', response.status);
-      console.log('Received mock transaction:', JSON.stringify(response.data, null, 2));
+      // console.log('Backend response status:', response.status);
+      // console.log('Received mock transaction:', JSON.stringify(response.data, null, 2));
       
       if (!response.data) {
         throw new Error('Empty response from backend');
@@ -77,23 +77,23 @@ export const fetchMockTransaction = async () => {
 // Function to sign a transaction with the private key from AuthContext
 export const signTransaction = async (transactionData: any, privateKeyBase58: string) => {
   try {
-    console.log('Signing transaction data:', JSON.stringify(transactionData, null, 2));
+    // console.log('Signing transaction data:', JSON.stringify(transactionData, null, 2));
     
     // 1. Decode the private key from base58
     const privateKeyBytes = bs58.decode(privateKeyBase58);
-    console.log('Private key bytes length:', privateKeyBytes.length);
+    // console.log('Private key bytes length:', privateKeyBytes.length);
     
     // Following the working example provided
-    console.log('Using the all-in-one approach from the example...');
+    // console.log('Using the all-in-one approach from the example...');
     
     // Use the all-in-one function to sign the debit allowance
     // This is equivalent to the signedTokenMint function in the example
-    console.log('Using sign.signedDebitAllowance...');
+    // console.log('Using sign.signedDebitAllowance...');
     try {
       // Get the signed message from the library function
       const signedMessage = sign.signedDebitAllowance(transactionData, privateKeyBytes);
-      console.log('Successfully signed debit allowance with signedDebitAllowance function');
-      console.log('Raw signed message:', JSON.stringify(signedMessage, null, 2));
+      // console.log('Successfully signed debit allowance with signedDebitAllowance function');
+      // console.log('Raw signed message:', JSON.stringify(signedMessage, null, 2));
       
       // Based on the provided example, the backend is expecting a different format
       // It wants a payload and a signature with Ed25519 containing pubkey and signature
@@ -107,28 +107,28 @@ export const signTransaction = async (transactionData: any, privateKeyBase58: st
         }
       };
       
-      console.log('Final formatted message:', JSON.stringify(formattedMessage, null, 2));
+      // console.log('Final formatted message:', JSON.stringify(formattedMessage, null, 2));
       return formattedMessage;
     } catch (signError) {
       console.error('Error with signedDebitAllowance:', signError);
       
       // If the all-in-one approach fails, try the step-by-step approach
-      console.log('Falling back to manual signing approach...');
+      // console.log('Falling back to manual signing approach...');
       
       // 1. Parse the debit allowance
-      console.log('Parsing debit allowance...');
+      // console.log('Parsing debit allowance...');
       const parsedDebitAllowance = parse.debitAllowance(transactionData);
-      console.log('Successfully parsed debit allowance');
+      // console.log('Successfully parsed debit allowance');
       
       // 2. Serialize the parsed debit allowance to bytes
-      console.log('Serializing parsed debit allowance...');
+      // console.log('Serializing parsed debit allowance...');
       const serializedBytes = serialize(parsedDebitAllowance);
-      console.log('Serialized DebitAllowance bytes length:', serializedBytes.length);
+      // console.log('Serialized DebitAllowance bytes length:', serializedBytes.length);
       
       // 3. Sign the serialized bytes
-      console.log('Signing serialized bytes...');
+      // console.log('Signing serialized bytes...');
       const signature = sign.signBytes(serializedBytes, privateKeyBytes);
-      console.log('Signature length:', signature.length);
+      // console.log('Signature length:', signature.length);
       
       // 4. Construct the signed message manually in the format expected by the backend
       // Based on the provided example, it should have payload and signature fields
@@ -142,7 +142,7 @@ export const signTransaction = async (transactionData: any, privateKeyBase58: st
         }
       };
       
-      console.log('Created manual signed message:', JSON.stringify(manualSignedMessage, null, 2));
+      // console.log('Created manual signed message:', JSON.stringify(manualSignedMessage, null, 2));
       return manualSignedMessage;
     }
   } catch (error) {
@@ -158,19 +158,19 @@ export const sendMockTransaction = async (privateKey?: string) => {
   try {
     // 1. Fetch transaction data from backend
     const transactionData = await fetchMockTransaction();
-    console.log('Transaction data:', transactionData);
+    // console.log('Transaction data:', transactionData);
     
     // 2. Sign the transaction
     // Use the provided private key or fall back to the test key
     const keyToUse = privateKey || TEST_PRIVATE_KEY;
-    console.log('Using test private key for transaction signing');
-    console.log('Private key type:', typeof keyToUse);
-    console.log('Private key length:', keyToUse.length);
+    // console.log('Using test private key for transaction signing');
+    // console.log('Private key type:', typeof keyToUse);
+    // console.log('Private key length:', keyToUse.length);
     
     // Decode the private key to make sure it's valid
     try {
       const decodedKey = bs58.decode(keyToUse);
-      console.log('Successfully decoded private key, length in bytes:', decodedKey.length);
+      // console.log('Successfully decoded private key, length in bytes:', decodedKey.length);
     } catch (decodeError) {
       console.error('Error decoding private key:', decodeError);
       throw new Error('Invalid private key format');
@@ -180,18 +180,18 @@ export const sendMockTransaction = async (privateKey?: string) => {
     const signedTransaction = await signTransaction(transactionData, keyToUse);
     
     // 4. Send the signed transaction back to the backend
-    console.log('Sending signed transaction to backend:', signedTransaction);
+    // console.log('Sending signed transaction to backend:', signedTransaction);
     
     try {
       // Log the exact payload we're sending
-      console.log('Sending payload to backend:', JSON.stringify(signedTransaction, null, 2));
+      // console.log('Sending payload to backend:', JSON.stringify(signedTransaction, null, 2));
       
       // Wrap the signed transaction in the signed_debit_allowance field for the backend
       const requestPayload = {
         signed_debit_allowance: signedTransaction
       };
       
-      console.log('Final request payload:', JSON.stringify(requestPayload, null, 2));
+      // console.log('Final request payload:', JSON.stringify(requestPayload, null, 2));
       
       // Send the signed transaction to the /receive-signed endpoint
       const response = await axios.post(`${API_BASE_URL}/receive-signed`, requestPayload, {
@@ -199,7 +199,7 @@ export const sendMockTransaction = async (privateKey?: string) => {
           'Content-Type': 'application/json'
         }
       });
-      console.log('Backend response:', response.data);
+      // console.log('Backend response:', response.data);
       
       // 5. Show a success alert
       Alert.alert(

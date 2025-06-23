@@ -12,10 +12,13 @@ import {
   ActivityIndicator,
   Platform,
   Image,
+  TextInput,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useTheme } from '@/contexts/ThemeContext';
-import { X, TrendingUp, TrendingDown } from 'lucide-react-native';
+import { X, TrendingUp, TrendingDown, Edit3 } from 'lucide-react-native';
 import { ThemedView } from './ThemedView';
 import { ThemedText } from './ThemedText';
 
@@ -46,14 +49,51 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
   const [isDragging, setIsDragging] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [sliderWidth, setSliderWidth] = useState(0);
+  const [isEditingValue, setIsEditingValue] = useState(false);
+  const [inputValue, setInputValue] = useState('');
+  const inputRef = useRef<TextInput>(null);
   const maxRange = 500; // Fixed max range
 
   // Update adjustment when token changes
   useEffect(() => {
     if (token) {
       setAdjustment(token.adjustment || 0);
+      setInputValue(Math.abs(token.adjustment || 0).toFixed(2));
     }
   }, [token]);
+  
+  // Handle manual input
+  const handleInputChange = (text: string) => {
+    // Allow only numbers and one decimal point
+    const cleaned = text.replace(/[^0-9.]/g, '');
+    const parts = cleaned.split('.');
+    if (parts.length > 2) {
+      // Too many decimal points
+      return;
+    }
+    if (parts[1] && parts[1].length > 2) {
+      // More than 2 decimal places
+      return;
+    }
+    setInputValue(cleaned);
+  };
+  
+  const handleInputSubmit = () => {
+    const value = parseFloat(inputValue) || 0;
+    // Keep the current sign (premium/discount)
+    if (adjustment < 0) {
+      setAdjustment(-value);
+    } else {
+      setAdjustment(value);
+    }
+  };
+  
+  // Update input value when adjustment changes from slider
+  useEffect(() => {
+    if (!isEditingValue && !isDragging) {
+      setInputValue(Math.abs(adjustment).toFixed(2));
+    }
+  }, [adjustment, isEditingValue, isDragging]);
 
   // Animate modal in/out
   useEffect(() => {
@@ -265,25 +305,105 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
             </View>
           </View>
 
-          <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-            {/* Adjustment display */}
+          <ScrollView 
+            style={styles.content} 
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            <TouchableWithoutFeedback onPress={() => {
+              if (isEditingValue) {
+                Keyboard.dismiss();
+              }
+            }}>
+              <View>
+            {/* Adjustment display with manual input */}
             <View className={`mx-4 p-6 rounded-2xl ${
               colorScheme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-50'
             }`}>
               <View className="items-center">
                 <ThemedText className="text-sm opacity-60 mb-2">Your Adjustment</ThemedText>
-                <View className="min-w-full px-4">
-                  <ThemedText 
-                    className={`text-3xl font-bold text-center ${
-                      adjustment === 0 ? 'text-gray-400' : (adjustment > 0 ? 'text-green-500' : 'text-yellow-500')
+                <TouchableOpacity 
+                  onPress={() => {
+                    if (!isEditingValue) {
+                      setIsEditingValue(true);
+                      // Ensure the input value is set correctly
+                      setInputValue(Math.abs(adjustment).toFixed(2));
+                    }
+                  }}
+                  activeOpacity={0.7}
+                  className="flex-row items-center justify-center min-w-full px-4"
+                >
+                  {isEditingValue ? (
+                    <View className="flex-row items-center">
+                      <Text className={`text-3xl font-bold ${
+                        adjustment === 0 ? 'text-gray-400' : (adjustment > 0 ? 'text-green-500' : 'text-yellow-500')
+                      }`}>$</Text>
+                      <TextInput
+                        ref={inputRef}
+                        className={`text-3xl font-bold min-w-[100px] text-center ${
+                          adjustment === 0 ? 'text-gray-400' : (adjustment > 0 ? 'text-green-500' : 'text-yellow-500')
+                        }`}
+                        style={{ outline: 'none' }}
+                        value={inputValue}
+                        onChangeText={handleInputChange}
+                        keyboardType="number-pad"
+                        autoFocus
+                        selectTextOnFocus
+                        onBlur={() => {
+                          handleInputSubmit();
+                          setIsEditingValue(false);
+                        }}
+                      />
+                    </View>
+                  ) : (
+                    <View className="flex-row items-center">
+                      <ThemedText 
+                        className={`text-3xl font-bold text-center ${
+                          adjustment === 0 ? 'text-gray-400' : (adjustment > 0 ? 'text-green-500' : 'text-yellow-500')
+                        }`}
+                      >
+                        {adjustment > 0 ? '+' : ''}{adjustment < 0 ? '-' : ''}${Math.abs(adjustment).toFixed(2)}
+                      </ThemedText>
+                      <View className={`ml-2 p-1 rounded-full ${
+                        colorScheme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'
+                      }`}>
+                        <Edit3 size={14} color={colorScheme === 'dark' ? '#9CA3AF' : '#6B7280'} />
+                      </View>
+                    </View>
+                  )}
+                </TouchableOpacity>
+                <View className="flex-row items-center mt-2 gap-2">
+                  <TouchableOpacity
+                    onPress={() => {
+                      const absValue = Math.abs(adjustment);
+                      setAdjustment(-absValue);
+                    }}
+                    className={`px-3 py-1 rounded-full ${
+                      adjustment < 0 
+                        ? 'bg-yellow-500' 
+                        : (colorScheme === 'dark' ? 'bg-gray-700' : 'bg-gray-200')
                     }`}
                   >
-                    {adjustment > 0 ? '+' : ''}{adjustment < 0 ? '-' : ''}${Math.abs(adjustment).toFixed(2)}
-                  </ThemedText>
+                    <ThemedText className={`text-xs font-medium ${
+                      adjustment < 0 ? 'text-white' : ''
+                    }`}>Premium</ThemedText>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => {
+                      const absValue = Math.abs(adjustment);
+                      setAdjustment(absValue);
+                    }}
+                    className={`px-3 py-1 rounded-full ${
+                      adjustment > 0 
+                        ? 'bg-green-500' 
+                        : (colorScheme === 'dark' ? 'bg-gray-700' : 'bg-gray-200')
+                    }`}
+                  >
+                    <ThemedText className={`text-xs font-medium ${
+                      adjustment > 0 ? 'text-white' : ''
+                    }`}>Discount</ThemedText>
+                  </TouchableOpacity>
                 </View>
-                <ThemedText className="text-xs opacity-50 mt-1">
-                  {adjustment === 0 ? 'No adjustment' : (adjustment > 0 ? 'Discount' : 'Premium')}
-                </ThemedText>
               </View>
             </View>
 
@@ -482,14 +602,17 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
             <View className={`mx-4 p-4 rounded-xl ${
               colorScheme === 'dark' ? 'bg-blue-900/20' : 'bg-blue-50'
             }`}>
+              {/* Copy: When someone pays you $10 worth of this currency, $2 worth of this discount is used up. */}
               <ThemedText className="text-sm text-center opacity-80 leading-5">
-                Adjust your personal valuation. Positive values represent discounts, negative values represent premiums.
+                When someone pays you $10 worth of this currency, $2 worth of this {adjustment > 0 ? 'discount' : 'premium'} is used up.
               </ThemedText>
             </View>
+              </View>
+            </TouchableWithoutFeedback>
           </ScrollView>
 
-          {/* Action buttons */}
-          <View className="flex-row px-5 pt-5 pb-2 space-x-3">
+          {/* Action buttons with spacing */}
+          <View className="flex-row px-5 pt-5 pb-2 gap-4">
             <TouchableOpacity
               className={`flex-1 py-4 rounded-2xl items-center justify-center ${
                 colorScheme === 'dark' ? 'bg-gray-800' : 'bg-gray-200'

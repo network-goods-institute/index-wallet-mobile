@@ -68,16 +68,16 @@ export default function Receive({ onSuccessStateChange }: ReceiveProps) {
   
   // Sync pending transactions on mount
   useEffect(() => {
-    console.log('Receive component mounted, syncing transactions...');
+    // console.log('Receive component mounted, syncing transactions...');
     syncTransactions();
     loadTransactionHistory();
   }, []);
   
   // Debug effect to see pending transactions
   useEffect(() => {
-    console.log('Pending transactions updated in Receive:', pendingTransactions.length);
-    console.log('Vendor pending transactions:', vendorPendingTransactions.length);
-    console.log('Active request:', activeRequest?.payment_id);
+    // console.log('Pending transactions updated in Receive:', pendingTransactions.length);
+    // console.log('Vendor pending transactions:', vendorPendingTransactions.length);
+    // console.log('Active request:', activeRequest?.payment_id);
   }, [pendingTransactions, vendorPendingTransactions, activeRequest]);
 
   // Note: We don't clear active request on unmount anymore
@@ -89,7 +89,7 @@ export default function Receive({ onSuccessStateChange }: ReceiveProps) {
     if (activeRequest) {
       const completedStatuses = ['completed', 'success', 'confirmed', 'Completed', 'Success', 'Confirmed'];
       if (completedStatuses.includes(activeRequest.status)) {
-        console.log('Transaction completed! Showing success screen');
+        // console.log('Transaction completed! Showing success screen');
         setShowSuccess(true);
       }
     }
@@ -148,7 +148,7 @@ export default function Receive({ onSuccessStateChange }: ReceiveProps) {
       try {
         // Delete the payment request from backend
         await deleteRequest(paymentId);
-        console.log(`Payment ${paymentId} cancelled and deleted`);
+        // console.log(`Payment ${paymentId} cancelled and deleted`);
         
         // Clear the form
         setQrVisible(false);

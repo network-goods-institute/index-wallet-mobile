@@ -23,7 +23,7 @@ const TEST_PRIVATE_KEY = '5JeqVC5myFajNwvqba1QNZLdWMNTnMkz5oSN5W1yJWhUr1TDQoP';
 export const getPrivateKey = async (providedPrivateKey?: string): Promise<string | null> => {
   // If a private key is provided directly, use it
   if (providedPrivateKey) {
-    console.log('Using provided private key');
+    // console.log('Using provided private key');
     return providedPrivateKey;
   }
   
@@ -33,19 +33,19 @@ export const getPrivateKey = async (providedPrivateKey?: string): Promise<string
     
     // If not found in SecureStore, try AsyncStorage as fallback
     if (!encryptedKey) {
-      console.log('Key not found in SecureStore, trying AsyncStorage');
+      // console.log('Key not found in SecureStore, trying AsyncStorage');
       encryptedKey = await AsyncStorage.getItem(PRIVATE_KEY_KEY);
     }
     
     if (!encryptedKey) {
-      console.log('No private key found in storage, using test key for development');
+      // console.log('No private key found in storage, using test key for development');
       return TEST_PRIVATE_KEY;
     }
     
     return await decryptPrivateKey(encryptedKey);
   } catch (error) {
     console.error('Error retrieving encrypted private key:', error);
-    console.log('Falling back to test private key for development');
+    // console.log('Falling back to test private key for development');
     return TEST_PRIVATE_KEY;
   }
 };
@@ -55,21 +55,21 @@ export const getPrivateKey = async (providedPrivateKey?: string): Promise<string
  * Matches the AuthContext's decryptData implementation
  */
 export const decryptPrivateKey = async (encryptedKey: string): Promise<string> => {
-  console.log('Decrypting key:', encryptedKey.substring(0, 20) + '...');
+  // console.log('Decrypting key:', encryptedKey.substring(0, 20) + '...');
   
   // Match the AuthContext's decryption implementation exactly
   if (encryptedKey.startsWith('encrypted:')) {
-    console.log('Found encrypted: prefix, extracting data');
+    // console.log('Found encrypted: prefix, extracting data');
     return encryptedKey.substring(10);
   }
   
   // Try other possible formats
   if (encryptedKey.includes(':')) {
-    console.log('Found other prefix format, extracting after colon');
+    // console.log('Found other prefix format, extracting after colon');
     return encryptedKey.substring(encryptedKey.indexOf(':') + 1);
   }
   
-  console.log('No encryption prefix found, returning as is');
+  // console.log('No encryption prefix found, returning as is');
   return encryptedKey;
 };
 
@@ -83,13 +83,13 @@ export const signTransaction = async (transactionData: any, privateKey: string) 
   try {
     // Decode the private key from base58
     const privateKeyBytes = bs58.decode(privateKey);
-    console.log('Private key bytes length:', privateKeyBytes.length);
+    // console.log('Private key bytes length:', privateKeyBytes.length);
     
     try {
       // Sign the transaction using the all-in-one approach
-      console.log('Using sign.signedDebitAllowance...');
+      // console.log('Using sign.signedDebitAllowance...');
       const signedMessage = sign.signedDebitAllowance(transactionData, privateKeyBytes);
-      console.log('Successfully signed transaction');
+      // console.log('Successfully signed transaction');
       
       // Format the signed transaction as expected by the API
       return {
@@ -105,7 +105,7 @@ export const signTransaction = async (transactionData: any, privateKey: string) 
       console.error('Error with signedDebitAllowance:', signError);
       
       // Fall back to manual signing approach
-      console.log('Falling back to manual signing approach...');
+      // console.log('Falling back to manual signing approach...');
       
       // Parse the debit allowance
       const parsedDebitAllowance = parse.debitAllowance(transactionData);
@@ -148,11 +148,11 @@ export const sendSignedTransaction = async (
   payerAddress: string
 ) => {
   try {
-    console.log('Sending signed transaction to backend...');
-    console.log('Payment ID:', paymentId);
-    console.log('Signed transaction:', JSON.stringify(signedTransaction, null, 2));
-    console.log('Transaction details:', JSON.stringify(transactionDetails, null, 2));
-    console.log('Payer address:', payerAddress);
+    // console.log('Sending signed transaction to backend...');
+    // console.log('Payment ID:', paymentId);
+    // console.log('Signed transaction:', JSON.stringify(signedTransaction, null, 2));
+    // console.log('Transaction details:', JSON.stringify(transactionDetails, null, 2));
+    // console.log('Payer address:', payerAddress);
     
     // Format the request according to the backend's ProcessSignedTransactionRequest struct
     // The signed_transaction should be an array containing the signed transaction
@@ -166,18 +166,18 @@ export const sendSignedTransaction = async (
       payer_address: payerAddress
     };
     
-    console.log('Final request body:', JSON.stringify(requestBody, null, 2));
+    // console.log('Final request body:', JSON.stringify(requestBody, null, 2));
     
     // Send to the correct backend endpoint: /payments/{payment_id}/sign
     const apiUrl = `${API_BASE_URL}/api/payments/${paymentId}/sign`;
-    console.log('Posting to API URL:', apiUrl);
+    // console.log('Posting to API URL:', apiUrl);
     
     const response = await axios.post(apiUrl, requestBody, {
       headers: {
         'Content-Type': 'application/json'
       }
     });
-    console.log('Success with /payments/{payment_id}/sign endpoint:', response.data);
+    // console.log('Success with /payments/{payment_id}/sign endpoint:', response.data);
     return response.data;
   } catch (error) {
     console.error('Error sending signed transaction:', error);
@@ -206,17 +206,17 @@ export const signAndSendTransaction = async (
   privateKeyOverride?: string
 ) => {
   try {
-    console.log('=== Starting signAndSendTransaction ===');
-    console.log('Payment ID:', paymentId);
-    console.log('Transaction data:', JSON.stringify(transactionData, null, 2));
-    console.log('Payer address:', payerAddress);
-    console.log('Private key override provided:', !!privateKeyOverride);
+    // console.log('=== Starting signAndSendTransaction ===');
+    // console.log('Payment ID:', paymentId);
+    // console.log('Transaction data:', JSON.stringify(transactionData, null, 2));
+    // console.log('Payer address:', payerAddress);
+    // console.log('Private key override provided:', !!privateKeyOverride);
     
     // 1. Get the private key (either from override or storage)
     let privateKey = privateKeyOverride;
     
     if (!privateKey) {
-      console.log('No private key override, retrieving from storage...');
+      // console.log('No private key override, retrieving from storage...');
       privateKey = await getPrivateKey();
     }
     
@@ -224,10 +224,10 @@ export const signAndSendTransaction = async (
       throw new Error('No private key available for signing');
     }
     
-    console.log('Private key available for signing');
-    console.log('Private key type:', typeof privateKey);
-    console.log('Private key length:', privateKey.length);
-    console.log('Private key preview:', privateKey.substring(0, 10) + '...');
+    // console.log('Private key available for signing');
+    // console.log('Private key type:', typeof privateKey);
+    // console.log('Private key length:', privateKey.length);
+    // console.log('Private key preview:', privateKey.substring(0, 10) + '...');
     
     // 2. Validate transaction data
     if (!transactionData) {
@@ -235,38 +235,38 @@ export const signAndSendTransaction = async (
     }
     
     if (typeof transactionData === 'string') {
-      console.log('Transaction data is string, parsing...');
+      // console.log('Transaction data is string, parsing...');
       transactionData = JSON.parse(transactionData);
     }
     
     // Handle case where transaction data comes as an array (extract first element)
     if (Array.isArray(transactionData)) {
-      console.log('Transaction data is an array, extracting first element...');
+      // console.log('Transaction data is an array, extracting first element...');
       transactionData = transactionData[0];
     }
     
-    console.log('Parsed transaction data:', JSON.stringify(transactionData, null, 2));
+    // console.log('Parsed transaction data:', JSON.stringify(transactionData, null, 2));
     
     // 3. Sign the transaction
-    console.log('Signing transaction...');
+    // console.log('Signing transaction...');
     const signedTransaction = await signTransaction(transactionData, privateKey);
-    console.log('Transaction signed successfully');
-    console.log('Signed transaction:', JSON.stringify(signedTransaction, null, 2));
+    // console.log('Transaction signed successfully');
+    // console.log('Signed transaction:', JSON.stringify(signedTransaction, null, 2));
     
     // 4. Send the signed transaction to the backend
-    console.log('Sending signed transaction to backend...');
+    // console.log('Sending signed transaction to backend...');
     const response = await sendSignedTransaction(
       paymentId, 
       signedTransaction, 
       completeTransactionDetails, 
       payerAddress
     );
-    console.log('Transaction sent successfully');
-    console.log('Backend response:', JSON.stringify(response, null, 2));
+    // console.log('Transaction sent successfully');
+    // console.log('Backend response:', JSON.stringify(response, null, 2));
     
     return response;
   } catch (error) {
-    console.error('=== Error in signAndSendTransaction ===');
+    // console.error('=== Error in signAndSendTransaction ===');
     console.error('Error:', error);
     console.error('Error message:', error.message);
     if (error.response) {

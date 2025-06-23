@@ -98,10 +98,10 @@ export const TransactionProvider: React.FC<{ children: ReactNode }> = ({ childre
   };
   // Merchant: Create a new transaction
   const createTransaction = async (amount: number): Promise<string> => {
-    console.log("Amount:", amount);
-    console.log('User wallet address:', auth?.walletAddress);
-    console.log('User name:', auth?.userName);
-    console.log('User valuations:', auth?.valuations);
+    // console.log("Amount:", amount);
+    // console.log('User wallet address:', auth?.walletAddress);
+    // console.log('User name:', auth?.userName);
+    // console.log('User valuations:', auth?.valuations);
     
     if (!auth?.walletAddress) {
       throw new Error('Vendor wallet address not available');
@@ -121,7 +121,7 @@ export const TransactionProvider: React.FC<{ children: ReactNode }> = ({ childre
       
       // Call the real backend API
       const response = await PaymentAPI.createPayment(paymentData);
-      console.log('Payment created:', response);
+      // console.log('Payment created:', response);
       
       // Use the response directly as our Transaction
       const transaction: Transaction = {
@@ -166,16 +166,16 @@ export const TransactionProvider: React.FC<{ children: ReactNode }> = ({ childre
     const maxAttempts = 50; // Stop after 50 attempts
     let attemptCount = 0;
     
-    console.log(`Starting polling for transaction: ${paymentId}`);
+    // console.log(`Starting polling for transaction: ${paymentId}`);
     
     const pollFunction = async () => {
       try {
         attemptCount++;
-        console.log(`Polling attempt ${attemptCount} for transaction: ${paymentId} (delay: ${currentDelay}ms)`);
+        // console.log(`Polling attempt ${attemptCount} for transaction: ${paymentId} (delay: ${currentDelay}ms)`);
         
         // Call the actual backend API to get payment status
         const statusResponse = await PaymentAPI.getPaymentStatus(paymentId);
-        console.log(`Received status response:`, statusResponse);
+        // console.log(`Received status response:`, statusResponse);
         
         // Update the current transaction with the latest data
         if (statusResponse) {
@@ -187,7 +187,7 @@ export const TransactionProvider: React.FC<{ children: ReactNode }> = ({ childre
             updatedAt: new Date().toISOString()
           };
           
-          console.log(`Status updated to: ${statusResponse.status}`);
+          // console.log(`Status updated to: ${statusResponse.status}`);
           setCurrentTransaction(updatedTransaction);
           
           // Check for terminal states (adjust these based on your backend's status values)
@@ -197,32 +197,32 @@ export const TransactionProvider: React.FC<{ children: ReactNode }> = ({ childre
           
           if (terminalStatuses.includes(statusResponse.status)) {
             stopPolling();
-            console.log(`Stopped polling - terminal status reached: ${statusResponse.status}`);
+            // console.log(`Stopped polling - terminal status reached: ${statusResponse.status}`);
             
             if (completedStatuses.includes(statusResponse.status)) {
-              console.log('SUCCESS: Transaction completed successfully!');
+              // console.log('SUCCESS: Transaction completed successfully!');
             } else {
-              console.log('FAILED: Transaction', statusResponse.status.toLowerCase(), '. Please try again.');
+              // console.log('FAILED: Transaction', statusResponse.status.toLowerCase(), '. Please try again.');
             }
             return; // Exit polling
           }
           
           // If status changed, reset delay to check more frequently
           if (currentTransaction && statusResponse.status !== currentTransaction.status) {
-            console.log('Status changed, resetting polling delay');
+            // console.log('Status changed, resetting polling delay');
             currentDelay = 1000;
           } else {
             // No change, apply exponential backoff
             currentDelay = Math.min(currentDelay * backoffMultiplier, maxDelay);
-            console.log(`No status change, increasing delay to: ${currentDelay}ms`);
+            // console.log(`No status change, increasing delay to: ${currentDelay}ms`);
           }
         }
         
         // Stop polling if we've reached max attempts
         if (attemptCount >= maxAttempts) {
           stopPolling();
-          console.log(`Stopped polling - reached maximum attempts (${maxAttempts})`);
-          console.log('TIMEOUT: Transaction status polling timed out. Please check manually.');
+          // console.log(`Stopped polling - reached maximum attempts (${maxAttempts})`);
+          // console.log('TIMEOUT: Transaction status polling timed out. Please check manually.');
           return;
         }
         
@@ -244,13 +244,13 @@ export const TransactionProvider: React.FC<{ children: ReactNode }> = ({ childre
           // For other errors, normal backoff
           currentDelay = Math.min(currentDelay * 2, maxDelay);
         }
-        console.log(`Error occurred, increasing delay to: ${currentDelay}ms`);
+        // console.log(`Error occurred, increasing delay to: ${currentDelay}ms`);
         
         // Stop polling if too many errors or max attempts reached
         if (attemptCount >= maxAttempts || attemptCount >= 10) { // Stop after 10 attempts for errors
           stopPolling();
-          console.log('Stopped polling due to too many errors');
-          console.log('ERROR: Unable to check transaction status. Please try again later.');
+          // console.log('Stopped polling due to too many errors');
+          // console.log('ERROR: Unable to check transaction status. Please try again later.');
           
           // Update the transaction status to show error
           setCurrentTransaction(prev => {
@@ -279,7 +279,7 @@ export const TransactionProvider: React.FC<{ children: ReactNode }> = ({ childre
     if (pollingInterval) {
       clearTimeout(pollingInterval); // Changed to clearTimeout
       setPollingInterval(null);
-      console.log('Stopped polling manually');
+      // console.log('Stopped polling manually');
     }
   };
 
@@ -289,12 +289,12 @@ export const TransactionProvider: React.FC<{ children: ReactNode }> = ({ childre
     setError(null);
     
     try {
-      console.log(`Scanning transaction: ${paymentId}`);
+      // console.log(`Scanning transaction: ${paymentId}`);
       
       try {
         // Try to fetch payment from real API
         const payment = await PaymentAPI.getPayment(paymentId);
-        console.log('Payment details:', payment);
+        // console.log('Payment details:', payment);
         
         // Use API response directly as our Transaction
         const transaction: Transaction = {
@@ -320,7 +320,7 @@ export const TransactionProvider: React.FC<{ children: ReactNode }> = ({ childre
         setCurrentTransaction(transaction);
         return transaction;
       } catch (apiError) {
-        console.log('API scan error, using mock:', apiError);
+        // console.log('API scan error, using mock:', apiError);
         
         // Fallback to mock implementation
         await new Promise(resolve => setTimeout(resolve, 500));
@@ -346,7 +346,7 @@ export const TransactionProvider: React.FC<{ children: ReactNode }> = ({ childre
         };
         
         setCurrentTransaction(mockTransaction);
-        console.log('Transaction scanned (mock):', mockTransaction);
+        // console.log('Transaction scanned (mock):', mockTransaction);
         return mockTransaction;
       }
     } catch (err) {
@@ -368,13 +368,13 @@ export const TransactionProvider: React.FC<{ children: ReactNode }> = ({ childre
     setError(null);
     
     try {
-      console.log(`Supplementing transaction: ${paymentId}`);
-      console.log('User info:', {
-        walletAddress: auth.walletAddress,
-        userName: auth.userName || 'Unknown User',
-        hasValuations: auth.valuations,
-        balancesCount: balances.length
-      });
+      // console.log(`Supplementing transaction: ${paymentId}`);
+      // console.log('User info:', {
+      //   walletAddress: auth.walletAddress,
+      //   userName: auth.userName || 'Unknown User',
+      //   hasValuations: auth.valuations,
+      //   balancesCount: balances.length
+      // });
       
       // Convert balances to the format expected by the API, using the tokenKey from TokenBalance objects
       const payerBalances = balances.map(token => {
@@ -391,19 +391,19 @@ export const TransactionProvider: React.FC<{ children: ReactNode }> = ({ childre
         };
       });
       
-      console.log('Sending balances to API with token keys:', payerBalances);
+      // console.log('Sending balances to API with token keys:', payerBalances);
       
       const transaction = await PaymentAPI.getFinalizedTransaction(paymentId, { 
         payer_address: auth.walletAddress,
         payer_balances: payerBalances
       });
       
-      console.log('==========================================');
-      console.log('TRANSACTION RECEIVED FROM API:');
-      console.log('==========================================');
-      console.log(JSON.stringify(transaction, null, 2));
-      console.log('==========================================');
-      console.log('Setting as currentTransaction...');
+      // console.log('==========================================');
+      // console.log('TRANSACTION RECEIVED FROM API:');
+      // console.log('==========================================');
+      // console.log(JSON.stringify(transaction, null, 2));
+      // console.log('==========================================');
+      // console.log('Setting as currentTransaction...');
       setCurrentTransaction(transaction);
       return transaction;
     } catch (err) {
@@ -425,26 +425,26 @@ export const TransactionProvider: React.FC<{ children: ReactNode }> = ({ childre
     setError(null);
     
     try {
-      console.log(`Completing transaction: ${paymentId}`);
+      // console.log(`Completing transaction: ${paymentId}`);
       
       let signature = null;
       if (auth.signMessage) {
         const message = `Complete transaction ${paymentId}`;
         signature = await auth.signMessage(message);
-        console.log(`Transaction signed with message: ${message}`);
+        // console.log(`Transaction signed with message: ${message}`);
       }
       
-      console.log('Completion data:', {
-        signature,
-        walletAddress: auth.walletAddress
-      });
+      // console.log('Completion data:', {
+      //   signature,
+      //   walletAddress: auth.walletAddress
+      // });
       
       // Call the API to complete the payment
       const response = await PaymentAPI.completePayment(paymentId, {
         customer_address: auth.walletAddress
       });
       
-      console.log('Payment completion response:', response);
+      // console.log('Payment completion response:', response);
       
       // Update the transaction status in state
       setCurrentTransaction(prev => {
@@ -457,7 +457,7 @@ export const TransactionProvider: React.FC<{ children: ReactNode }> = ({ childre
         };
       });
       
-      console.log('Transaction completed successfully');
+      // console.log('Transaction completed successfully');
       return true;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to complete transaction';

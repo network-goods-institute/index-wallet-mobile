@@ -11,19 +11,19 @@ export const WalletDebugger = () => {
   
   // Debug logging for seed phrase visibility
   useEffect(() => {
-    console.log('=== DEBUG UI: Auth context values updated ===');
-    console.log('DEBUG UI: status:', status);
-    console.log('DEBUG UI: seedPhrase from context:', seedPhrase ? 'PRESENT' : 'NULL');
-    console.log('DEBUG UI: keyPair from context:', keyPair ? 'PRESENT' : 'NULL');
-    console.log('DEBUG UI: walletAddress from context:', walletAddress ? 'PRESENT' : 'NULL');
+    // console.log('=== DEBUG UI: Auth context values updated ===');
+    // console.log('DEBUG UI: status:', status);
+    // console.log('DEBUG UI: seedPhrase from context:', seedPhrase ? 'PRESENT' : 'NULL');
+    // console.log('DEBUG UI: keyPair from context:', keyPair ? 'PRESENT' : 'NULL');
+    // console.log('DEBUG UI: walletAddress from context:', walletAddress ? 'PRESENT' : 'NULL');
     if (seedPhrase) {
-      console.log('DEBUG UI: seedPhrase value:', seedPhrase.substring(0, 20) + '...');
+      // console.log('DEBUG UI: seedPhrase value:', seedPhrase.substring(0, 20) + '...');
     }
     if (keyPair) {
-      console.log('DEBUG UI: privateKey value:', keyPair.privateKey.substring(0, 20) + '...');
-      console.log('DEBUG UI: publicKey value:', keyPair.publicKey.substring(0, 20) + '...');
+      // console.log('DEBUG UI: privateKey value:', keyPair.privateKey.substring(0, 20) + '...');
+      // console.log('DEBUG UI: publicKey value:', keyPair.publicKey.substring(0, 20) + '...');
     }
-    console.log('=== End DEBUG UI update ===');
+    // console.log('=== End DEBUG UI update ===');
   }, [seedPhrase, keyPair, status, walletAddress]);
   const [storedAddress, setStoredAddress] = useState<string | null>(null);
   const [storedPrivateKey, setStoredPrivateKey] = useState<string | null>(null);
@@ -58,20 +58,20 @@ export const WalletDebugger = () => {
         const encryptedSeedPhrase = await SecureStore.getItemAsync('encrypted-seed-phrase');
         
         if (encryptedPrivateKey) {
-          console.log('Found encrypted private key in SecureStore:', encryptedPrivateKey.substring(0, 10) + '...');
+          // console.log('Found encrypted private key in SecureStore:', encryptedPrivateKey.substring(0, 10) + '...');
           privateKey = encryptedPrivateKey;
           const decrypted = await decryptData(encryptedPrivateKey);
           setDecryptedPrivateKey(decrypted);
         }
         
         if (encryptedSeedPhrase) {
-          console.log('Found encrypted seed phrase in SecureStore');
+          // console.log('Found encrypted seed phrase in SecureStore');
           seedPhrase = encryptedSeedPhrase;
           const decrypted = await decryptData(encryptedSeedPhrase);
           setDecryptedSeedPhrase(decrypted);
         }
       } catch (e) {
-        console.log('Error accessing SecureStore:', e);
+        // console.log('Error accessing SecureStore:', e);
       }
       
       // If not found in SecureStore, try AsyncStorage
@@ -81,20 +81,20 @@ export const WalletDebugger = () => {
           const asyncStorageSeedPhrase = await AsyncStorage.getItem('encrypted-seed-phrase');
           
           if (asyncStoragePrivateKey) {
-            console.log('Found encrypted private key in AsyncStorage:', asyncStoragePrivateKey.substring(0, 10) + '...');
+            // console.log('Found encrypted private key in AsyncStorage:', asyncStoragePrivateKey.substring(0, 10) + '...');
             privateKey = asyncStoragePrivateKey;
             const decrypted = await decryptData(asyncStoragePrivateKey);
             setDecryptedPrivateKey(decrypted);
           }
           
           if (asyncStorageSeedPhrase) {
-            console.log('Found encrypted seed phrase in AsyncStorage');
+            // console.log('Found encrypted seed phrase in AsyncStorage');
             seedPhrase = asyncStorageSeedPhrase;
             const decrypted = await decryptData(asyncStorageSeedPhrase);
             setDecryptedSeedPhrase(decrypted);
           }
         } catch (e) {
-          console.log('Error accessing AsyncStorage:', e);
+          // console.log('Error accessing AsyncStorage:', e);
         }
       }
       
@@ -104,7 +104,7 @@ export const WalletDebugger = () => {
       if (privateKey) {
         return privateKey;
       } else {
-        console.log('No private key found in storage');
+        // console.log('No private key found in storage');
         return null;
       }
     } catch (error) {
@@ -122,7 +122,7 @@ export const WalletDebugger = () => {
       }
       
       const testSeed = decryptedSeedPhrase || seedPhrase;
-      console.log('Testing key derivation with seed phrase...');
+      // console.log('Testing key derivation with seed phrase...');
       const derivedKeys = await createKeyPairFromSeedPhrase(testSeed);
       
       alert(`Key Derivation Test:
@@ -144,7 +144,7 @@ Context Match: ${derivedKeys.privateKey === keyPair?.privateKey}`);
       }
       
       const testMessage = 'Hello, this is a test message for signing!';
-      console.log('Signing test message...');
+      // console.log('Signing test message...');
       const signature = await signMessage(testMessage, keyPair.privateKey);
       setTestSignature(signature);
       
@@ -166,7 +166,7 @@ Signature: ${signature.substring(0, 40)}...`);
       }
       
       const testSeed = decryptedSeedPhrase || seedPhrase;
-      console.log('Testing login function with current seed phrase...');
+      // console.log('Testing login function with current seed phrase...');
       const loginResult = await login(testSeed, false);
       
       alert(`Login Function Test:
@@ -204,7 +204,7 @@ This should re-derive and store private keys.`);
         payment_bundle: []
       };
       
-      console.log('Testing transaction signing with mock data...');
+      // console.log('Testing transaction signing with mock data...');
       const result = await signAndSendTransaction(
         'test-payment-123',
         mockTransactionData,
@@ -310,7 +310,7 @@ Check console for details.`);
         <Text style={styles.label}>Seed Phrase in Context:</Text>
         <Text style={styles.value}>{seedPhrase ? seedPhrase.split(' ').slice(0, 3).join(' ') + '...' : 'null'}</Text>
         <TouchableOpacity onPress={() => {
-          console.log('MANUAL CHECK: seedPhrase from context:', seedPhrase);
+          // console.log('MANUAL CHECK: seedPhrase from context:', seedPhrase);
           alert(seedPhrase || 'No seed phrase in context');
         }}>
           <Text style={styles.viewButton}>View Full</Text>

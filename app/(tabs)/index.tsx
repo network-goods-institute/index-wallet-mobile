@@ -3,7 +3,6 @@ import { WalletIndex } from '@/components/WalletIndex';
 import { ThemedView } from '@/components/ThemedView';
 import { TokenBalance, useBalance } from '@/contexts/BalanceContext';
 import { useEffect, useState } from 'react';
-import { sendMockTransaction } from '@/services/mockTransactionService';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function HomeScreen() {
@@ -48,23 +47,6 @@ export default function HomeScreen() {
     setRefreshing(false);
   };
 
-  // Handle mock transaction
-  const handleMockTransaction = async () => {
-    try {
-      if (!keyPair || !keyPair.privateKey) {
-        console.log('Private key not available in keyPair:', keyPair);
-        Alert.alert('Error', 'Private key not available. Please make sure you are logged in.');
-        return;
-      }
-      
-      console.log('Using private key from keyPair:', keyPair.privateKey);
-      await sendMockTransaction(keyPair.privateKey);
-    } catch (error) {
-      console.error('Error in mock transaction:', error);
-      Alert.alert('Transaction Error', error instanceof Error ? error.message : 'Failed to process transaction');
-    }
-  };
-
 
   // Transform balances to the format expected by WalletIndex
   const transformedTokens = balances.map(token => ({
@@ -77,7 +59,6 @@ export default function HomeScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      {/* Mock Transaction Button */}
       <WalletIndex 
         totalValue={totalValueUSD}
         tokens={transformedTokens}
@@ -95,19 +76,5 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingBottom: 80, // Space for floating tab bar
-  },
-  mockButton: {
-    position: 'absolute',
-    top: 50,
-    right: 20,
-    backgroundColor: '#FF8C42',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    zIndex: 10,
-  },
-  mockButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
   },
 });

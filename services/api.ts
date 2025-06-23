@@ -157,11 +157,11 @@ export const PaymentAPI = {
     vendor_valuations: any; 
   }) => {
     try {
-      console.log('Creating payment with data:', paymentData);
+      // console.log('Creating payment with data:', paymentData);
       
       // Send the data as is, with price_usd as a number
       const response = await api.post('/api/payments', paymentData);
-      console.log('Payment created response:', response.data);
+      // console.log('Payment created response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error creating payment:', error);
@@ -200,9 +200,9 @@ export const PaymentAPI = {
     }>;
   }) => {
     try {
-      console.log(`Supplementing payment ${paymentId} with data:`, supplementData);
+      // console.log(`Supplementing payment ${paymentId} with data:`, supplementData);
       const response = await api.post(`/api/payments/${paymentId}/supplement`, supplementData);
-      console.log('Payment supplemented response:', response.data);
+      // console.log('Payment supplemented response:', response.data);
       return response.data;
     } catch (error: any) {
       console.error('Error supplementing payment:', error);
@@ -339,14 +339,14 @@ export const setAuthToken = (token: string | null) => {
 // Request interceptor for debugging
 api.interceptors.request.use(
   (config) => {
-    console.log('🚀 Making API request:', {
-      method: config.method?.toUpperCase(),
-      url: config.url,
-      baseURL: config.baseURL,
-      fullURL: `${config.baseURL}${config.url}`,
-      headers: config.headers,
-      timeout: config.timeout
-    });
+    // console.log('🚀 Making API request:', {
+    //   method: config.method?.toUpperCase(),
+    //   url: config.url,
+    //   baseURL: config.baseURL,
+    //   fullURL: `${config.baseURL}${config.url}`,
+    //   headers: config.headers,
+    //   timeout: config.timeout
+    // });
     return config;
   },
   (error) => {
@@ -358,11 +358,11 @@ api.interceptors.request.use(
 // Error handling interceptor
 api.interceptors.response.use(
   (response) => {
-    console.log('✅ API response received:', {
-      status: response.status,
-      url: response.config.url,
-      data: response.data
-    });
+    // console.log('✅ API response received:', {
+    //   status: response.status,
+    //   url: response.config.url,
+    //   data: response.data
+    // });
     return response;
   },
   (error) => {
@@ -386,7 +386,7 @@ api.interceptors.response.use(
     // Handle global error responses
     if (error.response) {
       // Server responded with a status code outside of 2xx range
-      console.log('Server Error Response:', error.response.status, error.response.data);
+      // console.log('Server Error Response:', error.response.status, error.response.data);
       
       // Handle authentication errors
       if (error.response.status === 401) {
@@ -394,15 +394,15 @@ api.interceptors.response.use(
       }
     } else if (error.request) {
       // Request was made but no response received
-      console.log('Network/Request Error - no response received');
-      console.log('Request details:', {
-        url: error.config?.baseURL + error.config?.url,
-        method: error.config?.method,
-        headers: error.config?.headers
-      });
+      // console.log('Network/Request Error - no response received');
+      // console.log('Request details:', {
+      //   url: error.config?.baseURL + error.config?.url,
+      //   method: error.config?.method,
+      //   headers: error.config?.headers
+      // });
     } else {
       // Something else happened while setting up the request
-      console.log('Request Setup Error:', error.message);
+      // console.log('Request Setup Error:', error.message);
     }
     
     return Promise.reject(error);

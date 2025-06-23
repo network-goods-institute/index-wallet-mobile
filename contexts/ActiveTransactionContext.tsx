@@ -120,7 +120,7 @@ export const ActiveTransactionProvider: React.FC<{ children: React.ReactNode }> 
       // Check if we've exceeded max polling duration
       const startTime = pollStartTimeRef.current.get(transactionId);
       if (startTime && Date.now() - startTime > MAX_POLL_DURATION) {
-        console.log(`Max poll duration reached for ${transactionId}, stopping`);
+        // console.log(`Max poll duration reached for ${transactionId}, stopping`);
         if (type === 'payment') {
           stopPaymentPolling();
         } else {
@@ -166,7 +166,7 @@ export const ActiveTransactionProvider: React.FC<{ children: React.ReactNode }> 
             removePendingTransaction(transactionId);
             // Add to transaction history
             addToHistory(response);
-            console.log('Transaction completed and added to history:', transactionId);
+            // console.log('Transaction completed and added to history:', transactionId);
           }
         } else {
           // Update the polling interval based on transaction age
@@ -178,14 +178,14 @@ export const ActiveTransactionProvider: React.FC<{ children: React.ReactNode }> 
               () => pollTransaction(transactionId, 'payment'),
               currentInterval
             );
-            console.log(`Updated payment polling interval to ${currentInterval}ms`);
+            // console.log(`Updated payment polling interval to ${currentInterval}ms`);
           } else if (type === 'request' && requestPollingRef.current) {
             clearInterval(requestPollingRef.current);
             requestPollingRef.current = setInterval(
               () => pollTransaction(transactionId, 'request'),
               currentInterval
             );
-            console.log(`Updated request polling interval to ${currentInterval}ms`);
+            // console.log(`Updated request polling interval to ${currentInterval}ms`);
           }
         }
       }
@@ -427,12 +427,12 @@ export const ActiveTransactionProvider: React.FC<{ children: React.ReactNode }> 
         setActiveRequest(null);
       }
       
-      console.log(`Payment ${paymentId} deleted successfully`);
+      // console.log(`Payment ${paymentId} deleted successfully`);
       return true;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete payment';
       setError(errorMessage);
-      console.error('Failed to delete payment:', err);
+      // console.error('Failed to delete payment:', err);
       throw new Error(errorMessage);
     } finally {
       setIsLoading(false);

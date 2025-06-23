@@ -72,7 +72,7 @@ export const PendingTransactionManagerProvider: React.FC<{ children: React.React
   // Load cached pending transactions
   const loadCachedData = async () => {
     if (!auth?.walletAddress) {
-      console.log('No wallet address, skipping cache load');
+      // console.log('No wallet address, skipping cache load');
       return;
     }
     
@@ -85,10 +85,10 @@ export const PendingTransactionManagerProvider: React.FC<{ children: React.React
 
       if (cachedPending) {
         const transactions = JSON.parse(cachedPending);
-        console.log(`Loaded ${transactions.length} cached transactions for wallet ${auth.walletAddress.slice(0, 8)}...`);
+        // console.log(`Loaded ${transactions.length} cached transactions for wallet ${auth.walletAddress.slice(0, 8)}...`);
         setPendingTransactions(transactions);
       } else {
-        console.log('No cached transactions found for this wallet');
+        // console.log('No cached transactions found for this wallet');
         setPendingTransactions([]);
       }
       
@@ -104,18 +104,18 @@ export const PendingTransactionManagerProvider: React.FC<{ children: React.React
   // Save to cache
   const saveToCache = async (transactions: Transaction[], syncTime: number) => {
     if (!auth?.walletAddress) {
-      console.log('No wallet address, skipping cache save');
+      // console.log('No wallet address, skipping cache save');
       return;
     }
     
     try {
       const storageKeys = getStorageKeys(auth.walletAddress);
-      console.log(`Saving ${transactions.length} transactions to cache for wallet ${auth.walletAddress.slice(0, 8)}...`);
+      // console.log(`Saving ${transactions.length} transactions to cache for wallet ${auth.walletAddress.slice(0, 8)}...`);
       await Promise.all([
         AsyncStorage.setItem(storageKeys.PENDING_TRANSACTIONS, JSON.stringify(transactions)),
         AsyncStorage.setItem(storageKeys.LAST_SYNC, syncTime.toString()),
       ]);
-      console.log('Cache saved successfully');
+      // console.log('Cache saved successfully');
     } catch (error) {
       console.error('Failed to save to cache:', error);
     }
@@ -169,7 +169,7 @@ export const PendingTransactionManagerProvider: React.FC<{ children: React.React
       setError(null);
       
       try {
-        console.log('Syncing transactions from backend...');
+        // console.log('Syncing transactions from backend...');
         
         // Fetch transaction history from backend
         const response = await PaymentAPI.getTransactionHistory(auth.walletAddress);
@@ -181,7 +181,7 @@ export const PendingTransactionManagerProvider: React.FC<{ children: React.React
             pendingStatuses.includes(tx.status)
           );
           
-          console.log(`Found ${pendingTxs.length} pending transactions from ${response.transactions.length} total`);
+          // console.log(`Found ${pendingTxs.length} pending transactions from ${response.transactions.length} total`);
           
           // Update state with new pending transactions
           setPendingTransactions(pendingTxs);
@@ -198,7 +198,7 @@ export const PendingTransactionManagerProvider: React.FC<{ children: React.React
           updatePollingInterval(newInterval);
           
           if (newInterval) {
-            console.log(`Polling interval updated to ${newInterval}ms based on transaction ages`);
+            // console.log(`Polling interval updated to ${newInterval}ms based on transaction ages`);
           }
         }
         
@@ -225,7 +225,7 @@ export const PendingTransactionManagerProvider: React.FC<{ children: React.React
     }
     
     if (interval && appState === 'active') {
-      console.log(`Setting sync interval to ${interval}ms`);
+      // console.log(`Setting sync interval to ${interval}ms`);
       syncIntervalRef.current = setInterval(syncTransactions, interval);
     }
   }, [appState, syncTransactions]);
@@ -251,7 +251,7 @@ export const PendingTransactionManagerProvider: React.FC<{ children: React.React
       } else {
         // Add new transaction
         updated = [...prev, transaction];
-        console.log('Added new pending transaction:', transaction.payment_id);
+        // console.log('Added new pending transaction:', transaction.payment_id);
       }
       
       // Save to cache
