@@ -61,6 +61,18 @@ export const TransactionHistoryStoreProvider: React.FC<{ children: React.ReactNo
     setHasMore(true);
   }, [auth?.walletAddress]);
 
+  // Clear transaction history when user logs out
+  useEffect(() => {
+    if (auth?.status === 'unauthenticated') {
+      setTransactions([]);
+      setCursor(null);
+      setHasMore(true);
+      setError(null);
+      setIsLoading(false);
+      setIsInitialized(false);
+    }
+  }, [auth?.status]);
+
   // Load cached transaction history
   const loadCachedHistory = async () => {
     if (!auth?.walletAddress) {

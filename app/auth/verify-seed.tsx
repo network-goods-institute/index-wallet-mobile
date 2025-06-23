@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, TextInput, SafeAreaView, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, TextInput, SafeAreaView, KeyboardAvoidingView, Platform, Keyboard, ActivityIndicator } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { ThemedView } from '@/components/ThemedView';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,6 +12,7 @@ export default function VerifySeedScreen() {
   const [verificationInputs, setVerificationInputs] = useState<{[key: number]: string}>({});
   const [missingIndices, setMissingIndices] = useState<number[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
   const inputRefs = useRef<{[key: number]: TextInput | null}>({});
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -100,7 +101,15 @@ export default function VerifySeedScreen() {
       return;
     }
     
-    if (verifyInputs()) {
+    if (!verifyInputs()) {
+      setError('Incorrect words. Please check and try again.');
+      return;
+    }
+    
+    setIsProcessing(true);
+    setError(null);
+    
+    try {
       if (seedPhrase) {
         // Complete the onboarding process
         const success = await completeOnboarding(seedPhrase, false);
@@ -108,8 +117,10 @@ export default function VerifySeedScreen() {
           setError('Failed to complete setup. Please try again.');
         }
       }
-    } else {
-      setError('Incorrect words. Please check and try again.');
+    } catch (error) {
+      setError('An error occurred. Please try again.');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -241,16 +252,24 @@ export default function VerifySeedScreen() {
           <View className="px-6 pb-8">
             <TouchableOpacity
               onPress={handleContinue}
-              disabled={!areAllInputsFilled()}
+              disabled={!areAllInputsFilled() || isProcessing}
+              activeOpacity={0.8}
               className={`w-full py-4 rounded-2xl items-center justify-center ${
-                areAllInputsFilled() ? 'bg-yellow-400' : 'bg-gray-200 dark:bg-gray-800'
+                areAllInputsFilled() && !isProcessing ? 'bg-yellow-400' : 'bg-gray-200 dark:bg-gray-800'
               }`}
+              style={{
+                transform: [{scale: isProcessing ? 0.98 : 1}]
+              }}
             >
-              <Text className={`text-lg font-semibold ${
-                areAllInputsFilled() ? 'text-black' : 'text-gray-500 dark:text-gray-400'
-              }`}>
-                Continue
-              </Text>
+              {isProcessing ? (
+                <ActivityIndicator color={colorScheme === 'dark' ? '#FFFFFF' : '#000000'} />
+              ) : (
+                <Text className={`text-lg font-semibold ${
+                  areAllInputsFilled() ? 'text-black' : 'text-gray-500 dark:text-gray-400'
+                }`}>
+                  Continue
+                </Text>
+              )}
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>

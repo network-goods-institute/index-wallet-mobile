@@ -562,14 +562,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Logout
   const logout = async (): Promise<void> => {
     try {
-      // Clear sensitive data from storage
-      await AsyncStorage.removeItem(AUTH_STATUS_KEY);
-      await AsyncStorage.removeItem(SEED_PHRASE_KEY);
-      await AsyncStorage.removeItem(PRIVATE_KEY_KEY);
-      await AsyncStorage.removeItem(PUBLIC_KEY_KEY);
-      await AsyncStorage.removeItem(WALLET_ADDRESS_KEY);
-      await AsyncStorage.removeItem(USER_DATA_KEY);
-      await AsyncStorage.removeItem(VALUATIONS_KEY);
+      // Clear ALL user-specific data from AsyncStorage
+      const keysToRemove = [
+        AUTH_STATUS_KEY,
+        SEED_PHRASE_KEY,
+        PRIVATE_KEY_KEY,
+        PUBLIC_KEY_KEY,
+        WALLET_ADDRESS_KEY,
+        USER_DATA_KEY,
+        VALUATIONS_KEY,
+        USER_TYPE_KEY,
+        USER_NAME_KEY,
+        HAS_PASSKEY_KEY,
+        ICLOUD_BACKUP_ENABLED_KEY,
+        BACKUP_STATUS_KEY,
+        'USER_ID',
+        'user-id',
+        'wallet-address',
+        'username',
+      ];
+      
+      await AsyncStorage.multiRemove(keysToRemove);
       
       // Try to clear from SecureStore as well
       try {
@@ -579,12 +592,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.warn('Error clearing SecureStore:', secureStoreError);
       }
       
-      // Reset state
+      // Reset ALL state to initial values
       setSeedPhrase(null);
       setKeyPair(null);
       setWalletAddress(null);
       setValuations(null);
       setExistingWallet(null);
+      setUserType(null);
+      setUserName(null);
+      setHasPasskey(false);
+      setICloudBackupEnabled(false);
+      setBackupStatus('none');
+      setOnboardingStep('welcome');
       setStatus('unauthenticated');
       
       // console.log('Successfully logged out and cleared all user data');

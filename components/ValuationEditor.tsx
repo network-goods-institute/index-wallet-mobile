@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -15,8 +15,10 @@ import {
   TextInput,
   Keyboard,
   TouchableWithoutFeedback,
+  InteractionManager,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/contexts/ThemeContext';
 import { X, TrendingUp, TrendingDown, Edit3 } from 'lucide-react-native';
 import { ThemedView } from './ThemedView';
@@ -46,19 +48,22 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
   const { colorScheme } = useTheme();
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const [adjustment, setAdjustment] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [sliderWidth, setSliderWidth] = useState(0);
   const [isEditingValue, setIsEditingValue] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const inputRef = useRef<TextInput>(null);
-  const maxRange = 500; // Fixed max range
+  const scrollViewRef = useRef<ScrollView>(null);
+  const [isScrolling, setIsScrolling] = useState(false);
+  const isProgrammaticScroll = useRef(false);
 
   // Update adjustment when token changes
   useEffect(() => {
     if (token) {
-      setAdjustment(token.adjustment || 0);
-      setInputValue(Math.abs(token.adjustment || 0).toFixed(2));
+      const tokenAdjustment = token.adjustment || 0;
+      lastValue.current = tokenAdjustment;
+      lastHapticValue.current = tokenAdjustment;
+      setAdjustment(tokenAdjustment);
+      setInputValue(Math.abs(tokenAdjustment).toFixed(2));
     }
   }, [token]);
   
@@ -78,22 +83,47 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
     setInputValue(cleaned);
   };
   
-  const handleInputSubmit = () => {
+  const handleInputSubmit = useCallback(() => {
     const value = parseFloat(inputValue) || 0;
-    // Keep the current sign (premium/discount)
-    if (adjustment < 0) {
-      setAdjustment(-value);
+    
+    let newAdjustment;
+    if (adjustment === 0 && value !== 0) {
+      // If at 0 and entering a value, default to Discount (positive)
+      // User can click Premium/Discount buttons to change direction
+      newAdjustment = value;
     } else {
-      setAdjustment(value);
+      // Keep the current sign (premium/discount)
+      newAdjustment = adjustment < 0 ? -value : value;
     }
-  };
+    
+    // Update refs immediately
+    lastValue.current = newAdjustment;
+    lastHapticValue.current = newAdjustment;
+    
+    // Update state
+    setAdjustment(newAdjustment);
+    
+    // Update scroll position with flag to prevent feedback loop
+    if (scrollViewRef.current) {
+      isProgrammaticScroll.current = true;
+      // Use whole dollar value for scroll position
+      const wholeDollarValue = Math.round(newAdjustment);
+      const scrollPosition = (wholeDollarValue + 10000) * 3;
+      scrollViewRef.current.scrollTo({ x: scrollPosition, animated: true });
+      
+      // Reset flag after animation completes
+      setTimeout(() => {
+        isProgrammaticScroll.current = false;
+      }, 500);
+    }
+  }, [inputValue, adjustment]);
   
   // Update input value when adjustment changes from slider
   useEffect(() => {
-    if (!isEditingValue && !isDragging) {
+    if (!isEditingValue && !isScrolling) {
       setInputValue(Math.abs(adjustment).toFixed(2));
     }
-  }, [adjustment, isEditingValue, isDragging]);
+  }, [adjustment, isEditingValue, isScrolling]);
 
   // Animate modal in/out
   useEffect(() => {
@@ -115,80 +145,75 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
   }, [visible]);
 
 
-  // Handle slider interaction with non-linear scale
-  const handleSliderPress = (evt: any) => {
-    const touchX = evt.nativeEvent.locationX;
-    if (sliderWidth > 0) {
-      const percentage = Math.max(0, Math.min(1, touchX / sliderWidth));
+  // Initialize scroll position when modal opens
+  useEffect(() => {
+    if (visible && scrollViewRef.current && !isEditingValue) {
+      // Use whole dollar value for scroll position
+      const wholeDollarValue = Math.round(lastValue.current);
+      const scrollPosition = (wholeDollarValue + 10000) * 3; // 3 pixels per dollar
+      isProgrammaticScroll.current = true;
+      setTimeout(() => {
+        scrollViewRef.current?.scrollTo({ x: scrollPosition, animated: false });
+        setTimeout(() => {
+          isProgrammaticScroll.current = false;
+        }, 200);
+      }, 100);
+    }
+  }, [visible]);
+  
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (scrollTimeout.current) {
+        clearTimeout(scrollTimeout.current);
+      }
+    };
+  }, []);
+
+  // Handle scroll events with better performance
+  const lastValue = useRef(adjustment);
+  const scrollTimeout = useRef<NodeJS.Timeout>();
+  const lastHapticValue = useRef<number>(adjustment);
+  
+  const handleScroll = useCallback((event: any) => {
+    // Ignore scroll events during programmatic scrolling
+    if (isProgrammaticScroll.current) {
+      return;
+    }
+    
+    const offset = event.nativeEvent.contentOffset.x;
+    const value = Math.round(offset / 3) - 10000; // 3 pixels per dollar
+    const clampedValue = Math.max(-10000, Math.min(10000, value));
+    
+    // Update value immediately for responsiveness
+    // Compare against rounded value to handle decimals properly
+    if (clampedValue !== Math.round(lastValue.current)) {
+      // When scrolling, always snap to whole dollars (no decimal preservation)
+      lastValue.current = clampedValue;
       
-      // Dynamic non-linear scale that adapts to current value
-      let mappedValue;
-      const currentRange = Math.max(50, Math.abs(adjustment) + 50);
-      
-      if (percentage >= 0.45 && percentage <= 0.55) {
-        // Small linear zone in center for fine control
-        mappedValue = (percentage - 0.5) * currentRange * 0.4;
-      } else if (percentage < 0.45) {
-        // Progressive exponential on left
-        const normalized = (0.45 - percentage) / 0.45;
-        const expo = Math.pow(normalized, 1.5);
-        mappedValue = -currentRange * 0.2 - (expo * currentRange * 2);
-      } else {
-        // Progressive exponential on right
-        const normalized = (percentage - 0.55) / 0.45;
-        const expo = Math.pow(normalized, 1.5);
-        mappedValue = currentRange * 0.2 + (expo * currentRange * 2);
+      // Haptic feedback for every $10 change
+      const lastTen = Math.floor(lastHapticValue.current / 10);
+      const currentTen = Math.floor(clampedValue / 10);
+      if (lastTen !== currentTen) {
+        Haptics.selectionAsync();
+        lastHapticValue.current = clampedValue;
       }
       
-      const newAdjustment = Math.round(mappedValue * 10) / 10;
-      setAdjustment(Math.max(-1000, Math.min(1000, newAdjustment)));
+      // Clear any pending timeout
+      if (scrollTimeout.current) {
+        clearTimeout(scrollTimeout.current);
+      }
+      
+      // Defer state update slightly to batch multiple updates
+      scrollTimeout.current = setTimeout(() => {
+        setAdjustment(clampedValue);
+      }, 0);
     }
-  };
-
-  // Create pan responder for slider
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: () => {
-        setIsDragging(true);
-      },
-      onPanResponderMove: (evt) => {
-        const touchX = evt.nativeEvent.locationX;
-        if (sliderWidth > 0) {
-          const percentage = Math.max(0, Math.min(1, touchX / sliderWidth));
-          
-          // Dynamic non-linear scale that adapts to current value
-          let mappedValue;
-          const currentRange = Math.max(50, Math.abs(adjustment) + 50);
-          
-          if (percentage >= 0.45 && percentage <= 0.55) {
-            // Small linear zone in center for fine control
-            mappedValue = (percentage - 0.5) * currentRange * 0.4;
-          } else if (percentage < 0.45) {
-            // Progressive exponential on left
-            const normalized = (0.45 - percentage) / 0.45;
-            const expo = Math.pow(normalized, 1.5);
-            mappedValue = -currentRange * 0.2 - (expo * currentRange * 2);
-          } else {
-            // Progressive exponential on right
-            const normalized = (percentage - 0.55) / 0.45;
-            const expo = Math.pow(normalized, 1.5);
-            mappedValue = currentRange * 0.2 + (expo * currentRange * 2);
-          }
-          
-          const newAdjustment = Math.round(mappedValue * 10) / 10;
-          setAdjustment(Math.max(-1000, Math.min(1000, newAdjustment)));
-        }
-      },
-      onPanResponderRelease: () => {
-        setIsDragging(false);
-      },
-    })
-  ).current;
+  }, []);
 
   const handleSave = async () => {
     if (token && !isSaving) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       setIsSaving(true);
       try {
         await onSave(token.symbol, adjustment);
@@ -202,40 +227,20 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
   };
 
   const handleReset = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    lastValue.current = 0;
+    lastHapticValue.current = 0;
     setAdjustment(0);
+    if (scrollViewRef.current) {
+      isProgrammaticScroll.current = true;
+      scrollViewRef.current.scrollTo({ x: 10000 * 3, animated: true }); // Center position
+      setTimeout(() => {
+        isProgrammaticScroll.current = false;
+      }, 500);
+    }
   };
 
   if (!token) return null;
-
-  // Calculate display range based on current adjustment
-  const displayRange = Math.max(50, Math.ceil(Math.abs(adjustment) / 50) * 50 + 50);
-  
-  // Calculate the position of the thumb on the slider using dynamic scaling
-  const getThumbPosition = () => {
-    if (sliderWidth === 0) return sliderWidth / 2;
-    
-    const currentRange = Math.max(50, Math.abs(adjustment) + 50);
-    
-    // Inverse of the dynamic non-linear mapping
-    if (Math.abs(adjustment) <= currentRange * 0.2) {
-      // Linear range
-      return (adjustment / (currentRange * 0.4) + 0.5) * sliderWidth;
-    } else if (adjustment < -currentRange * 0.2) {
-      // Left exponential
-      const valueOffset = Math.abs(adjustment) - currentRange * 0.2;
-      const normalized = Math.pow(valueOffset / (currentRange * 2), 1/1.5);
-      return (0.45 - normalized * 0.45) * sliderWidth;
-    } else {
-      // Right exponential
-      const valueOffset = adjustment - currentRange * 0.2;
-      const normalized = Math.pow(valueOffset / (currentRange * 2), 1/1.5);
-      return (0.55 + normalized * 0.45) * sliderWidth;
-    }
-  };
-  
-  const thumbPosition = getThumbPosition();
-  const fillWidth = Math.abs(thumbPosition - sliderWidth / 2);
-  const fillOffset = adjustment < 0 ? thumbPosition : sliderWidth / 2;
 
   return (
     <Modal
@@ -316,25 +321,32 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
               }
             }}>
               <View>
-            {/* Adjustment display with manual input */}
-            <View className={`mx-4 p-6 rounded-2xl ${
-              colorScheme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-50'
-            }`}>
-              <View className="items-center">
-                <ThemedText className="text-sm opacity-60 mb-2">Your Adjustment</ThemedText>
-                <TouchableOpacity 
-                  onPress={() => {
-                    if (!isEditingValue) {
-                      setIsEditingValue(true);
-                      // Ensure the input value is set correctly
-                      setInputValue(Math.abs(adjustment).toFixed(2));
-                    }
-                  }}
-                  activeOpacity={0.7}
-                  className="flex-row items-center justify-center min-w-full px-4"
-                >
+            {/* Adjustment Bubble with Edit Functionality */}
+            <View className="items-center mb-6">
+              <ThemedText className="text-sm opacity-60 mb-3">Your Adjustment</ThemedText>
+              
+              <TouchableOpacity 
+                onPress={() => {
+                  if (!isEditingValue) {
+                    setIsEditingValue(true);
+                    // Show empty input if value is 0, otherwise show the value
+                    setInputValue(adjustment === 0 ? '' : Math.abs(adjustment).toFixed(2));
+                  }
+                }}
+                activeOpacity={0.8}
+              >
+                <View className={`rounded-3xl py-4 px-8 ${
+                  colorScheme === 'dark' ? 'bg-gray-800' : 'bg-white'
+                }`} style={{
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.15,
+                  shadowRadius: 8,
+                  elevation: 5,
+                  minWidth: 160,
+                }}>
                   {isEditingValue ? (
-                    <View className="flex-row items-center">
+                    <View className="flex-row items-center justify-center">
                       <Text className={`text-3xl font-bold ${
                         adjustment === 0 ? 'text-gray-400' : (adjustment > 0 ? 'text-green-500' : 'text-yellow-500')
                       }`}>$</Text>
@@ -346,267 +358,258 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
                         style={{ outline: 'none' }}
                         value={inputValue}
                         onChangeText={handleInputChange}
-                        keyboardType="number-pad"
+                        keyboardType="decimal-pad"
                         autoFocus
                         selectTextOnFocus
                         onBlur={() => {
                           handleInputSubmit();
                           setIsEditingValue(false);
                         }}
+                        onSubmitEditing={() => {
+                          handleInputSubmit();
+                          setIsEditingValue(false);
+                        }}
                       />
                     </View>
                   ) : (
-                    <View className="flex-row items-center">
+                    <View className="flex-row items-center justify-center">
                       <ThemedText 
-                        className={`text-3xl font-bold text-center ${
+                        className={`text-3xl font-bold ${
                           adjustment === 0 ? 'text-gray-400' : (adjustment > 0 ? 'text-green-500' : 'text-yellow-500')
                         }`}
                       >
-                        {adjustment > 0 ? '+' : ''}{adjustment < 0 ? '-' : ''}${Math.abs(adjustment).toFixed(2)}
+                        ${adjustment === 0 ? '0' : Math.abs(adjustment).toFixed(2)}
                       </ThemedText>
-                      <View className={`ml-2 p-1 rounded-full ${
-                        colorScheme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'
+                      <View className={`ml-2 p-1.5 rounded-full ${
+                        colorScheme === 'dark' ? 'bg-gray-700/50' : 'bg-gray-100'
                       }`}>
-                        <Edit3 size={14} color={colorScheme === 'dark' ? '#9CA3AF' : '#6B7280'} />
+                        <Edit3 size={16} color={colorScheme === 'dark' ? '#9CA3AF' : '#6B7280'} />
                       </View>
                     </View>
                   )}
-                </TouchableOpacity>
-                <View className="flex-row items-center mt-2 gap-2">
-                  <TouchableOpacity
-                    onPress={() => {
-                      const absValue = Math.abs(adjustment);
-                      setAdjustment(-absValue);
-                    }}
-                    className={`px-3 py-1 rounded-full ${
-                      adjustment < 0 
-                        ? 'bg-yellow-500' 
-                        : (colorScheme === 'dark' ? 'bg-gray-700' : 'bg-gray-200')
-                    }`}
-                  >
-                    <ThemedText className={`text-xs font-medium ${
-                      adjustment < 0 ? 'text-white' : ''
-                    }`}>Premium</ThemedText>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => {
-                      const absValue = Math.abs(adjustment);
-                      setAdjustment(absValue);
-                    }}
-                    className={`px-3 py-1 rounded-full ${
-                      adjustment > 0 
-                        ? 'bg-green-500' 
-                        : (colorScheme === 'dark' ? 'bg-gray-700' : 'bg-gray-200')
-                    }`}
-                  >
-                    <ThemedText className={`text-xs font-medium ${
-                      adjustment > 0 ? 'text-white' : ''
-                    }`}>Discount</ThemedText>
-                  </TouchableOpacity>
                 </View>
+              </TouchableOpacity>
+              
+              <View className="flex-row items-center mt-4 gap-3">
+                <TouchableOpacity
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    
+                    // Get current absolute value, using input if being edited
+                    let absValue = Math.abs(adjustment);
+                    if (isEditingValue && inputValue) {
+                      absValue = parseFloat(inputValue) || 0;
+                    }
+                    
+                    const newValue = -absValue;
+                    lastValue.current = newValue;
+                    lastHapticValue.current = newValue;
+                    setAdjustment(newValue);
+                    
+                    if (scrollViewRef.current) {
+                      isProgrammaticScroll.current = true;
+                      const wholeDollarValue = Math.round(newValue);
+                      const scrollPosition = (10000 + wholeDollarValue) * 3;
+                      scrollViewRef.current.scrollTo({ x: scrollPosition, animated: false });
+                      setTimeout(() => {
+                        isProgrammaticScroll.current = false;
+                      }, 100);
+                    }
+                  }}
+                  className={`px-4 py-2 rounded-full ${
+                    adjustment < 0 
+                      ? 'bg-yellow-500' 
+                      : (colorScheme === 'dark' ? 'bg-gray-700' : 'bg-gray-200')
+                  }`}
+                >
+                  <ThemedText className={`text-sm font-medium ${
+                    adjustment < 0 ? 'text-white' : ''
+                  }`}>Premium</ThemedText>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    
+                    // Get current absolute value, using input if being edited
+                    let absValue = Math.abs(adjustment);
+                    if (isEditingValue && inputValue) {
+                      absValue = parseFloat(inputValue) || 0;
+                    }
+                    
+                    lastValue.current = absValue;
+                    lastHapticValue.current = absValue;
+                    setAdjustment(absValue);
+                    
+                    if (scrollViewRef.current) {
+                      isProgrammaticScroll.current = true;
+                      const wholeDollarValue = Math.round(absValue);
+                      const scrollPosition = (10000 + wholeDollarValue) * 3;
+                      scrollViewRef.current.scrollTo({ x: scrollPosition, animated: false });
+                      setTimeout(() => {
+                        isProgrammaticScroll.current = false;
+                      }, 100);
+                    }
+                  }}
+                  className={`px-4 py-2 rounded-full ${
+                    adjustment > 0 
+                      ? 'bg-green-500' 
+                      : (colorScheme === 'dark' ? 'bg-gray-700' : 'bg-gray-200')
+                  }`}
+                >
+                  <ThemedText className={`text-sm font-medium ${
+                    adjustment > 0 ? 'text-white' : ''
+                  }`}>Discount</ThemedText>
+                </TouchableOpacity>
               </View>
             </View>
 
-            {/* Slider section */}
-            <View className="mt-8 px-4">
-              <View className="mb-4">
-                <View className="flex-row justify-between items-center mb-2">
-                  <ThemedText className="text-xs font-medium opacity-60">Slide to adjust</ThemedText>
-                  {Math.abs(adjustment) > 50 && (
-                    <View className={`px-2 py-0.5 rounded-full ${colorScheme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'}`}>
-                      <ThemedText className="text-xs font-medium">
-                        Extended Range
-                      </ThemedText>
-                    </View>
-                  )}
+            {/* Scrollable Scale Slider */}
+            <View className="mt-8">
+              <View className="mb-6 px-4">
+                <View className="flex-row justify-between items-center mb-1">
+                  <ThemedText className="text-xs font-medium opacity-60">Swipe to adjust</ThemedText>
                 </View>
                 <View className="flex-row justify-between">
                   <ThemedText className="text-sm font-medium text-yellow-500">Premium</ThemedText>
-                  <View className="flex-row items-center">
-                    <View className="w-16 h-px bg-gray-300 dark:bg-gray-600 mx-2" />
-                    <ThemedText className="text-xs opacity-60">$0</ThemedText>
-                    <View className="w-16 h-px bg-gray-300 dark:bg-gray-600 mx-2" />
-                  </View>
                   <ThemedText className="text-sm font-medium text-green-500">Discount</ThemedText>
                 </View>
               </View>
 
-              <View 
-                style={styles.sliderContainer}
-                onLayout={(e) => setSliderWidth(e.nativeEvent.layout.width)}
-              >
-                {/* Background track */}
-                <View style={[styles.sliderTrack, { backgroundColor: colorScheme === 'dark' ? '#2C2C2E' : '#E5E5EA' }]} />
-                
-                {/* Center line */}
-                <View style={[styles.centerLine, { backgroundColor: colorScheme === 'dark' ? '#48484A' : '#C7C7CC' }]} />
-                
-                {/* Colored fill */}
-                {adjustment !== 0 && (
-                  <View
-                    style={[
-                      styles.sliderFill,
-                      {
-                        backgroundColor: adjustment > 0 ? '#22C55E' : '#EAB308',
-                        width: fillWidth,
-                        left: adjustment < 0 ? fillOffset : sliderWidth / 2,
-                      },
-                    ]}
-                  />
-                )}
-                
-                {/* Edge glow and continuation indicator */}
-                {Math.abs(adjustment) > displayRange * 0.7 && (
-                  <>
-                    <Animated.View 
-                      className="absolute h-full w-20"
-                      style={{
-                        [adjustment > 0 ? 'right' : 'left']: 0,
-                        opacity: ((Math.abs(adjustment) - displayRange * 0.7) / (displayRange * 0.3)) * 0.4,
-                        backgroundColor: adjustment > 0 ? '#22C55E' : '#EAB308',
-                      }}
-                    />
-                    <View 
-                      className="absolute h-full w-px"
-                      style={{
-                        [adjustment > 0 ? 'right' : 'left']: 0,
-                        backgroundColor: adjustment > 0 ? '#22C55E' : '#EAB308',
-                        opacity: 0.8,
-                      }}
-                    />
-                    {/* Continuation arrows */}
-                    <View 
-                      className="absolute"
-                      style={{
-                        [adjustment > 0 ? 'right' : 'left']: 8,
-                        top: '50%',
-                        transform: [{ translateY: -12 }],
-                      }}
-                    >
-                      <ThemedText className="text-lg font-bold" style={{
-                        color: adjustment > 0 ? '#22C55E' : '#EAB308',
-                        opacity: 0.8,
-                      }}>
-                        {adjustment > 0 ? '»»' : '««'}
-                      </ThemedText>
-                    </View>
-                  </>
-                )}
-                
-                {/* Thumb */}
-                <View
-                  style={[
-                    styles.sliderThumb,
-                    {
-                      left: thumbPosition - 15,
-                      backgroundColor: '#FFFFFF',
-                      shadowColor: '#000',
-                      shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.25,
-                      shadowRadius: 4,
-                      elevation: 5,
-                    },
-                    isDragging && styles.sliderThumbActive,
-                  ]}
-                >
-                  <View style={[styles.thumbInner, { backgroundColor: colorScheme === 'dark' ? '#007AFF' : '#007AFF' }]} />
-                </View>
-                
-                {/* Touch overlay for better gesture handling */}
+              {/* Scale Container */}
+              <View style={{ height: 80, position: 'relative' }}>
+                {/* Center Line Indicator - more delicate */}
                 <View 
-                  style={styles.touchOverlay}
-                  onTouchStart={handleSliderPress}
-                  onTouchMove={handleSliderPress}
-                  {...panResponder.panHandlers}
+                  style={{
+                    position: 'absolute',
+                    left: SCREEN_WIDTH / 2 - 0.5,
+                    top: 0,
+                    bottom: 0,
+                    width: 1,
+                    backgroundColor: colorScheme === 'dark' ? '#60A5FA' : '#3B82F6',
+                    opacity: 0.8,
+                    zIndex: 10,
+                  }}
+                />
+                
+                {/* Scrollable Scale */}
+                <ScrollView
+                  ref={scrollViewRef}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  onScroll={handleScroll}
+                  onScrollBeginDrag={() => setIsScrolling(true)}
+                  onScrollEndDrag={() => setIsScrolling(false)}
+                  scrollEventThrottle={1}
+                  snapToInterval={3}
+                  decelerationRate="fast"
+                  contentContainerStyle={{
+                    paddingHorizontal: SCREEN_WIDTH / 2,
+                  }}
+                >
+                  <View style={{ 
+                    width: 60000, // 20000 values * 3 pixels each
+                    height: 80,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                  }}>
+                    {/* Background zones for premium/discount */}
+                    <View
+                      style={{
+                        position: 'absolute',
+                        left: 0,
+                        right: 30000,
+                        top: 0,
+                        bottom: 0,
+                        backgroundColor: '#EAB308',
+                        opacity: 0.05,
+                      }}
+                    />
+                    <View
+                      style={{
+                        position: 'absolute',
+                        left: 30000,
+                        right: 0,
+                        top: 0,
+                        bottom: 0,
+                        backgroundColor: '#22C55E',
+                        opacity: 0.05,
+                      }}
+                    />
+                    
+                    {/* Generate tick marks - optimized for performance */}
+                    {Array.from({ length: 401 }, (_, i) => {
+                      const value = (i - 200) * 50; // -10000 to 10000 in steps of 50
+                      const isMajor = value % 500 === 0;
+                      const isZero = value === 0;
+                      
+                      // Only render visible ticks
+                      return (
+                        <React.Fragment key={i}>
+                          <View
+                            style={{
+                              position: 'absolute',
+                              left: (value + 10000) * 3, // Convert to pixel position
+                              width: isZero ? 2 : (isMajor ? 1.5 : 1),
+                              height: isMajor ? 30 : 20,
+                              backgroundColor: isZero 
+                                ? (colorScheme === 'dark' ? '#60A5FA' : '#3B82F6')
+                                : value < 0
+                                  ? '#EAB308' // Yellow for premium
+                                  : '#22C55E', // Green for discount
+                              opacity: isMajor ? 0.6 : 0.3,
+                              bottom: 15,
+                            }}
+                          />
+                          {isMajor && (
+                            <Text 
+                              style={{
+                                position: 'absolute',
+                                left: (value + 10000) * 3 - 20,
+                                bottom: 0,
+                                width: 40,
+                                textAlign: 'center',
+                                fontSize: 11,
+                                color: colorScheme === 'dark' ? '#9CA3AF' : '#6B7280',
+                                fontWeight: isZero ? '600' : '400',
+                              }}
+                            >
+                              {value === 0 ? '0' : `${Math.abs(value)}`}
+                            </Text>
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
+                  </View>
+                </ScrollView>
+                
+                {/* Gradient Fade Edges - using gradients would be better but using solid for now */}
+                <View
+                  style={{
+                    position: 'absolute',
+                    left: 0,
+                    top: 0,
+                    bottom: 0,
+                    width: 30,
+                    pointerEvents: 'none',
+                    backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
+                    opacity: 0.9,
+                  }}
+                />
+                <View
+                  style={{
+                    position: 'absolute',
+                    right: 0,
+                    top: 0,
+                    bottom: 0,
+                    width: 30,
+                    pointerEvents: 'none',
+                    backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
+                    opacity: 0.9,
+                  }}
                 />
               </View>
-
-              {/* Dynamic scale marks */}
-              <View style={styles.tickContainer}>
-                {/* Center mark at $0 */}
-                <View style={[styles.tickWrapper, { position: 'absolute', left: sliderWidth / 2 - 1 }]}>
-                  <View style={[styles.tick, { 
-                    backgroundColor: colorScheme === 'dark' ? '#48484A' : '#C7C7CC',
-                    height: 12,
-                    width: 2,
-                  }]} />
-                  <ThemedText style={[styles.tickLabel, { opacity: 1 }]}>
-                    $0
-                  </ThemedText>
-                </View>
-                
-                {/* Dynamic scale marks based on current value */}
-                {(() => {
-                  const marks = [];
-                  const absAdjustment = Math.abs(adjustment);
-                  
-                  // Determine scale marks based on current value
-                  let stepSize = 25;
-                  if (absAdjustment > 100) stepSize = 50;
-                  if (absAdjustment > 200) stepSize = 100;
-                  if (absAdjustment > 400) stepSize = 200;
-                  
-                  // Generate marks
-                  for (let i = stepSize; i <= Math.max(100, displayRange); i += stepSize) {
-                    // Left side (negative/premium)
-                    marks.push(
-                      <View 
-                        key={`left-${i}`} 
-                        style={[styles.tickWrapper, { 
-                          position: 'absolute', 
-                          left: sliderWidth / 2 - (i / displayRange * sliderWidth / 2) - 1,
-                          opacity: i > displayRange * 0.8 ? 0.3 : 1,
-                        }]}
-                      >
-                        <View style={[styles.tick, { 
-                          backgroundColor: colorScheme === 'dark' ? '#48484A' : '#C7C7CC',
-                          height: 8,
-                        }]} />
-                        {i <= displayRange * 0.8 && (
-                          <ThemedText style={[styles.tickLabel, { opacity: 0.6 }]}>
-                            -${i}
-                          </ThemedText>
-                        )}
-                      </View>
-                    );
-                    
-                    // Right side (positive/discount)
-                    marks.push(
-                      <View 
-                        key={`right-${i}`} 
-                        style={[styles.tickWrapper, { 
-                          position: 'absolute', 
-                          left: sliderWidth / 2 + (i / displayRange * sliderWidth / 2) - 1,
-                          opacity: i > displayRange * 0.8 ? 0.3 : 1,
-                        }]}
-                      >
-                        <View style={[styles.tick, { 
-                          backgroundColor: colorScheme === 'dark' ? '#48484A' : '#C7C7CC',
-                          height: 8,
-                        }]} />
-                        {i <= displayRange * 0.8 && (
-                          <ThemedText style={[styles.tickLabel, { opacity: 0.6 }]}>
-                            +${i}
-                          </ThemedText>
-                        )}
-                      </View>
-                    );
-                  }
-                  
-                  return marks;
-                })()}
-              </View>
             </View>
 
-            {/* Info section */}
-            <View className={`mx-4 p-4 rounded-xl ${
-              colorScheme === 'dark' ? 'bg-blue-900/20' : 'bg-blue-50'
-            }`}>
-              {/* Copy: When someone pays you $10 worth of this currency, $2 worth of this discount is used up. */}
-              <ThemedText className="text-sm text-center opacity-80 leading-5">
-                When someone pays you $10 worth of this currency, $2 worth of this {adjustment > 0 ? 'discount' : 'premium'} is used up.
-              </ThemedText>
-            </View>
               </View>
             </TouchableWithoutFeedback>
           </ScrollView>

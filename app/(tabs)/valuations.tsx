@@ -169,43 +169,53 @@ const Valuations = ({ tokens, onUpdateValuation, isLoading, onRefresh, onEditTok
   }
   
   return (
-    <ScrollView 
-      className={`flex-1 ${isDark ? 'bg-black' : 'bg-gray-50'}`}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={handleRefresh}
-          tintColor={isDark ? '#60A5FA' : '#3B82F6'}
-        />
-      }
-      showsVerticalScrollIndicator={false}
-    >
-      <View className="px-4 pt-4 pb-2">
-        <ThemedText className="text-3xl font-bold mb-2">Valuations</ThemedText>
-        <View className="flex-row items-center space-x-4">
+    <View className="flex-1">
+      {/* Header section with proper padding */}
+      <View className="pt-16 pb-5 px-5">
+        <Text className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-black'}`}>Valuations</Text>
+        
+        {/* Main explanation text */}
+        <ThemedText className="text-base opacity-80 leading-relaxed mt-3 mb-4">
+          If a user pays you $10 in a certain token, you can apply a $2 premium or discount to it. You can adjust and set the amount of discounts and premiums you provide here.
+        </ThemedText>
+        
+        {/* Legend with gap and switched order */}
+        <View className="flex-row items-center gap-6">
           <View className="flex-row items-center">
-            <View className="w-2 h-2 rounded-full bg-green-500 mr-1.5" />
-            <ThemedText className="text-sm opacity-60">Discount</ThemedText>
+            <View className="w-3 h-3 rounded-full bg-yellow-500 mr-2" />
+            <ThemedText className="text-base font-medium">Premium</ThemedText>
           </View>
           <View className="flex-row items-center">
-            <View className="w-2 h-2 rounded-full bg-yellow-500 mr-1.5" />
-            <ThemedText className="text-sm opacity-60">Premium</ThemedText>
+            <View className="w-3 h-3 rounded-full bg-green-500 mr-2" />
+            <ThemedText className="text-base font-medium">Discount</ThemedText>
           </View>
         </View>
       </View>
       
-      <View className="pb-4">
-        {tokens.map((token) => (
-          <TokenRow 
-            key={token.symbol || token.name} 
-            token={token} 
-            onEditToken={onEditToken}
+      {/* Scrollable content */}
+      <ScrollView 
+        className={`flex-1 ${isDark ? 'bg-black' : 'bg-gray-50'}`}
+        contentContainerStyle={{ paddingBottom: 80 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={isDark ? '#60A5FA' : '#3B82F6'}
           />
-        ))}
-      </View>
-      
-      <View className="h-20" />
-    </ScrollView>
+        }
+        showsVerticalScrollIndicator={false}
+      >
+        <View className="pb-4">
+          {tokens.map((token) => (
+            <TokenRow 
+              key={token.symbol || token.name} 
+              token={token} 
+              onEditToken={onEditToken}
+            />
+          ))}
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -507,7 +517,7 @@ export default function ValuationsScreen() {
   // If there's an error, show an error message
   if (error) {
     return (
-      <SafeAreaView className={`flex-1 ${colorScheme === 'dark' ? 'bg-black' : 'bg-gray-50'}`} style={{ paddingBottom: 80 }}>
+      <ThemedView className="flex-1">
         <View className="flex-1 items-center justify-center px-6">
           <View className={`w-full max-w-sm p-8 rounded-3xl ${colorScheme === 'dark' ? 'bg-gray-800/50' : 'bg-white'}`}
             style={{
@@ -544,12 +554,12 @@ export default function ValuationsScreen() {
             </TouchableOpacity>
           </View>
         </View>
-      </SafeAreaView>
+      </ThemedView>
     );
   }
   
   return (
-    <SafeAreaView className={`flex-1 ${colorScheme === 'dark' ? 'bg-black' : 'bg-white'}`} style={{ paddingBottom: 80 }}>
+    <ThemedView className="flex-1">
       <Valuations 
         tokens={tokens}
         onUpdateValuation={updateTokenValuation}
@@ -566,7 +576,7 @@ export default function ValuationsScreen() {
         }}
         onSave={handleSaveValuation}
       />
-    </SafeAreaView>
+    </ThemedView>
   );
 }
 

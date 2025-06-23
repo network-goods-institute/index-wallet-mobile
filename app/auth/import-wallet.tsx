@@ -68,16 +68,17 @@ export default function ImportWalletScreen(): JSX.Element {
   };
 
   const handleImport = async () => {
+    // Immediate validation check to prevent unnecessary loading state
+    if (seedWords.some(word => !word)) {
+      setError('Please enter all 12 words of your seed phrase');
+      return;
+    }
+    
     setError(null);
     setIsValidating(true);
     
     try {
       const completeSeedPhrase = seedWords.join(' ');
-
-      if (seedWords.some(word => !word)) {
-        setError('Please enter all 12 words of your seed phrase');
-        return;
-      }
       
       if (!validateSeedPhrase(completeSeedPhrase)) {
         setError('Invalid seed phrase format. Please check and try again.');
@@ -221,12 +222,16 @@ export default function ImportWalletScreen(): JSX.Element {
           <View className="px-6 pb-8">
             <TouchableOpacity
               onPress={handleImport}
-              disabled={isValidating || seedWords.some(word => !word) || error !== null}
+              disabled={isValidating || seedWords.some(word => !word)}
+              activeOpacity={0.8}
               className={`w-full py-4 rounded-2xl items-center justify-center ${
-                isValidating || seedWords.some(word => !word) || error !== null
+                isValidating || seedWords.some(word => !word)
                   ? 'bg-gray-200 dark:bg-gray-800'
                   : 'bg-yellow-400'
               }`}
+              style={{
+                transform: [{scale: isValidating ? 0.98 : 1}]
+              }}
             >
               {isValidating ? (
                 <ActivityIndicator color={colorScheme === 'dark' ? '#FFFFFF' : '#000000'} />

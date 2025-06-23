@@ -126,10 +126,17 @@ export const BalanceProvider: React.FC<{ children: ReactNode }> = ({ children })
     await fetchBalances();
   };
   
-  // Fetch balances when auth status changes
+  // Fetch balances when auth status changes and clear when unauthenticated
   useEffect(() => {
     if (status === 'authenticated') {
       fetchBalances();
+    } else if (status === 'unauthenticated') {
+      // Clear all balance data on logout
+      setBalances([]);
+      setTotalValueUSD(0);
+      setError(null);
+      setLastUpdated(null);
+      setIsLoading(false);
     }
   }, [status]);
   

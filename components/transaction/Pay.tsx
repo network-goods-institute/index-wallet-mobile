@@ -186,7 +186,7 @@ export default function Pay({ onSuccessStateChange }: PayProps) {
 
   // Handle complete payment
   const handleCompletePayment = async () => {
-    if (!activePayment) return;
+    if (!activePayment || processing || isLoading) return;
     
     setProcessing(true);
     try {
@@ -398,11 +398,13 @@ export default function Pay({ onSuccessStateChange }: PayProps) {
                   styles.approveButton,
                   { 
                     backgroundColor: processing || isLoading ? '#4ADE80' : '#22C55E',
-                    opacity: processing || isLoading ? 0.7 : 1
+                    opacity: processing || isLoading ? 0.7 : 1,
+                    transform: [{scale: processing || isLoading ? 0.98 : 1}]
                   }
                 ]}
                 disabled={processing || isLoading}
                 onPress={handleCompletePayment}
+                activeOpacity={0.8}
               >
                 {processing || isLoading ? (
                   <View style={styles.processingContainer}>
