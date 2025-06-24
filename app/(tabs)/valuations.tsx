@@ -171,7 +171,7 @@ const Valuations = ({ tokens, onUpdateValuation, isLoading, onRefresh, onEditTok
   return (
     <View className="flex-1">
       {/* Header section with proper padding */}
-      <View className="pt-16 pb-5 px-5">
+      <View className="pt-20 pb-5 px-5">
         <Text className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-black'}`}>Valuations</Text>
         
         {/* Main explanation text */}

@@ -18,7 +18,7 @@ interface ReceiveProps {
 export default function Receive({ onSuccessStateChange }: ReceiveProps) {
   const { colorScheme } = useTheme();
   const { activeRequest, createRequest, deleteRequest, clearActiveRequest, isLoading, error } = useActiveTransaction();
-  const { pendingTransactions, syncTransactions } = usePendingTransactionManager();
+  const { pendingTransactions, syncTransactions, clearAllCaches } = usePendingTransactionManager();
   const { transactions: historyTransactions, loadTransactionHistory } = useTransactionHistory();
   const auth = useAuth();
   const [amount, setAmount] = useState('');
@@ -38,8 +38,10 @@ export default function Receive({ onSuccessStateChange }: ReceiveProps) {
     .filter(t => {
       // Check if vendor's transaction
       if (t.vendor_address !== auth?.walletAddress) return false;
-      if (t.payment_id === activeRequest?.payment_id) return false;
-      if (t.status === 'completed' || t.status === 'Completed') return false;
+      
+      // Exclude completed, cancelled, expired transactions
+      const excludedStatuses = ['completed', 'Completed', 'cancelled', 'Cancelled', 'expired', 'Expired', 'failed', 'Failed'];
+      if (excludedStatuses.includes(t.status)) return false;
       
       // Check if expired (older than 1 hour)
       const createdAtMs = t.created_at < 10000000000 ? t.created_at * 1000 : t.created_at;
@@ -119,8 +121,8 @@ export default function Receive({ onSuccessStateChange }: ReceiveProps) {
         createdAt: new Date().toISOString()
       });
       
-      // Force a sync to update the pending transactions list immediately
-      await syncTransactions();
+      // Don't sync immediately - let the local update from createRequest take effect
+      // The background sync will pick it up from the backend later
     } catch (error) {
       console.error('Failed to create payment:', error);
       Alert.alert('Error', 'Failed to create payment request');
@@ -156,8 +158,8 @@ export default function Receive({ onSuccessStateChange }: ReceiveProps) {
         setTransactionDetails(null);
         setAmount('');
         
-        // Sync to update the pending list
-        await syncTransactions();
+        // Don't sync immediately - the local removal will take effect
+        // Background sync will update from backend later
       } catch (error) {
         console.error('Failed to cancel payment:', error);
         Alert.alert('Error', 'Failed to cancel payment. Please try again.');

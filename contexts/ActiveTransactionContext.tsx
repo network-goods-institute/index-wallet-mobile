@@ -8,9 +8,9 @@ import { Transaction } from './TransactionContext';
 
 const POLLING_INTERVALS = {
   ACTIVE_TRANSACTION: 2000,      // 2s - User actively transacting
-  PENDING_RECENT: 5000,          // 5s - Transaction < 2 min old
-  PENDING_STANDARD: 15000,       // 15s - Transaction 2-10 min old  
-  PENDING_STALE: 60000,          // 60s - Transaction > 10 min old
+  PENDING_RECENT: 5000,          // 5s - Transaction < 30 seconds old
+  PENDING_STANDARD: 10000,       // 10s - Transaction 30s-5 min old  
+  PENDING_STALE: 120000,         // 120s - Transaction > 5 min old
 };
 
 const MAX_POLL_DURATION = 30 * 60 * 1000; // 30 minutes max polling
@@ -85,10 +85,9 @@ export const ActiveTransactionProvider: React.FC<{ children: React.ReactNode }> 
     
     const age = Date.now() - createdAt;
     
-    if (age < 2 * 60 * 1000) return POLLING_INTERVALS.ACTIVE_TRANSACTION;  // < 2 min
-    if (age < 10 * 60 * 1000) return POLLING_INTERVALS.PENDING_RECENT;     // 2-10 min
-    if (age < 30 * 60 * 1000) return POLLING_INTERVALS.PENDING_STANDARD;   // 10-30 min
-    return POLLING_INTERVALS.PENDING_STALE;  // > 30 min
+    if (age < 30 * 1000) return POLLING_INTERVALS.ACTIVE_TRANSACTION;      // < 30 seconds
+    if (age < 5 * 60 * 1000) return POLLING_INTERVALS.PENDING_STANDARD;    // 30s - 5 minutes
+    return POLLING_INTERVALS.PENDING_STALE;  // > 5 min
   };
 
   // Check if status is terminal
@@ -414,25 +413,27 @@ export const ActiveTransactionProvider: React.FC<{ children: React.ReactNode }> 
     setError(null);
     
     try {
+      console.log(`Deleting payment ${paymentId}...`);
       await PaymentAPI.deletePayment(paymentId, auth.walletAddress);
+      console.log(`Payment ${paymentId} deleted from backend`);
       
       // Stop polling
       stopRequestPolling();
       
       // Remove from pending transactions
       removePendingTransaction(paymentId);
+      console.log(`Payment ${paymentId} removed from pending transactions`);
       
       // Clear active request if it matches
       if (activeRequest?.payment_id === paymentId) {
         setActiveRequest(null);
       }
       
-      // console.log(`Payment ${paymentId} deleted successfully`);
       return true;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete payment';
       setError(errorMessage);
-      // console.error('Failed to delete payment:', err);
+      console.error('Failed to delete payment:', err);
       throw new Error(errorMessage);
     } finally {
       setIsLoading(false);

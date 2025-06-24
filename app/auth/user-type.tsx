@@ -62,7 +62,7 @@ export default function UserTypeScreen() {
                     <Store size={24} color="#FFFFFF" />
                   </View>
                   <Text className="text-2xl font-semibold text-black dark:text-white ml-4">
-                    Vendor
+                    Store
                   </Text>
                 </View>
                 <Text className="text-gray-600 dark:text-gray-400 text-base ml-14">

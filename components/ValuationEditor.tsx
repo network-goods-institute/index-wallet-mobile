@@ -481,18 +481,18 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
               </View>
 
               {/* Scale Container - Increased height for better touch area */}
-              <View style={{ height: 100, position: 'relative', marginVertical: 10 }}>
+              <View style={{ height: 120, position: 'relative', marginVertical: 10, marginBottom: 20 }}>
                 
-                {/* Center Line Indicator - more delicate */}
+                {/* Center Line Indicator - clean and minimal */}
                 <View 
                   style={{
                     position: 'absolute',
-                    left: SCREEN_WIDTH / 2 - 0.5,
-                    top: 0,
-                    bottom: 0,
-                    width: 1,
-                    backgroundColor: colorScheme === 'dark' ? '#E5E7EB' : '#374151',
-                    opacity: 0.8,
+                    left: SCREEN_WIDTH / 2 - 1,
+                    top: 25,
+                    bottom: 25,
+                    width: 2,
+                    backgroundColor: colorScheme === 'dark' ? '#FFFFFF' : '#000000',
+                    opacity: 0.3,
                     zIndex: 10,
                     pointerEvents: 'none',
                   }}
@@ -515,20 +515,21 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
                 >
                   <View style={{ 
                     width: 60000, // 20000 values * 3 pixels each
-                    height: 100,
+                    height: 120,
                     flexDirection: 'row',
                     alignItems: 'center',
                   }}>
-                    {/* Background zones for premium/discount */}
+                    {/* Background zones for premium/discount with gradient effect */}
                     <View
                       style={{
                         position: 'absolute',
                         left: 0,
                         right: 30000,
-                        top: 0,
-                        bottom: 0,
+                        top: 20,
+                        bottom: 20,
                         backgroundColor: '#EAB308',
-                        opacity: 0.15,
+                        opacity: 0.08,
+                        borderRadius: 40,
                       }}
                     />
                     <View
@@ -536,10 +537,11 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
                         position: 'absolute',
                         left: 30000,
                         right: 0,
-                        top: 0,
-                        bottom: 0,
+                        top: 20,
+                        bottom: 20,
                         backgroundColor: '#22C55E',
-                        opacity: 0.15,
+                        opacity: 0.08,
+                        borderRadius: 40,
                       }}
                     />
                     
@@ -556,13 +558,14 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
                             style={{
                               position: 'absolute',
                               left: (value + 10000) * 3, // Convert to pixel position
-                              width: isMajor ? 2 : 1,
-                              height: isZero ? 50 : (isMajor ? 40 : 25),
-                              backgroundColor: value < 0
-                                ? '#EAB308' // Yellow for premium
-                                : '#22C55E', // Green for discount
-                              opacity: isMajor ? 1 : 0.7,
-                              bottom: isZero ? 10 : 15,
+                              width: isZero ? 3 : (isMajor ? 3 : 1.5),
+                              height: isZero ? 60 : (isMajor ? 60 : 35),
+                              backgroundColor: isZero 
+                                ? (colorScheme === 'dark' ? '#FFFFFF' : '#000000')
+                                : (value < 0 ? '#EAB308' : '#22C55E'), // Yellow for premium, Green for discount
+                              opacity: isZero ? 0.4 : (isMajor ? 1 : 0.7),
+                              bottom: isZero ? 30 : (isMajor ? 30 : 42.5),
+                              borderRadius: 1,
                             }}
                           />
                           {isMajor && (
@@ -570,12 +573,14 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
                               style={{
                                 position: 'absolute',
                                 left: (value + 10000) * 3 - 20,
-                                bottom: isZero ? -10 : -5,
+                                bottom: 10,
                                 width: 40,
                                 textAlign: 'center',
-                                fontSize: 12,
-                                color: colorScheme === 'dark' ? '#E5E7EB' : '#374151',
-                                fontWeight: isZero ? '700' : '500',
+                                fontSize: isZero ? 14 : 12,
+                                color: isZero 
+                                  ? (colorScheme === 'dark' ? '#FFFFFF' : '#000000')
+                                  : (colorScheme === 'dark' ? '#D1D5DB' : '#4B5563'),
+                                fontWeight: isZero ? '600' : '500',
                               }}
                             >
                               {value === 0 ? '0' : `${Math.abs(value)}`}
@@ -587,31 +592,73 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
                   </View>
                 </GHScrollView>
                 
-                {/* Gradient Fade Edges - using gradients would be better but using solid for now */}
+                {/* Gradient Fade Edges - subtle fade effect */}
                 <View
                   style={{
                     position: 'absolute',
                     left: 0,
-                    top: 0,
-                    bottom: 0,
-                    width: 30,
+                    top: 20,
+                    bottom: 20,
+                    width: 40,
                     pointerEvents: 'none',
-                    backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
-                    opacity: 0.9,
+                    flexDirection: 'row',
                   }}
-                />
+                >
+                  <View 
+                    style={{
+                      flex: 1,
+                      backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
+                      opacity: 0.7,
+                    }}
+                  />
+                  <View 
+                    style={{
+                      width: 10,
+                      backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
+                      opacity: 0.3,
+                    }}
+                  />
+                  <View 
+                    style={{
+                      width: 10,
+                      backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
+                      opacity: 0.1,
+                    }}
+                  />
+                </View>
                 <View
                   style={{
                     position: 'absolute',
                     right: 0,
-                    top: 0,
-                    bottom: 0,
-                    width: 30,
+                    top: 20,
+                    bottom: 20,
+                    width: 40,
                     pointerEvents: 'none',
-                    backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
-                    opacity: 0.9,
+                    flexDirection: 'row',
                   }}
-                />
+                >
+                  <View 
+                    style={{
+                      width: 10,
+                      backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
+                      opacity: 0.1,
+                    }}
+                  />
+                  <View 
+                    style={{
+                      width: 10,
+                      backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
+                      opacity: 0.3,
+                    }}
+                  />
+                  <View 
+                    style={{
+                      flex: 1,
+                      backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
+                      opacity: 0.7,
+                    }}
+                  />
+                </View>
               </View>
             </View>
 

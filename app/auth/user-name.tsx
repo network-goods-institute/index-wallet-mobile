@@ -31,51 +31,59 @@ export default function UserNameScreen() {
 
   return (
     <ThemedView className="flex-1 bg-black">
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="flex-1"
-      >
-        <SafeAreaView className="flex-1">
-          <View className="px-6 pt-6">
-            <TouchableOpacity onPress={handleBack} className="mb-16">
-              <ArrowLeft size={32} color={isVendor ? '#2196F3' : '#9C27B0'} />
-            </TouchableOpacity>
+      <SafeAreaView className="flex-1">
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          className="flex-1"
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        >
+          <View className="flex-1">
+            {/* Header */}
+            <View className="px-6 pt-6">
+              <TouchableOpacity onPress={handleBack} className="mb-16">
+                <ArrowLeft size={32} color={isVendor ? '#2196F3' : '#9C27B0'} />
+              </TouchableOpacity>
 
-            <Text className="text-5xl font-bold text-white leading-tight">
-              {isVendor 
-                ? "What is your\nvendor name?"
-                : "What is your\nname?"
-              }
-            </Text>
-          </View>
+              <Text className="text-5xl font-bold text-white leading-tight mb-12">
+                {isVendor 
+                  ? "What is your\nvendor name?"
+                  : "What is your\nname?"
+                }
+              </Text>
+            </View>
 
-          <View className="flex-1 px-6 pt-16">
-            <Text className="text-gray-400 text-base mb-8">
-              {isVendor 
-                ? "Customers will be able to see your store name on transactions"
-                : "Vendors will be able to see your username on transactions"
-              }
-            </Text>
+            {/* Content area with input */}
+            <View className="flex-1 px-6">
+              {/* Disclaimer text above input */}
+              <Text className="text-gray-400 text-base mb-4">
+                {isVendor 
+                  ? "Customers will be able to see your store name on transactions"
+                  : "Merchants will be able to see your username on transactions"
+                }
+              </Text>
 
-            <TextInput
-              className="dark:text-white light:text-black text-3xl font-medium py-4"
-              placeholder={isVendor ? "Enter business name" : "Enter your name"}
-              placeholderTextColor="#666"
-              value={name}
-              onChangeText={(text) => {
-                setName(text);
-                if (error) setError('');
-              }}
-              autoFocus
-              autoCapitalize="words"
-              selectionColor={isVendor ? '#2196F3' : '#9C27B0'}
-            />
+              {/* Input field */}
+              <TextInput
+                className="dark:text-white light:text-black text-3xl font-medium py-4"
+                placeholder={isVendor ? "Enter business name" : "Enter your name"}
+                placeholderTextColor="#666"
+                value={name}
+                onChangeText={(text) => {
+                  setName(text);
+                  if (error) setError('');
+                }}
+                autoFocus
+                autoCapitalize="words"
+                selectionColor={isVendor ? '#2196F3' : '#9C27B0'}
+              />
 
-            {error ? (
-              <Text className="text-red-500 text-lg mt-4">{error}</Text>
-            ) : null}
+              {error ? (
+                <Text className="text-red-500 text-lg mt-4">{error}</Text>
+              ) : null}
+            </View>
 
-            <View className="absolute bottom-12 left-6 right-6">
+            {/* Continue button - fixed at bottom with proper spacing */}
+            <View className="px-6 pb-8">
               <TouchableOpacity
                 onPress={handleContinue}
                 className={`${isVendor ? 'bg-blue-600' : 'bg-purple-600'} p-5 rounded-2xl`}
@@ -84,8 +92,8 @@ export default function UserNameScreen() {
               </TouchableOpacity>
             </View>
           </View>
-        </SafeAreaView>
-      </KeyboardAvoidingView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
     </ThemedView>
   );
 }

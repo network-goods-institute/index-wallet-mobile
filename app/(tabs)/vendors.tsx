@@ -59,7 +59,7 @@ export default function VendorsScreen() {
   
   return (
     <ThemedView className="flex-1">
-      <View className="pt-16 pb-5 px-5">
+      <View className="pt-20 pb-5 px-5">
         <Text className="text-3xl font-bold text-black dark:text-white">Partnered Vendors</Text>
       </View>
       

@@ -41,6 +41,12 @@ export function WalletIndex({
 }: WalletIndexProps) {
   const { colorScheme } = useTheme();
   const [showLoadWalletModal, setShowLoadWalletModal] = useState(false);
+  
+  // Override onBuyPress to show Load Wallet modal
+  const handleAddPress = () => {
+    setShowLoadWalletModal(true);
+  };
+  
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colorScheme === 'dark' ? '#000000' : '#FFFFFF' }}>
       <ThemedView
@@ -65,7 +71,7 @@ export function WalletIndex({
 
         {/* Action buttons */}
         <ActionButtonRow
-          onBuyPress={onBuyPress}
+          onBuyPress={handleAddPress}
           onSwapPress={onSwapPress}
           onHistoryPress={() => router.push('/history')}
           onCopyPress={onCopyPress}
