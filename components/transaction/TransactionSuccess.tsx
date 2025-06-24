@@ -305,7 +305,8 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: 24,
     paddingTop: 40,
-    paddingBottom: 40,
+    paddingBottom: 100, // Extra space for tab bar
+    minHeight: height - 100, // Ensure minimum height for scrolling
   },
   confettiContainer: {
     position: 'absolute',

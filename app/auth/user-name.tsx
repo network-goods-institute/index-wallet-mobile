@@ -39,12 +39,12 @@ export default function UserNameScreen() {
         >
           <View className="flex-1">
             {/* Header */}
-            <View className="px-6 pt-6">
-              <TouchableOpacity onPress={handleBack} className="mb-16">
+            <View className="px-6 pt-4">
+              <TouchableOpacity onPress={handleBack} className="mb-8">
                 <ArrowLeft size={32} color={isVendor ? '#2196F3' : '#9C27B0'} />
               </TouchableOpacity>
 
-              <Text className="text-5xl font-bold text-white leading-tight mb-12">
+              <Text className="text-4xl font-bold text-white leading-tight mb-6">
                 {isVendor 
                   ? "What is your\nvendor name?"
                   : "What is your\nname?"
@@ -55,7 +55,7 @@ export default function UserNameScreen() {
             {/* Content area with input */}
             <View className="flex-1 px-6">
               {/* Disclaimer text above input */}
-              <Text className="text-gray-400 text-base mb-4">
+              <Text className="text-gray-400 text-sm mb-3">
                 {isVendor 
                   ? "Customers will be able to see your store name on transactions"
                   : "Merchants will be able to see your username on transactions"
@@ -64,7 +64,7 @@ export default function UserNameScreen() {
 
               {/* Input field */}
               <TextInput
-                className="dark:text-white light:text-black text-3xl font-medium py-4"
+                className="dark:text-white light:text-black text-2xl font-medium py-3"
                 placeholder={isVendor ? "Enter business name" : "Enter your name"}
                 placeholderTextColor="#666"
                 value={name}
@@ -78,17 +78,17 @@ export default function UserNameScreen() {
               />
 
               {error ? (
-                <Text className="text-red-500 text-lg mt-4">{error}</Text>
+                <Text className="text-red-500 text-base mt-3">{error}</Text>
               ) : null}
             </View>
 
             {/* Continue button - fixed at bottom with proper spacing */}
-            <View className="px-6 pb-8">
+            <View className="px-6 pb-6">
               <TouchableOpacity
                 onPress={handleContinue}
-                className={`${isVendor ? 'bg-blue-600' : 'bg-purple-600'} p-5 rounded-2xl`}
+                className={`${isVendor ? 'bg-blue-600' : 'bg-purple-600'} p-4 rounded-2xl`}
               >
-                <Text className="text-white font-bold text-center text-xl">Continue</Text>
+                <Text className="text-white font-bold text-center text-lg">Continue</Text>
               </TouchableOpacity>
             </View>
           </View>
