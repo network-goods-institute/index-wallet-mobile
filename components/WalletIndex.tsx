@@ -300,8 +300,8 @@ function LoadWalletModal({ visible, onClose }: { visible: boolean; onClose: () =
       setIsLoading(true);
       
       // Direct Stripe checkout link with client reference ID
-      // TODO: abstract this to a env variable: 
-      const stripeUrl = `https://buy.stripe.com/test_6oE6pt3uO3gH1tS5kk?client_reference_id=${walletAddress}`;
+      const stripeBaseUrl = process.env.EXPO_PUBLIC_STRIPE_USD_ID || 'https://buy.stripe.com/test_6oE6pt3uO3gH1tS5kk';
+      const stripeUrl = `${stripeBaseUrl}?client_reference_id=${walletAddress}`;
       
       // Open the Stripe checkout page in browser
       await Linking.openURL(stripeUrl);
@@ -315,9 +315,9 @@ function LoadWalletModal({ visible, onClose }: { visible: boolean; onClose: () =
     }
   };
 
-  const handleSupportCauses = () => {
-    // Navigate to vendors/causes page
-    router.push('/(tabs)/vendors');
+  const handleSupportCauses = async () => {
+    // Open Index Wallets website in browser
+    await Linking.openURL('https://app.indexwallets.org');
     onClose();
   };
   

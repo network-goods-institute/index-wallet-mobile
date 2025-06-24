@@ -24,14 +24,13 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.indexwallets.mobile",
+      "bundleIdentifier": "com.networkgoods.indexwallets",
       "jsEngine": "hermes",
       "config": {
         "usesNonExemptEncryption": false
       },
       "infoPlist": {
         "NSCameraUsageDescription": "IndexWallets needs camera access to scan QR codes for payments",
-        "NSFaceIDUsageDescription": "IndexWallets uses Face ID for secure authentication to your wallet",
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": false,
           "NSAllowsLocalNetworking": true,

@@ -3,7 +3,7 @@ import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
 // Environment detection
-const isDevelopment = process.env.NODE_ENV === 'development';
+const isDevelopment = __DEV__;
 
 // Dynamic API URL detection for development
 const getLocalApiUrl = () => {
@@ -17,10 +17,10 @@ const getLocalApiUrl = () => {
 
 // API URLs
 export const LOCAL_BACKEND_SERVER_URL = getLocalApiUrl();
-export const PRODUCTION_API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://api.indexwallets.com';
+export const PRODUCTION_API_URL = Constants.expoConfig?.extra?.apiUrl || process.env.EXPO_PUBLIC_API_URL || 'https://index-wallets-backend-production.up.railway.app';
 
-// Use local server in development, production API in production
-export const API_URL = isDevelopment ? LOCAL_BACKEND_SERVER_URL : PRODUCTION_API_URL;
+// Use environment variable if available, otherwise use local in dev or production URL
+export const API_URL = process.env.EXPO_PUBLIC_API_URL || (isDevelopment ? LOCAL_BACKEND_SERVER_URL : PRODUCTION_API_URL);
 
 // Log the API URL for debugging
 // console.log('🌐 API Configuration:');
