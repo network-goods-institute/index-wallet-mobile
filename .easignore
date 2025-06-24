@@ -1,0 +1,4 @@
+# EAS Build ignore file
+.env
+.env.local
+.env.production

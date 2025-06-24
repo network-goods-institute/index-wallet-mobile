@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+# Create .npmrc with authentication token from environment
+if [ -n "$GITHUB_TOKEN" ]; then
+  echo "@repyh-labs:registry=https://npm.pkg.github.com" > ~/.npmrc
+  echo "//npm.pkg.github.com/:_authToken=$GITHUB_TOKEN" >> ~/.npmrc
+  echo "✓ npm authentication configured"
+else
+  echo "⚠️  GITHUB_TOKEN not found"
+fi
