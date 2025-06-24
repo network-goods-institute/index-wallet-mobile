@@ -22,7 +22,7 @@ const GridBackground = ({ color }: { color: string }) => {
             d={`M ${i * gridSize} 0 L ${i * gridSize} ${height}`}
             stroke={color}
             strokeWidth={strokeWidth}
-            opacity={0.05}
+            opacity={0.15}
           />
         ))}
         {/* Horizontal lines */}
@@ -32,7 +32,7 @@ const GridBackground = ({ color }: { color: string }) => {
             d={`M 0 ${i * gridSize} L ${width} ${i * gridSize}`}
             stroke={color}
             strokeWidth={strokeWidth}
-            opacity={0.05}
+            opacity={0.15}
           />
         ))}
       </Svg>
@@ -114,7 +114,7 @@ const WelcomeScreen = () => {
               onPress={handleCreateWallet}
             >
               <Text 
-                className="text-base font-semibold text-black"
+                className="text-base font-semibold text-white"
                 style={{ fontFamily: 'SF-Pro-Rounded-Bold' }}
               >
                 Create a New Wallet
