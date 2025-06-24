@@ -11,10 +11,6 @@ const API_BASE_URL = API_URL;
 // Storage keys - must match the ones in AuthContext
 const PRIVATE_KEY_KEY = 'encrypted-private-key';
 
-// Test private key for development - this would be replaced with a real key in production
-// This is the same test key used in mockTransactionService.ts
-const TEST_PRIVATE_KEY = '5JeqVC5myFajNwvqba1QNZLdWMNTnMkz5oSN5W1yJWhUr1TDQoP';
-
 /**
  * Retrieves the private key from secure storage
  * Falls back to AsyncStorage if SecureStore is not available
@@ -38,15 +34,14 @@ export const getPrivateKey = async (providedPrivateKey?: string): Promise<string
     }
     
     if (!encryptedKey) {
-      // console.log('No private key found in storage, using test key for development');
-      return TEST_PRIVATE_KEY;
+      // console.log('No private key found in storage');
+      return null;
     }
     
     return await decryptPrivateKey(encryptedKey);
   } catch (error) {
     console.error('Error retrieving encrypted private key:', error);
-    // console.log('Falling back to test private key for development');
-    return TEST_PRIVATE_KEY;
+    return null;
   }
 };
 
