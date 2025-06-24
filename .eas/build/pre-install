@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
 
-# Create .npmrc with authentication token from environment
-if [ -n "$GITHUB_TOKEN" ]; then
-  echo "@repyh-labs:registry=https://npm.pkg.github.com" > ~/.npmrc
-  echo "//npm.pkg.github.com/:_authToken=$GITHUB_TOKEN" >> ~/.npmrc
-  echo "✓ npm authentication configured"
-else
-  echo "⚠️  GITHUB_TOKEN not found"
-fi
+# Create .npmrc in home directory with authentication token
+echo "@repyh-labs:registry=https://npm.pkg.github.com" > ~/.npmrc
+echo "//npm.pkg.github.com/:_authToken=$GITHUB_TOKEN" >> ~/.npmrc
+
+# Also create .yarnrc with auth
+echo '"@repyh-labs:registry" "https://npm.pkg.github.com"' > ~/.yarnrc
+
+# Set yarn config for authentication
+yarn config set "@repyh-labs:registry" "https://npm.pkg.github.com"
+yarn config set "//npm.pkg.github.com/:_authToken" "$GITHUB_TOKEN"
+
+echo "✓ npm and yarn authentication configured"
