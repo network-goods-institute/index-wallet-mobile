@@ -408,6 +408,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // console.log('Storing user ID:', userData.userId);
           await AsyncStorage.setItem('USER_ID', userData.userId);
         }
+        
+        // Store username to AsyncStorage
+        if (userName) {
+          console.log('Storing username to AsyncStorage:', userName);
+          await AsyncStorage.setItem(USER_NAME_KEY, userName);
+        }
+        
+        // Store user type to AsyncStorage
+        if (userType) {
+          await AsyncStorage.setItem(USER_TYPE_KEY, userType);
+        }
       } catch (apiError: any) {
         // Log error and fail onboarding - we need a successful registration
         console.error('Error registering with backend:', apiError);
@@ -507,6 +518,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // console.log('LOGIN: Setting wallet address from backend:', wallet.wallet_address);
         await AsyncStorage.setItem(WALLET_ADDRESS_KEY, wallet.wallet_address);
         setWalletAddress(wallet.wallet_address);
+        
+        // Also restore username if available
+        if (wallet.username) {
+          console.log('LOGIN: Restoring username from backend:', wallet.username);
+          await AsyncStorage.setItem(USER_NAME_KEY, wallet.username);
+          setUserName(wallet.username);
+        } else {
+          // If backend doesn't have username, check local storage
+          const localUserName = await AsyncStorage.getItem(USER_NAME_KEY);
+          if (localUserName) {
+            console.log('LOGIN: Backend missing username, using local storage:', localUserName);
+            setUserName(localUserName);
+          }
+        }
+        
+        // Restore user type if available
+        if (wallet.user_type) {
+          await AsyncStorage.setItem(USER_TYPE_KEY, wallet.user_type);
+          setUserType(wallet.user_type);
+        }
       } else {
         // Fallback to using the public key as the wallet address
         // console.log('LOGIN: Setting wallet address from public key:', derivedKeyPair.publicKey);
