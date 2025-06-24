@@ -41,3 +41,4 @@ yarn-error.*
 app-example
 
 TESTFLIGHT_SUBMISSION.md
+.npmrc
