@@ -66,15 +66,15 @@ const TokenValuationBar = ({ adjustment, colorScheme }: { adjustment: number; co
         isDark ? 'bg-gray-600' : 'bg-gray-300'
       }`} />
       
-      {/* Colored fill */}
+      {/* Colored fill - extends from center to value */}
       {adjustment !== 0 && (
         <View
           className={`absolute top-0 bottom-0 rounded-full ${
             isPositive ? 'bg-green-500' : 'bg-yellow-500'
           }`}
           style={{
+            left: isPositive ? '50%' : `${50 - percentage}%`,
             width: `${percentage}%`,
-            [isPositive ? 'left' : 'right']: '50%',
           }}
         />
       )}

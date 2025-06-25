@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -210,10 +210,10 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
         clearTimeout(scrollTimeout.current);
       }
       
-      // Defer state update slightly to batch multiple updates
+      // Defer state update with longer delay to reduce re-renders
       scrollTimeout.current = setTimeout(() => {
         setAdjustment(clampedValue);
-      }, 0);
+      }, 16); // ~60fps
     }
   }, []);
 
@@ -246,6 +246,50 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
       }, 500);
     }
   };
+
+  // Generate tick marks - memoized for performance
+  const tickMarks = useMemo(() => Array.from({ length: 401 }, (_, i) => {
+    const value = (i - 200) * 50; // -10000 to 10000 in steps of 50
+    const isMajor = value % 500 === 0;
+    const isZero = value === 0;
+    
+    return (
+      <React.Fragment key={i}>
+        <View
+          style={{
+            position: 'absolute',
+            left: (value + 10000) * 3, // Convert to pixel position
+            width: isZero ? 3 : (isMajor ? 3 : 1.5),
+            height: isZero ? (IS_SMALL_DEVICE ? 40 : 60) : (isMajor ? (IS_SMALL_DEVICE ? 40 : 60) : (IS_SMALL_DEVICE ? 25 : 35)),
+            backgroundColor: isZero 
+              ? (colorScheme === 'dark' ? '#FFFFFF' : '#000000')
+              : (value < 0 ? '#EAB308' : '#22C55E'), // Yellow for premium, Green for discount
+            opacity: isZero ? 0.4 : (isMajor ? 1 : 0.7),
+            bottom: isZero ? (IS_SMALL_DEVICE ? 20 : 30) : (isMajor ? (IS_SMALL_DEVICE ? 20 : 30) : (IS_SMALL_DEVICE ? 27.5 : 42.5)),
+            borderRadius: 1,
+          }}
+        />
+        {isMajor && (
+          <Text 
+            style={{
+              position: 'absolute',
+              left: (value + 10000) * 3 - 20,
+              bottom: IS_SMALL_DEVICE ? 5 : 10,
+              width: 40,
+              textAlign: 'center',
+              fontSize: IS_SMALL_DEVICE ? (isZero ? 12 : 10) : (isZero ? 14 : 12),
+              color: isZero 
+                ? (colorScheme === 'dark' ? '#FFFFFF' : '#000000')
+                : (colorScheme === 'dark' ? '#D1D5DB' : '#4B5563'),
+              fontWeight: isZero ? '600' : '500',
+            }}
+          >
+            {value === 0 ? '0' : `${Math.abs(value)}`}
+          </Text>
+        )}
+      </React.Fragment>
+    );
+  }), [colorScheme, IS_SMALL_DEVICE]);
 
   if (!token) return null;
 
@@ -495,7 +539,7 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
 
             {/* Scrollable Scale Slider */}
             <View className="mt-4">
-              <View className="mb-4 px-4">
+              <View className="px-4">
                 <View className="flex-row justify-between items-center mb-1">
                   <ThemedText className="text-xs font-medium opacity-60">Swipe to adjust</ThemedText>
                 </View>
@@ -506,22 +550,16 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
               </View>
 
               {/* Scale Container - Responsive height for better touch area */}
-              <View style={{ height: IS_SMALL_DEVICE ? 80 : 120, position: 'relative', marginVertical: IS_SMALL_DEVICE ? 5 : 10, marginBottom: IS_SMALL_DEVICE ? 10 : 20 }}>
+              <View style={{ 
+                height: IS_SMALL_DEVICE ? 80 : 120, 
+                position: 'relative', 
+                marginVertical: IS_SMALL_DEVICE ? 5 : 10, 
+                marginBottom: IS_SMALL_DEVICE ? 10 : 20,
+                backgroundColor: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)',
+                borderRadius: 20,
+                marginHorizontal: 10,
+              }}>
                 
-                {/* Center Line Indicator - clean and minimal */}
-                <View 
-                  style={{
-                    position: 'absolute',
-                    left: SCREEN_WIDTH / 2 - 1,
-                    top: 25,
-                    bottom: 25,
-                    width: 2,
-                    backgroundColor: colorScheme === 'dark' ? '#FFFFFF' : '#000000',
-                    opacity: 0.3,
-                    zIndex: 10,
-                    pointerEvents: 'none',
-                  }}
-                />
                 
                 {/* Scrollable Scale */}
                 <GHScrollView
@@ -529,11 +567,12 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
                   horizontal={true}
                   showsHorizontalScrollIndicator={false}
                   onScroll={handleScroll}
-                  scrollEventThrottle={16}
+                  scrollEventThrottle={32}
                   decelerationRate="fast"
                   snapToInterval={3}
                   bounces={false}
                   overScrollMode="never"
+                  removeClippedSubviews={true}
                   contentContainerStyle={{
                     paddingHorizontal: SCREEN_WIDTH / 2,
                   }}
@@ -544,146 +583,53 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
                     flexDirection: 'row',
                     alignItems: 'center',
                   }}>
-                    {/* Background zones for premium/discount with gradient effect */}
+                    {/* Subtle gradient background zones */}
                     <View
                       style={{
                         position: 'absolute',
                         left: 0,
-                        right: 30000,
-                        top: 20,
-                        bottom: 20,
+                        width: 30000,
+                        top: IS_SMALL_DEVICE ? 20 : 30,
+                        bottom: IS_SMALL_DEVICE ? 20 : 30,
                         backgroundColor: '#EAB308',
-                        opacity: 0.08,
-                        borderRadius: 40,
+                        opacity: 0.03,
+                        borderTopRightRadius: 30,
+                        borderBottomRightRadius: 30,
                       }}
                     />
                     <View
                       style={{
                         position: 'absolute',
                         left: 30000,
-                        right: 0,
-                        top: 20,
-                        bottom: 20,
+                        width: 30000,
+                        top: IS_SMALL_DEVICE ? 20 : 30,
+                        bottom: IS_SMALL_DEVICE ? 20 : 30,
                         backgroundColor: '#22C55E',
-                        opacity: 0.08,
-                        borderRadius: 40,
+                        opacity: 0.03,
+                        borderTopLeftRadius: 30,
+                        borderBottomLeftRadius: 30,
+                      }}
+                    />
+                    
+                    {/* Active colored fill bar from center to current position */}
+                    <View
+                      style={{
+                        position: 'absolute',
+                        left: adjustment < 0 ? (adjustment + 10000) * 3 : 30000,
+                        width: Math.abs(adjustment) * 3,
+                        top: IS_SMALL_DEVICE ? 25 : 35,
+                        bottom: IS_SMALL_DEVICE ? 25 : 35,
+                        backgroundColor: adjustment < 0 ? '#EAB308' : '#22C55E',
+                        opacity: adjustment === 0 ? 0 : 0.3,
+                        borderRadius: 4,
                       }}
                     />
                     
                     {/* Generate tick marks - optimized for performance */}
-                    {Array.from({ length: 401 }, (_, i) => {
-                      const value = (i - 200) * 50; // -10000 to 10000 in steps of 50
-                      const isMajor = value % 500 === 0;
-                      const isZero = value === 0;
-                      
-                      // Only render visible ticks
-                      return (
-                        <React.Fragment key={i}>
-                          <View
-                            style={{
-                              position: 'absolute',
-                              left: (value + 10000) * 3, // Convert to pixel position
-                              width: isZero ? 3 : (isMajor ? 3 : 1.5),
-                              height: isZero ? (IS_SMALL_DEVICE ? 40 : 60) : (isMajor ? (IS_SMALL_DEVICE ? 40 : 60) : (IS_SMALL_DEVICE ? 25 : 35)),
-                              backgroundColor: isZero 
-                                ? (colorScheme === 'dark' ? '#FFFFFF' : '#000000')
-                                : (value < 0 ? '#EAB308' : '#22C55E'), // Yellow for premium, Green for discount
-                              opacity: isZero ? 0.4 : (isMajor ? 1 : 0.7),
-                              bottom: isZero ? (IS_SMALL_DEVICE ? 20 : 30) : (isMajor ? (IS_SMALL_DEVICE ? 20 : 30) : (IS_SMALL_DEVICE ? 27.5 : 42.5)),
-                              borderRadius: 1,
-                            }}
-                          />
-                          {isMajor && (
-                            <Text 
-                              style={{
-                                position: 'absolute',
-                                left: (value + 10000) * 3 - 20,
-                                bottom: IS_SMALL_DEVICE ? 5 : 10,
-                                width: 40,
-                                textAlign: 'center',
-                                fontSize: IS_SMALL_DEVICE ? (isZero ? 12 : 10) : (isZero ? 14 : 12),
-                                color: isZero 
-                                  ? (colorScheme === 'dark' ? '#FFFFFF' : '#000000')
-                                  : (colorScheme === 'dark' ? '#D1D5DB' : '#4B5563'),
-                                fontWeight: isZero ? '600' : '500',
-                              }}
-                            >
-                              {value === 0 ? '0' : `${Math.abs(value)}`}
-                            </Text>
-                          )}
-                        </React.Fragment>
-                      );
-                    })}
+                    {tickMarks}
                   </View>
                 </GHScrollView>
                 
-                {/* Gradient Fade Edges - subtle fade effect */}
-                <View
-                  style={{
-                    position: 'absolute',
-                    left: 0,
-                    top: IS_SMALL_DEVICE ? 15 : 20,
-                    bottom: IS_SMALL_DEVICE ? 15 : 20,
-                    width: 40,
-                    pointerEvents: 'none',
-                    flexDirection: 'row',
-                  }}
-                >
-                  <View 
-                    style={{
-                      flex: 1,
-                      backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
-                      opacity: 0.7,
-                    }}
-                  />
-                  <View 
-                    style={{
-                      width: 10,
-                      backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
-                      opacity: 0.3,
-                    }}
-                  />
-                  <View 
-                    style={{
-                      width: 10,
-                      backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
-                      opacity: 0.1,
-                    }}
-                  />
-                </View>
-                <View
-                  style={{
-                    position: 'absolute',
-                    right: 0,
-                    top: IS_SMALL_DEVICE ? 15 : 20,
-                    bottom: IS_SMALL_DEVICE ? 15 : 20,
-                    width: 40,
-                    pointerEvents: 'none',
-                    flexDirection: 'row',
-                  }}
-                >
-                  <View 
-                    style={{
-                      width: 10,
-                      backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
-                      opacity: 0.1,
-                    }}
-                  />
-                  <View 
-                    style={{
-                      width: 10,
-                      backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
-                      opacity: 0.3,
-                    }}
-                  />
-                  <View 
-                    style={{
-                      flex: 1,
-                      backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
-                      opacity: 0.7,
-                    }}
-                  />
-                </View>
               </View>
             </View>
 
