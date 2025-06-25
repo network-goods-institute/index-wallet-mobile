@@ -101,7 +101,7 @@ const TransactionSuccess: React.FC<TransactionSuccessProps> = ({ transaction, on
 
   const formatTransactionId = (id: string) => {
     if (!id) return '';
-    return `${id.slice(0, 6)}...${id.slice(-4)}`;
+    return id;
   };
 
   useEffect(() => {

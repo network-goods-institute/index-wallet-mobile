@@ -172,15 +172,10 @@ const Valuations = ({ tokens, onUpdateValuation, isLoading, onRefresh, onEditTok
     <View className="flex-1">
       {/* Header section with proper padding */}
       <View className="pt-20 pb-5 px-5">
-        <Text className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-black'}`}>Valuations</Text>
-        
-        {/* Main explanation text */}
-        <ThemedText className="text-base opacity-80 leading-relaxed mt-3 mb-4">
-          For every $10 a user pays in a certain cause, you will either donate or tax a cause $2. You can adjust and set the total amount here for each cause.
-        </ThemedText>
+        <Text className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-black'}`}>Preferences</Text>
         
         {/* Legend with gap and switched order */}
-        <View className="flex-row items-center gap-6">
+        <View className="flex-row items-center gap-6 mt-4">
           <View className="flex-row items-center">
             <View className="w-3 h-3 rounded-full bg-yellow-500 mr-2" />
             <ThemedText className="text-base font-medium">Premium</ThemedText>

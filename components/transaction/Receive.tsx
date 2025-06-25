@@ -8,7 +8,7 @@ import { usePendingTransactionManager } from '@/contexts/PendingTransactionManag
 import { useTransactionHistory } from '@/contexts/TransactionHistoryStore';
 import { useAuth } from '@/contexts/AuthContext';
 import QRCode from 'react-native-qrcode-svg';
-import { QrCode, Copy, Check, ArrowLeft, History, Clock, X } from 'lucide-react-native';
+import { QrCode, Copy, Check, ArrowLeft, Clock, X } from 'lucide-react-native';
 import TransactionSuccess from '@/components/transaction/TransactionSuccess';
 import * as Clipboard from 'expo-clipboard';
 
@@ -71,28 +71,15 @@ export default function Receive({ onSuccessStateChange }: ReceiveProps) {
   
   // Sync pending transactions on mount
   useEffect(() => {
-    // console.log('Receive component mounted, syncing transactions...');
     syncTransactions();
     loadTransactionHistory();
   }, []);
   
-  // Debug effect to see pending transactions
-  useEffect(() => {
-    // console.log('Pending transactions updated in Receive:', pendingTransactions.length);
-    // console.log('Vendor pending transactions:', vendorPendingTransactions.length);
-    // console.log('Active request:', activeRequest?.payment_id);
-  }, [pendingTransactions, vendorPendingTransactions, activeRequest]);
-
-  // Note: We don't clear active request on unmount anymore
-  // The ActiveTransactionContext is scoped to TransactScreen level
-  // so it will persist when switching between Pay/Receive tabs
-
   // Watch for completed transaction
   useEffect(() => {
     if (activeRequest) {
       const completedStatuses = ['completed', 'success', 'confirmed', 'Completed', 'Success', 'Confirmed'];
       if (completedStatuses.includes(activeRequest.status)) {
-        // console.log('Transaction completed! Showing success screen');
         setShowSuccess(true);
       }
     }
@@ -154,7 +141,6 @@ export default function Receive({ onSuccessStateChange }: ReceiveProps) {
       try {
         // Delete the payment request from backend
         await deleteRequest(paymentId);
-        // console.log(`Payment ${paymentId} cancelled and deleted`);
         
         // Clear the form
         setQrVisible(false);
@@ -199,8 +185,7 @@ export default function Receive({ onSuccessStateChange }: ReceiveProps) {
       ) : (
         <SafeAreaView style={{ flex: 1, backgroundColor: colorScheme === 'dark' ? '#000000' : '#FFFFFF' }}>
           <ThemedView className="flex-1 relative">
-            {!qrVisible ? (
-              <>
+            <>
                 <ScrollView 
             className="flex-1 px-6 pt-8" 
             contentContainerStyle={{ flexGrow: 1 }}
@@ -289,87 +274,127 @@ export default function Receive({ onSuccessStateChange }: ReceiveProps) {
                   </TouchableOpacity>
                 )}
               </>
-        ) : (
-          <ScrollView 
-            className="flex-1 px-6" 
-            contentContainerStyle={{ flexGrow: 1 }}
-            showsVerticalScrollIndicator={false}
+          </ThemedView>
+          
+          {/* QR Code Modal */}
+          <Modal
+            visible={qrVisible}
+            animationType="fade"
+            transparent={true}
+            onRequestClose={() => setQrVisible(false)}
           >
-            {/* Back Button */}
-            <TouchableOpacity
-              className="flex-row items-center mb-6 mt-8"
-              onPress={() => {
-                setQrVisible(false);
-                // Sync transactions when going back to ensure list is updated
-                syncTransactions();
-              }}
-            >
-              <ArrowLeft size={24} color={colorScheme === 'dark' ? '#FFFFFF' : '#000000'} />
-              <ThemedText className="text-lg font-medium ml-2">Back to Requests</ThemedText>
-            </TouchableOpacity>
-            
-            {/* QR Code Display */}
-            <View className="items-center mt-2">
-              <ThemedText className="text-2xl font-bold text-center mb-2">
-                Payment Request
-              </ThemedText>
-              <ThemedText className="text-6xl font-bold text-blue-500 mb-6">
-                ${amount}
-              </ThemedText>
-              
-              {paymentId && (
-                <View className="bg-white p-6 rounded-3xl shadow-lg mb-6">
-                  <QRCode
-                    value={paymentId}
-                    size={240}
-                    backgroundColor="white"
-                    color="black"
-                  />
-                </View>
-              )}
-
-              {/* Payment ID */}
-              {paymentId && (
-                <View className="w-full max-w-sm mb-6">
-                  <ThemedText className="text-sm font-medium mb-2 text-center opacity-60">
-                    Payment ID
-                  </ThemedText>
-                  <TouchableOpacity
-                    className="bg-gray-100 dark:bg-gray-800 p-4 rounded-xl flex-row items-center justify-between"
-                    onPress={handleCopyId}
+            <View className="flex-1" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
+              <SafeAreaView className="flex-1 justify-center items-center">
+                <View className="bg-white dark:bg-black mx-4 rounded-3xl" style={{ width: '90%', maxWidth: 400 }}>
+                  <ScrollView 
+                    contentContainerStyle={{ paddingHorizontal: 24, paddingVertical: 20 }}
+                    showsVerticalScrollIndicator={false}
                   >
-                    <ThemedText className="text-base font-mono flex-1 mr-2">
-                      {paymentId}
-                    </ThemedText>
-                    {copied ? (
-                      <Check size={20} color={colorScheme === 'dark' ? '#10B981' : '#059669'} />
-                    ) : (
-                      <Copy size={20} color={colorScheme === 'dark' ? '#9CA3AF' : '#6B7280'} />
-                    )}
-                  </TouchableOpacity>
-                </View>
-              )}
+                    {/* Modal Header */}
+                    <View className="flex-row items-center justify-between py-4">
+                      <TouchableOpacity
+                        onPress={() => {
+                          setQrVisible(false);
+                          syncTransactions();
+                        }}
+                        className="p-2"
+                      >
+                        <X size={24} color={colorScheme === 'dark' ? '#FFFFFF' : '#000000'} />
+                      </TouchableOpacity>
+                      <ThemedText className="text-lg font-bold flex-1 text-center mr-8">Payment Request</ThemedText>
+                    </View>
+                    
+                    {/* QR Code Display */}
+                    <View className="items-center">
+                      {/* Amount Display */}
+                      <View className="mb-6">
+                        <ThemedText className="text-center text-sm opacity-60 mb-1">Amount to receive</ThemedText>
+                        <ThemedText className="text-4xl font-bold text-center" style={{ fontFamily: 'System' }}>
+                          ${amount}
+                        </ThemedText>
+                      </View>
 
-              {/* Action Buttons - Moved up */}
-              <View className="w-full max-w-sm mt-4">
-                <TouchableOpacity
-                  className={`py-4 px-8 rounded-xl ${isCancelling ? 'bg-gray-400' : 'bg-red-500'}`}
-                  onPress={handleCancel}
-                  disabled={isCancelling}
-                >
-                  {isCancelling ? (
-                    <ActivityIndicator color="#ffffff" size="small" />
-                  ) : (
-                    <ThemedText className="text-white text-center text-lg font-semibold">
-                      Cancel Payment
-                    </ThemedText>
-                  )}
-                </TouchableOpacity>
-              </View>
+                      {/* QR Code */}
+                      {paymentId && (
+                        <View className="mb-6">
+                          <View className="bg-white p-6 rounded-3xl shadow-lg">
+                            <QRCode
+                              value={paymentId}
+                              size={180}
+                              backgroundColor="white"
+                              color="black"
+                            />
+                          </View>
+                          <ThemedText className="text-xs opacity-60 text-center mt-3">Scan to pay</ThemedText>
+                        </View>
+                      )}
+
+                      {/* Payment Code */}
+                      {paymentId && (
+                        <View className="w-full mb-6">
+                          <View className="flex-row items-center justify-center mb-4">
+                            <View className="h-px bg-gray-300 dark:bg-gray-700 flex-1" />
+                            <ThemedText className="text-xs font-medium mx-3 opacity-60">
+                              OR ENTER CODE
+                            </ThemedText>
+                            <View className="h-px bg-gray-300 dark:bg-gray-700 flex-1" />
+                          </View>
+                          <View className="items-center">
+                            <View className="flex-row items-center">
+                              <ThemedText 
+                                className="font-bold" 
+                                style={{ 
+                                  fontSize: 28,
+                                  letterSpacing: 3,
+                                  fontFamily: 'System',
+                                  lineHeight: 36
+                                }}
+                              >
+                                {paymentId}
+                              </ThemedText>
+                              <TouchableOpacity
+                                onPress={handleCopyId}
+                                activeOpacity={0.7}
+                                className="ml-3"
+                              >
+                                {copied ? (
+                                  <Check size={24} color={colorScheme === 'dark' ? '#10B981' : '#059669'} />
+                                ) : (
+                                  <Copy size={24} color={colorScheme === 'dark' ? '#9CA3AF' : '#6B7280'} />
+                                )}
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+                        </View>
+                      )}
+
+                      {/* Action Buttons */}
+                      <View className="w-full mt-4">
+                        <TouchableOpacity
+                          className={`py-3 rounded-xl flex-row items-center justify-center ${
+                            isCancelling ? 'bg-gray-400' : colorScheme === 'dark' ? 'bg-gray-800' : 'bg-gray-200'
+                          }`}
+                          onPress={handleCancel}
+                          disabled={isCancelling}
+                          activeOpacity={0.8}
+                        >
+                          {isCancelling ? (
+                            <ActivityIndicator color={colorScheme === 'dark' ? '#FFFFFF' : '#000000'} size="small" />
+                          ) : (
+                            <ThemedText className={`text-center text-base font-semibold ${
+                              colorScheme === 'dark' ? 'text-white' : 'text-gray-900'
+                            }`}>
+                              Cancel Request
+                            </ThemedText>
+                          )}
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </ScrollView>
+                </View>
+              </SafeAreaView>
             </View>
-          </ScrollView>
-        )}
-      </ThemedView>
+          </Modal>
       
       {/* Transaction History Modal */}
       <Modal

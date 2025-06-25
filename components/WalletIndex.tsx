@@ -41,6 +41,8 @@ export function WalletIndex({
 }: WalletIndexProps) {
   const { colorScheme } = useTheme();
   const [showLoadWalletModal, setShowLoadWalletModal] = useState(false);
+  const [showAddressModal, setShowAddressModal] = useState(false);
+  const [autoCopyOnOpen, setAutoCopyOnOpen] = useState(false);
   
   // Override onBuyPress to show Load Wallet modal
   const handleAddPress = () => {
@@ -64,7 +66,12 @@ export function WalletIndex({
         }
       >
         {/* Top section with wallet name and dropdown */}
-        <WalletHeader />
+        <WalletHeader 
+          showAddressModal={showAddressModal}
+          setShowAddressModal={setShowAddressModal}
+          autoCopyOnOpen={autoCopyOnOpen}
+          setAutoCopyOnOpen={setAutoCopyOnOpen}
+        />
 
         {/* Total value display */}
         <TotalValueDisplay totalValue={totalValue} />
@@ -74,7 +81,10 @@ export function WalletIndex({
           onBuyPress={handleAddPress}
           onSwapPress={onSwapPress}
           onHistoryPress={() => router.push('/history')}
-          onCopyPress={onCopyPress}
+          onCopyPress={() => {
+            setAutoCopyOnOpen(true);
+            setShowAddressModal(true);
+          }}
           showCopyCheckmark={showCopyCheckmark}
         />
 
@@ -102,9 +112,18 @@ export function WalletIndex({
   );
 }
 
-function WalletHeader() {
+function WalletHeader({ 
+  showAddressModal, 
+  setShowAddressModal, 
+  autoCopyOnOpen,
+  setAutoCopyOnOpen 
+}: { 
+  showAddressModal: boolean;
+  setShowAddressModal: (show: boolean) => void;
+  autoCopyOnOpen: boolean;
+  setAutoCopyOnOpen: (auto: boolean) => void;
+}) {
   const { userName, walletAddress } = useAuth(); // Get user from global state
-  const [showAddressModal, setShowAddressModal] = useState(false);
   const [copied, setCopied] = useState(false);
   const { colorScheme } = useTheme();
   
@@ -121,6 +140,14 @@ function WalletHeader() {
       setTimeout(() => setCopied(false), 2000);
     }
   };
+  
+  // Auto-copy when modal opens with autoCopyOnOpen flag
+  useEffect(() => {
+    if (showAddressModal && autoCopyOnOpen && walletAddress) {
+      handleCopyAddress();
+      setAutoCopyOnOpen(false); // Reset the flag
+    }
+  }, [showAddressModal, autoCopyOnOpen, walletAddress]);
   
   return (
     <>

@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, SafeAreaView, ScrollView, Modal } from 'react-native';
+import { View, Text, TouchableOpacity, SafeAreaView, ScrollView } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { ThemedView } from '@/components/ThemedView';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import { ArrowLeft, Copy, CheckCircle, ArrowRight, Shield, Key, AlertTriangle, X } from 'lucide-react-native';
+import { ArrowLeft, Copy, CheckCircle, ArrowRight } from 'lucide-react-native';
+import SeedPhraseWarningModal from '@/components/SeedPhraseWarningModal';
 
 export default function CreateWalletScreen() {
-  const { setOnboardingStep, userType, generateSeedPhrase, setSeedPhraseForOnboarding } = useAuth();
+  const { setOnboardingStep, generateSeedPhrase, setSeedPhraseForOnboarding } = useAuth();
   const { colorScheme } = useTheme();
   const [seedPhrase, setSeedPhrase] = useState('');
   const [copied, setCopied] = useState(false);
-  const [showSecurityModal, setShowSecurityModal] = useState(true);
+  const [showWarningModal, setShowWarningModal] = useState(false);
 
   useEffect(() => {
     const phrase = generateSeedPhrase();
@@ -93,7 +94,7 @@ export default function CreateWalletScreen() {
 
         <View className="absolute bottom-12 right-6">
           <TouchableOpacity
-            onPress={() => setOnboardingStep('verify-seed')}
+            onPress={() => setShowWarningModal(true)}
             className="bg-yellow-400 w-16 h-16 rounded-full items-center justify-center"
           >
             <ArrowRight size={32} color="#000000" />
@@ -101,110 +102,13 @@ export default function CreateWalletScreen() {
         </View>
       </SafeAreaView>
       
-      {/* Security Information Modal */}
-      <Modal
-        visible={showSecurityModal}
-        animationType="fade"
-        transparent={true}
-        onRequestClose={() => {}}
-      >
-        <SafeAreaView className={`flex-1 ${colorScheme === 'dark' ? 'bg-black/50' : 'bg-black/30'}`}>
-          <TouchableOpacity 
-            className="flex-1 justify-center items-center px-6"
-            activeOpacity={1}
-          >
-            <View
-              className={`w-full max-w-sm p-8 rounded-3xl ${colorScheme === 'dark' ? 'bg-gray-800' : 'bg-white'}`}
-              style={{
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: colorScheme === 'dark' ? 0.3 : 0.08,
-                shadowRadius: 8,
-                elevation: 4,
-              }}
-            >
-              {/* Modal Header */}
-              <View className={`w-20 h-20 rounded-full items-center justify-center mx-auto mb-6 ${
-                colorScheme === 'dark' ? 'bg-yellow-900/30' : 'bg-yellow-100'
-              }`}>
-                <Shield size={40} color={colorScheme === 'dark' ? '#FCD34D' : '#F59E0B'} />
-              </View>
-              
-              <Text className={`text-center text-2xl font-bold mb-6 ${colorScheme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                Secure Your Wallet
-              </Text>
-              
-              {/* Security tips with icons */}
-              <View className="mb-6">
-                <View className="flex-row items-start mb-4">
-                  <View className={`w-10 h-10 rounded-full items-center justify-center mr-3 ${
-                    colorScheme === 'dark' ? 'bg-blue-900/30' : 'bg-blue-100'
-                  }`}>
-                    <Key size={20} color={colorScheme === 'dark' ? '#60A5FA' : '#3B82F6'} />
-                  </View>
-                  <View className="flex-1">
-                    <Text className={`text-base font-semibold mb-1 ${colorScheme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                      Master Key to Your Wallet
-                    </Text>
-                    <Text className={`text-sm leading-relaxed ${colorScheme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                      Your seed phrase is the only way to recover your wallet if you lose your device.
-                    </Text>
-                  </View>
-                </View>
-
-                <View className="flex-row items-start mb-4">
-                  <View className={`w-10 h-10 rounded-full items-center justify-center mr-3 ${
-                    colorScheme === 'dark' ? 'bg-green-900/30' : 'bg-green-100'
-                  }`}>
-                    <Shield size={20} color={colorScheme === 'dark' ? '#10B981' : '#059669'} />
-                  </View>
-                  <View className="flex-1">
-                    <Text className={`text-base font-semibold mb-1 ${colorScheme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                      Write It Down Safely
-                    </Text>
-                    <Text className={`text-sm leading-relaxed ${colorScheme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                      Write it on paper and store it somewhere secure. Never save it digitally.
-                    </Text>
-                  </View>
-                </View>
-
-                <View className="flex-row items-start">
-                  <View className={`w-10 h-10 rounded-full items-center justify-center mr-3 ${
-                    colorScheme === 'dark' ? 'bg-red-900/30' : 'bg-red-100'
-                  }`}>
-                    <AlertTriangle size={20} color={colorScheme === 'dark' ? '#EF4444' : '#DC2626'} />
-                  </View>
-                  <View className="flex-1">
-                    <Text className={`text-base font-semibold mb-1 ${colorScheme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                      Never Share With Anyone
-                    </Text>
-                    <Text className={`text-sm leading-relaxed ${colorScheme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                      Anyone with your seed phrase can access all your funds permanently.
-                    </Text>
-                  </View>
-                </View>
-              </View>
-              
-              {/* Continue button */}
-              <TouchableOpacity 
-                className={`py-4 px-8 rounded-2xl items-center ${
-                  colorScheme === 'dark' ? 'bg-yellow-600' : 'bg-yellow-500'
-                }`}
-                onPress={() => setShowSecurityModal(false)}
-                style={{
-                  shadowColor: '#F59E0B',
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.3,
-                  shadowRadius: 8,
-                  elevation: 5,
-                }}
-              >
-                <Text className="text-white font-semibold text-lg">I Understand</Text>
-              </TouchableOpacity>
-            </View>
-          </TouchableOpacity>
-        </SafeAreaView>
-      </Modal>
+      <SeedPhraseWarningModal
+        visible={showWarningModal}
+        onContinue={() => {
+          setShowWarningModal(false);
+          setOnboardingStep('verify-seed');
+        }}
+      />
     </ThemedView>
   );
 }

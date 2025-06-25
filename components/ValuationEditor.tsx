@@ -49,6 +49,7 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
   const { colorScheme } = useTheme();
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const [adjustment, setAdjustment] = useState(0);
+  const [originalAdjustment, setOriginalAdjustment] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [isEditingValue, setIsEditingValue] = useState(false);
   const [inputValue, setInputValue] = useState('');
@@ -63,6 +64,7 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
       lastValue.current = tokenAdjustment;
       lastHapticValue.current = tokenAdjustment;
       setAdjustment(tokenAdjustment);
+      setOriginalAdjustment(tokenAdjustment);
       setInputValue(Math.abs(tokenAdjustment).toFixed(2));
     }
   }, [token]);
@@ -229,14 +231,15 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
     }
   };
 
-  const handleReset = () => {
+  const handleUndo = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    lastValue.current = 0;
-    lastHapticValue.current = 0;
-    setAdjustment(0);
+    lastValue.current = originalAdjustment;
+    lastHapticValue.current = originalAdjustment;
+    setAdjustment(originalAdjustment);
     if (scrollViewRef.current) {
       isProgrammaticScroll.current = true;
-      scrollViewRef.current.scrollTo({ x: 10000 * 3, animated: true }); // Center position
+      const scrollPosition = (originalAdjustment + 10000) * 3;
+      scrollViewRef.current.scrollTo({ x: scrollPosition, animated: true });
       setTimeout(() => {
         isProgrammaticScroll.current = false;
       }, 500);
@@ -322,7 +325,9 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
               <View>
             {/* Adjustment Bubble with Edit Functionality */}
             <View className="items-center mb-6">
-              <ThemedText className="text-sm opacity-60 mb-3">Your Adjustment</ThemedText>
+              <ThemedText className="text-sm opacity-60 mb-3">
+                {adjustment === 0 ? 'Your Adjustment' : adjustment > 0 ? 'Your Discount' : 'Your Premium'}
+              </ThemedText>
               
               <TouchableOpacity 
                 onPress={() => {
@@ -468,8 +473,22 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
               </View>
             </View>
 
+            {/* Dynamic Explanation Text */}
+            <View className={`mx-4 mb-6 p-4 rounded-2xl ${
+              colorScheme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'
+            }`}>
+              <ThemedText className="text-sm opacity-80 leading-relaxed text-center">
+                {adjustment === 0 
+                  ? "You will not provide a premium or discount for tokens received for this cause."
+                  : adjustment > 0 
+                    ? `For every $10 a user pays in ${token.name}, you will provide a $${Math.min(Math.abs(adjustment), 2).toFixed(2)} discount.`
+                    : `For every $10 a user pays in ${token.name}, you will charge a $${Math.min(Math.abs(adjustment), 2).toFixed(2)} premium.`
+                }
+              </ThemedText>
+            </View>
+
             {/* Scrollable Scale Slider */}
-            <View className="mt-8">
+            <View className="mt-4">
               <View className="mb-6 px-4">
                 <View className="flex-row justify-between items-center mb-1">
                   <ThemedText className="text-xs font-medium opacity-60">Swipe to adjust</ThemedText>
@@ -671,13 +690,13 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
             <TouchableOpacity
               className={`flex-1 py-4 rounded-2xl items-center justify-center ${
                 colorScheme === 'dark' ? 'bg-gray-800' : 'bg-gray-200'
-              } ${adjustment === 0 ? 'opacity-50' : ''}`}
-              onPress={handleReset}
-              disabled={adjustment === 0}
+              } ${adjustment === originalAdjustment ? 'opacity-50' : ''}`}
+              onPress={handleUndo}
+              disabled={adjustment === originalAdjustment}
             >
               <Text className={`text-base font-semibold ${
                 colorScheme === 'dark' ? 'text-white' : 'text-black'
-              }`}>Reset</Text>
+              }`}>Undo</Text>
             </TouchableOpacity>
             <TouchableOpacity
               className="flex-1 py-4 rounded-2xl items-center justify-center bg-blue-500"

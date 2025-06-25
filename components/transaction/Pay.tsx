@@ -548,11 +548,11 @@ export default function Pay({ onSuccessStateChange }: PayProps) {
               <Rect x="0" y="0" width={width} height={height} fill="rgba(255, 255, 255, 0.5)" mask="url(#mask)" />
             </Svg>
             
-            {/* Text below scan area */}
+            {/* Text above scan area */}
             <View 
               className="absolute left-0 right-0 items-center"
               style={{ 
-                top: (height - width * 0.7) / 2 + width * 0.7 + 40, // Position below scan frame
+                top: (height - width * 0.7) / 2 - 140, // Position above scan frame
               }}
             >
               <ThemedText className="text-gray-800 text-xl font-semibold text-center">Scan Code to Pay</ThemedText>
@@ -571,7 +571,7 @@ export default function Pay({ onSuccessStateChange }: PayProps) {
             <View 
               className="absolute left-0 right-0 px-5" 
               style={{ 
-                top: (height - width * 0.7) / 2 - 140, // Position above scan frame
+                top: (height - width * 0.7) / 2 - 80, // Position above scan frame
               }}
             >
               <View style={{ height: 56 }}> {/* Fixed height container */}

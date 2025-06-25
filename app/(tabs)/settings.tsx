@@ -3,6 +3,7 @@ import { StyleSheet, View, Text, Switch, TouchableOpacity, ScrollView, Platform,
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'expo-router';
+import SeedPhraseWarningModal from '@/components/SeedPhraseWarningModal';
 
 // Define types for settings items
 type ToggleSettingItem = {
@@ -50,6 +51,7 @@ export default function SettingsScreen() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [biometricsEnabled, setBiometricsEnabled] = useState(hasPasskey);
   const [autoLockEnabled, setAutoLockEnabled] = useState(true);
+  const [showSeedPhraseModal, setShowSeedPhraseModal] = useState(false);
   
   const handleLogout = () => {
     Alert.alert(
@@ -73,11 +75,7 @@ export default function SettingsScreen() {
   };
   
   const handleViewSeedPhrase = () => {
-    Alert.alert(
-      'View Seed Phrase',
-      'Your seed phrase is: \n\n' + seedPhrase + '\n\nKeep this safe and never share it with anyone.',
-      [{ text: 'OK' }]
-    );
+    setShowSeedPhraseModal(true);
   };
   
   // Setting sections
@@ -190,6 +188,13 @@ export default function SettingsScreen() {
           </View>
         ))}
       </ScrollView>
+      
+      <SeedPhraseWarningModal
+        visible={showSeedPhraseModal}
+        onContinue={() => setShowSeedPhraseModal(false)}
+        mode="reveal"
+        seedPhrase={seedPhrase || ''}
+      />
     </ThemedView>
   );
 }

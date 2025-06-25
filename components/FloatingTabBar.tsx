@@ -135,20 +135,14 @@ const FloatingTabBar: React.FC<TabBarProps> = ({ state, descriptors, navigation 
                 activeOpacity={0.8}
               >
                 <LinearGradient
-                  colors={
-                    isFocused
-                      ? ['#F59E0B', '#FB923C'] // Orange gradient when selected
-                      : isDark
-                      ? ['#4B5563', '#374151'] // Dark mode unselected
-                      : ['#E5E7EB', '#D1D5DB'] // Light mode unselected
-                  }
+                  colors={['#F59E0B', '#FB923C']} // Always orange gradient
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={[
                     styles.centerButton,
                     {
-                      shadowColor: isFocused ? '#F59E0B' : '#000',
-                      shadowOpacity: isFocused ? 0.5 : 0.3,
+                      shadowColor: '#F59E0B',
+                      shadowOpacity: 0.4,
                     }
                   ]}
                 >

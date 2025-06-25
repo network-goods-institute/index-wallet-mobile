@@ -39,13 +39,7 @@ export default function HomeScreen() {
   };
 
   const handleCopy = async () => {
-    if (keyPair?.publicKey) {
-      await Clipboard.setStringAsync(keyPair.publicKey);
-      setShowCheckmark(true);
-      setTimeout(() => {
-        setShowCheckmark(false);
-      }, 1500);
-    }
+    // This is now handled internally by WalletIndex
   };
 
   // Handle pull-to-refresh
