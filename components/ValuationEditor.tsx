@@ -376,7 +376,7 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
             {/* Adjustment Bubble with Edit Functionality */}
             <View className="items-center mb-4">
               <ThemedText className="text-sm opacity-60 mb-3">
-                {adjustment === 0 ? 'Your Adjustment' : adjustment > 0 ? 'Your Discount' : 'Your Premium'}
+                {adjustment === 0 ? 'Your Adjustment' : adjustment > 0 ? 'Total Discount' : 'Total Premium'}
               </ThemedText>
               
               <TouchableOpacity 

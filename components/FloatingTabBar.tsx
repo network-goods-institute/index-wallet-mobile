@@ -78,7 +78,7 @@ const FloatingTabBar: React.FC<TabBarProps> = ({ state, descriptors, navigation 
 
   const getIcon = (routeName: string, isFocused: boolean, isTransact: boolean = false) => {
     const iconSize = isTransact ? 28 : 24;
-    const iconColor = isTransact 
+    const iconColor = isTransact && isFocused
       ? '#FFFFFF'
       : isFocused 
         ? (isDark ? '#FBBF24' : '#F59E0B') // Index Wallets yellow
@@ -134,31 +134,48 @@ const FloatingTabBar: React.FC<TabBarProps> = ({ state, descriptors, navigation 
                 onPress={() => handlePress(route, isFocused)}
                 activeOpacity={0.8}
               >
-                <LinearGradient
-                  colors={['#F59E0B', '#FB923C']} // Always orange gradient
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={[
-                    styles.centerButton,
-                    {
-                      shadowColor: '#F59E0B',
-                      shadowOpacity: 0.4,
-                    }
-                  ]}
-                >
-                  <Animated.View
-                    style={{
-                      transform: [{
-                        scale: animatedValues[index].interpolate({
-                          inputRange: [0, 1],
-                          outputRange: [0.9, 1],
-                        })
-                      }],
-                    }}
+                {isFocused ? (
+                  <LinearGradient
+                    colors={['#F59E0B', '#FB923C']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={[
+                      styles.centerButton,
+                      {
+                        shadowColor: '#F59E0B',
+                        shadowOpacity: 0.25,
+                      }
+                    ]}
                   >
-                    {getIcon(route.name, isFocused, true)}
-                  </Animated.View>
-                </LinearGradient>
+                    <Animated.View
+                      style={{
+                        transform: [{
+                          scale: animatedValues[index].interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [0.9, 1],
+                          })
+                        }],
+                      }}
+                    >
+                      {getIcon(route.name, isFocused, true)}
+                    </Animated.View>
+                  </LinearGradient>
+                ) : (
+                  <View
+                    style={[
+                      styles.centerButton,
+                      {
+                        backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
+                        borderWidth: 2,
+                        borderColor: '#F59E0B',
+                        shadowColor: '#F59E0B',
+                        shadowOpacity: 0.05,
+                      }
+                    ]}
+                  >
+                    <ArrowLeftRight size={28} color="#F59E0B" strokeWidth={2.5} />
+                  </View>
+                )}
               </TouchableOpacity>
             </Animated.View>
           );
