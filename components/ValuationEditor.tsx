@@ -26,6 +26,7 @@ import { ThemedText } from './ThemedText';
 import { GestureHandlerRootView, ScrollView as GHScrollView } from 'react-native-gesture-handler';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const IS_SMALL_DEVICE = SCREEN_HEIGHT < 700;
 
 interface Token {
   name: string;
@@ -292,7 +293,7 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
               </View>
             </TouchableOpacity>
             
-            <View className="items-center mb-6 pt-2">
+            <View className="items-center mb-4 pt-2">
               {token.iconUrl ? (
                 <Image 
                   source={{ uri: token.iconUrl }} 
@@ -316,7 +317,12 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
             </View>
           </View>
 
-          <View style={styles.content}>
+          <ScrollView 
+            style={styles.content}
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+            contentContainerStyle={{ paddingBottom: 20 }}
+          >
             <TouchableWithoutFeedback onPress={() => {
               if (isEditingValue) {
                 Keyboard.dismiss();
@@ -324,7 +330,7 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
             }}>
               <View>
             {/* Adjustment Bubble with Edit Functionality */}
-            <View className="items-center mb-6">
+            <View className="items-center mb-4">
               <ThemedText className="text-sm opacity-60 mb-3">
                 {adjustment === 0 ? 'Your Adjustment' : adjustment > 0 ? 'Your Discount' : 'Your Premium'}
               </ThemedText>
@@ -474,7 +480,7 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
             </View>
 
             {/* Dynamic Explanation Text */}
-            <View className={`mx-4 mb-6 p-4 rounded-2xl ${
+            <View className={`mx-4 mb-4 p-3 rounded-2xl ${
               colorScheme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'
             }`}>
               <ThemedText className="text-sm opacity-80 leading-relaxed text-center">
@@ -489,7 +495,7 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
 
             {/* Scrollable Scale Slider */}
             <View className="mt-4">
-              <View className="mb-6 px-4">
+              <View className="mb-4 px-4">
                 <View className="flex-row justify-between items-center mb-1">
                   <ThemedText className="text-xs font-medium opacity-60">Swipe to adjust</ThemedText>
                 </View>
@@ -499,8 +505,8 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
                 </View>
               </View>
 
-              {/* Scale Container - Increased height for better touch area */}
-              <View style={{ height: 120, position: 'relative', marginVertical: 10, marginBottom: 20 }}>
+              {/* Scale Container - Responsive height for better touch area */}
+              <View style={{ height: IS_SMALL_DEVICE ? 80 : 120, position: 'relative', marginVertical: IS_SMALL_DEVICE ? 5 : 10, marginBottom: IS_SMALL_DEVICE ? 10 : 20 }}>
                 
                 {/* Center Line Indicator - clean and minimal */}
                 <View 
@@ -534,7 +540,7 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
                 >
                   <View style={{ 
                     width: 60000, // 20000 values * 3 pixels each
-                    height: 120,
+                    height: IS_SMALL_DEVICE ? 80 : 120,
                     flexDirection: 'row',
                     alignItems: 'center',
                   }}>
@@ -578,12 +584,12 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
                               position: 'absolute',
                               left: (value + 10000) * 3, // Convert to pixel position
                               width: isZero ? 3 : (isMajor ? 3 : 1.5),
-                              height: isZero ? 60 : (isMajor ? 60 : 35),
+                              height: isZero ? (IS_SMALL_DEVICE ? 40 : 60) : (isMajor ? (IS_SMALL_DEVICE ? 40 : 60) : (IS_SMALL_DEVICE ? 25 : 35)),
                               backgroundColor: isZero 
                                 ? (colorScheme === 'dark' ? '#FFFFFF' : '#000000')
                                 : (value < 0 ? '#EAB308' : '#22C55E'), // Yellow for premium, Green for discount
                               opacity: isZero ? 0.4 : (isMajor ? 1 : 0.7),
-                              bottom: isZero ? 30 : (isMajor ? 30 : 42.5),
+                              bottom: isZero ? (IS_SMALL_DEVICE ? 20 : 30) : (isMajor ? (IS_SMALL_DEVICE ? 20 : 30) : (IS_SMALL_DEVICE ? 27.5 : 42.5)),
                               borderRadius: 1,
                             }}
                           />
@@ -592,10 +598,10 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
                               style={{
                                 position: 'absolute',
                                 left: (value + 10000) * 3 - 20,
-                                bottom: 10,
+                                bottom: IS_SMALL_DEVICE ? 5 : 10,
                                 width: 40,
                                 textAlign: 'center',
-                                fontSize: isZero ? 14 : 12,
+                                fontSize: IS_SMALL_DEVICE ? (isZero ? 12 : 10) : (isZero ? 14 : 12),
                                 color: isZero 
                                   ? (colorScheme === 'dark' ? '#FFFFFF' : '#000000')
                                   : (colorScheme === 'dark' ? '#D1D5DB' : '#4B5563'),
@@ -616,8 +622,8 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
                   style={{
                     position: 'absolute',
                     left: 0,
-                    top: 20,
-                    bottom: 20,
+                    top: IS_SMALL_DEVICE ? 15 : 20,
+                    bottom: IS_SMALL_DEVICE ? 15 : 20,
                     width: 40,
                     pointerEvents: 'none',
                     flexDirection: 'row',
@@ -649,8 +655,8 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
                   style={{
                     position: 'absolute',
                     right: 0,
-                    top: 20,
-                    bottom: 20,
+                    top: IS_SMALL_DEVICE ? 15 : 20,
+                    bottom: IS_SMALL_DEVICE ? 15 : 20,
                     width: 40,
                     pointerEvents: 'none',
                     flexDirection: 'row',
@@ -683,10 +689,10 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
 
               </View>
             </TouchableWithoutFeedback>
-          </View>
+          </ScrollView>
 
           {/* Action buttons with spacing */}
-          <View className="flex-row px-5 pt-5 pb-2 gap-4">
+          <View className="flex-row px-5 pt-3 pb-2 gap-4">
             <TouchableOpacity
               className={`flex-1 py-4 rounded-2xl items-center justify-center ${
                 colorScheme === 'dark' ? 'bg-gray-800' : 'bg-gray-200'
@@ -732,7 +738,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingBottom: Platform.OS === 'ios' ? 34 : 24,
-    maxHeight: SCREEN_HEIGHT * 0.85,
+    maxHeight: IS_SMALL_DEVICE ? SCREEN_HEIGHT * 0.95 : SCREEN_HEIGHT * 0.85,
     overflow: 'hidden',
   },
   handleContainer: {
@@ -746,6 +752,7 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 20,
+    flex: 1,
   },
   valueSection: {
     marginBottom: 24,
