@@ -25,13 +25,13 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.networkgoods.indexwallets",
-      "buildNumber": "5",
+      "buildNumber": "6",
       "jsEngine": "hermes",
       "config": {
         "usesNonExemptEncryption": false
       },
       "infoPlist": {
-        "NSCameraUsageDescription": "IndexWallets needs camera access to scan QR codes for payments",
+        "NSCameraUsageDescription": "Index Wallets needs camera access to scan QR codes for payments",
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": false,
           "NSAllowsLocalNetworking": true,

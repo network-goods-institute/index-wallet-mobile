@@ -167,7 +167,22 @@ export default function TransactionHistory({ limit = 10, showTitle = true }: Tra
       ? (transaction.direction === 'Received' ? 'Requested from' : 'Paying to')
       : (transaction.direction === 'Received' ? 'From' : 'To');
     
-    return `${prefix} ${transaction.vendor_name || `${transaction.counterparty_address.slice(0, 8)}...`}`;
+    // Determine the counterparty name based on transaction direction
+    let counterpartyName: string;
+    
+    if (transaction.direction === 'Received') {
+      // For received transactions, prioritize counterparty username over vendor name
+      counterpartyName = transaction.counterparty_username || 
+                        transaction.vendor_name || 
+                        `${transaction.counterparty_address.slice(0, 8)}...`;
+    } else {
+      // For sent transactions, prioritize vendor name, then username
+      counterpartyName = transaction.vendor_name || 
+                        transaction.counterparty_username || 
+                        `${transaction.counterparty_address.slice(0, 8)}...`;
+    }
+    
+    return `${prefix} ${counterpartyName}`;
   };
   
   const getActivityPrimaryAmount = (activity: Activity) => {
@@ -526,7 +541,18 @@ export default function TransactionHistory({ limit = 10, showTitle = true }: Tra
                           })()}
                         </ThemedText>
                         <ThemedText className="text-sm">
-                          {(selectedActivity as TransactionActivity).vendor_name || (selectedActivity as TransactionActivity).counterparty_address}
+                          {(() => {
+                            const transaction = selectedActivity as TransactionActivity;
+                            if (transaction.direction === 'Received') {
+                              return transaction.counterparty_username || 
+                                     transaction.vendor_name || 
+                                     transaction.counterparty_address;
+                            } else {
+                              return transaction.vendor_name || 
+                                     transaction.counterparty_username || 
+                                     transaction.counterparty_address;
+                            }
+                          })()}
                         </ThemedText>
                       </View>
                       
