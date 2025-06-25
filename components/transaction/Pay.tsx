@@ -433,9 +433,10 @@ export default function Pay({ onSuccessStateChange }: PayProps) {
 
   // Handle barcode scan
   const handleBarCodeScanned = ({ type, data }: BarcodeScanningResult) => {
-    if (scanned || processing || isLoading || showModal) return;
+    if (scanned || processing || isLoading || showModal || activePayment) return;
     
     setScanned(true);
+    setProcessing(true); // Set processing immediately to prevent multiple scans
     // console.log(`QR code scanned with type ${type} and data ${data}`);
     
     // Process the payment code
@@ -515,7 +516,7 @@ export default function Pay({ onSuccessStateChange }: PayProps) {
           <CameraView
             style={StyleSheet.absoluteFillObject}
             facing="back"
-            onBarcodeScanned={scanned || showModal ? undefined : handleBarCodeScanned}
+            onBarcodeScanned={scanned || processing || isLoading || showModal || activePayment ? undefined : handleBarCodeScanned}
             barcodeScannerSettings={{
               barcodeTypes: ["qr", "pdf417"],
             }}
