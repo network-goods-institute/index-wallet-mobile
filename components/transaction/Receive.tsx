@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import QRCode from 'react-native-qrcode-svg';
 import { QrCode, Copy, Check, ArrowLeft, History, Clock, X } from 'lucide-react-native';
 import TransactionSuccess from '@/components/transaction/TransactionSuccess';
+import * as Clipboard from 'expo-clipboard';
 
 interface ReceiveProps {
   onSuccessStateChange?: (isSuccess: boolean) => void;
@@ -129,9 +130,12 @@ export default function Receive({ onSuccessStateChange }: ReceiveProps) {
     }
   };
 
-  const handleCopyId = () => {
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopyId = async () => {
+    if (paymentId) {
+      await Clipboard.setStringAsync(paymentId);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   const resetForm = () => {

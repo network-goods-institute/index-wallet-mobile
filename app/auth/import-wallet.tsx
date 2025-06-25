@@ -39,19 +39,40 @@ export default function ImportWalletScreen(): JSX.Element {
     setError(null);
     try {
       const clipboardContent = await Clipboard.getStringAsync();
-      const words = clipboardContent.trim().split(/\s+/);
+      const pastedWords = clipboardContent.trim().split(/\s+/).filter(word => word.length > 0);
+      let newWords: string[] = [];
       
-      // Always handle as multi-word paste
-      const newWords = [...seedWords];
-      words.forEach((word, i) => {
-        if (i < 12) {
-          newWords[i] = word.toLowerCase().trim();
+      console.log('Pasted words:', pastedWords);
+      console.log('Current seed words:', seedWords);
+      console.log('Pasted words length:', pastedWords.length);
+      
+      // Check if pasted content is exactly 12 words (full seed phrase)
+      if (pastedWords.length === 12) {
+        // Smart paste: only fill empty slots with the corresponding word from the pasted phrase
+        newWords = [...seedWords];
+        
+        for (let i = 0; i < 12; i++) {
+          // If current slot is empty, use the word from the same position in the pasted phrase
+          if (!newWords[i] || newWords[i].trim() === '') {
+            newWords[i] = pastedWords[i].toLowerCase().trim();
+          }
         }
-      });
-      setSeedWords(newWords);
+        console.log('Smart paste result:', newWords);
+        setSeedWords(newWords);
+      } else {
+        // Not a full seed phrase, just paste normally (overwrite from beginning)
+        newWords = [...seedWords];
+        pastedWords.forEach((word, i) => {
+          if (i < 12) {
+            newWords[i] = word.toLowerCase().trim();
+          }
+        });
+        console.log('Normal paste result:', newWords);
+        setSeedWords(newWords);
+      }
       
       // Focus the next empty cell if any
-      const nextEmptyIndex = newWords.findIndex((word, idx) => idx > words.length - 1 && !word);
+      const nextEmptyIndex = newWords.findIndex((word: string) => !word || word.trim() === '');
       if (nextEmptyIndex !== -1) {
         inputRefs.current[nextEmptyIndex]?.focus();
       }
@@ -68,20 +89,26 @@ export default function ImportWalletScreen(): JSX.Element {
   };
 
   const handleImport = async () => {
-    // Immediate validation check to prevent unnecessary loading state
+    // Set loading state immediately for instant feedback
+    setIsValidating(true);
+    setError(null);
+    
+    // Small delay to ensure UI updates
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
+    // Now do validation
     if (seedWords.some(word => !word)) {
       setError('Please enter all 12 words of your seed phrase');
+      setIsValidating(false);
       return;
     }
-    
-    setError(null);
-    setIsValidating(true);
     
     try {
       const completeSeedPhrase = seedWords.join(' ');
       
       if (!validateSeedPhrase(completeSeedPhrase)) {
         setError('Invalid seed phrase format. Please check and try again.');
+        setIsValidating(false);
         return;
       }
       
@@ -121,13 +148,9 @@ export default function ImportWalletScreen(): JSX.Element {
           keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         >
           <View className="px-6 pt-6">
-            <TouchableOpacity onPress={() => setOnboardingStep('welcome')} className="mb-16">
+            <TouchableOpacity onPress={() => setOnboardingStep('welcome')} className="mb-6">
               <ArrowLeft size={32} color={colorScheme === 'dark' ? '#FFFFFF' : '#000000'} />
             </TouchableOpacity>
-
-            <Text className="text-5xl font-bold text-black dark:text-white leading-tight mb-8">
-              Enter your{'\n'}seed phrase
-            </Text>
           </View>
 
           <ScrollView 
@@ -137,6 +160,10 @@ export default function ImportWalletScreen(): JSX.Element {
             showsVerticalScrollIndicator={false}
             onScrollBeginDrag={() => Keyboard.dismiss()}
           >
+            <Text className="text-5xl font-bold text-black dark:text-white leading-tight mb-8">
+              Enter your{'\n'}seed phrase
+            </Text>
+            
             <View className="flex-row flex-wrap justify-between mb-4">
               {seedWords.map((word, index) => (
                 <View key={index} className="w-[30%] bg-gray-100 dark:bg-gray-800 rounded-xl p-3 pb-4 mb-4 relative" style={{ minHeight: 72 }}>
@@ -144,7 +171,9 @@ export default function ImportWalletScreen(): JSX.Element {
                     {(index + 1).toString().padStart(2, '0')}
                   </Text>
                   <TextInput
-                    ref={ref => inputRefs.current[index] = ref}
+                    ref={ref => {
+                      inputRefs.current[index] = ref;
+                    }}
                     className="text-gray-900 dark:text-white text-base font-medium text-center mt-4 bg-transparent"
                     value={word}
                     onChangeText={(text) => handleWordChange(text, index)}

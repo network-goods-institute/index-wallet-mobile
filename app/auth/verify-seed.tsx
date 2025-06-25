@@ -60,9 +60,24 @@ export default function VerifySeedScreen() {
       const clipboardContent = await Clipboard.getStringAsync();
       const words = clipboardContent.trim().split(/\s+/);
       
-      // If user pastes multiple words
-      if (words.length > 1) {
-        // If pasting into a specific box, start from that index in missing indices
+      // Check if this is a full seed phrase (12 words)
+      if (words.length === 12) {
+        // Extract only the words at the missing indices
+        const newInputs = { ...verificationInputs };
+        missingIndices.forEach((missingIdx) => {
+          // Use the word from the pasted phrase at the same position
+          newInputs[missingIdx] = words[missingIdx].toLowerCase().trim();
+        });
+        setVerificationInputs(newInputs);
+        setError(null);
+        
+        // Focus the first empty input after paste
+        const firstEmptyIdx = missingIndices.find(idx => !newInputs[idx]);
+        if (firstEmptyIdx !== undefined) {
+          inputRefs.current[firstEmptyIdx]?.focus();
+        }
+      } else if (words.length > 1) {
+        // Multiple words but not a full seed - paste sequentially into missing slots
         const startIdx = index >= 0 ? missingIndices.indexOf(index) : 0;
         if (startIdx >= 0) {
           const newInputs = { ...verificationInputs };
@@ -76,7 +91,9 @@ export default function VerifySeedScreen() {
         }
       } else {
         // Single word paste
-        handleInputChange(index, clipboardContent);
+        if (index >= 0) {
+          handleInputChange(index, clipboardContent);
+        }
       }
     } catch (error) {
       console.error('Failed to paste from clipboard:', error);
@@ -163,12 +180,13 @@ export default function VerifySeedScreen() {
                 });
               }, 300);
             }}
-            style={{ outline: 'none', minHeight: 28, paddingVertical: 4 }}
+            style={{ outline: 'none' }}
           />
           {verificationInputs[index] && (
             <TouchableOpacity
               onPress={() => handleClearInput(index)}
-              className="absolute top-2 right-2"
+              className="absolute -top-1 -right-1 bg-gray-200 dark:bg-gray-700 rounded-full p-0.5"
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
               <X size={12} color={colorScheme === 'dark' ? '#4B5563' : '#9CA3AF'} />
             </TouchableOpacity>
@@ -200,13 +218,9 @@ export default function VerifySeedScreen() {
           keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         >
           <View className="px-6 pt-6">
-            <TouchableOpacity onPress={() => setOnboardingStep('create-seed')} className="mb-16">
+            <TouchableOpacity onPress={() => setOnboardingStep('create-seed')} className="mb-6">
               <ArrowLeft size={32} color={colorScheme === 'dark' ? '#FFFFFF' : '#000000'} />
             </TouchableOpacity>
-
-            <Text className="text-5xl font-bold text-black dark:text-white leading-tight mb-8">
-              Fill in the blanks{'\n'}to verify
-            </Text>
           </View>
 
           <ScrollView 
@@ -216,6 +230,10 @@ export default function VerifySeedScreen() {
             showsVerticalScrollIndicator={false}
             onScrollBeginDrag={() => Keyboard.dismiss()}
           >
+            <Text className="text-5xl font-bold text-black dark:text-white leading-tight mb-8">
+              Fill in the blanks{'\n'}to verify
+            </Text>
+            
             <View className="flex-row flex-wrap justify-between mb-4">
               {words.map((word, index) => renderWord(word, index))}
             </View>

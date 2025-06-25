@@ -35,16 +35,16 @@ export default function CreateWalletScreen() {
     <ThemedView className="flex-1">
       <SafeAreaView className="flex-1">
         <View className="px-6 pt-6">
-          <TouchableOpacity onPress={() => setOnboardingStep('user-type')} className="mb-16">
+          <TouchableOpacity onPress={() => setOnboardingStep('user-type')} className="mb-6">
             <ArrowLeft size={32} color={colorScheme === 'dark' ? '#FFFFFF' : '#000000'} />
           </TouchableOpacity>
-
-          <Text className="text-5xl font-bold text-black dark:text-white leading-tight mb-4">
-            This is your{'\n'}password:
-          </Text>
         </View>
 
         <ScrollView className="flex-1 px-6" showsVerticalScrollIndicator={false}>
+          <Text className="text-5xl font-bold text-black dark:text-white leading-tight mb-8">
+            This is your{'\n'}password:
+          </Text>
+          
           {seedPhrase ? (
             <>
               <View className="flex-row flex-wrap justify-between mb-8">
