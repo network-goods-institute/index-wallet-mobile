@@ -138,52 +138,71 @@ export default function SettingsScreen() {
             </Text>
             
             <View className="mx-4 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800">
-              {section.items.map((item, itemIndex) => (
-                <View 
-                  key={`item-${sectionIndex}-${itemIndex}`} 
-                  className={`flex-row items-center justify-between py-4 px-4 ${itemIndex < section.items.length - 1 ? 'border-b border-gray-200 dark:border-gray-700' : ''}`}
-                >
-                  <View className="flex-row items-center flex-1">
-                    <IconSymbol 
-                      name={item.type === 'toggle' && (item as ToggleSettingItem).value && (item as ToggleSettingItem).iconDark 
-                        ? (item as ToggleSettingItem).iconDark! 
-                        : item.icon} 
-                      size={24} 
-                      color={isDarkMode ? '#60A5FA' : '#2563EB'} 
-                    />
-                    <View className="ml-4 flex-1">
-                      <Text className="text-base font-medium text-black dark:text-white">
-                        {item.title}
-                      </Text>
-                      {item.description && (
-                        <Text className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                          {item.description}
+              {section.items.map((item, itemIndex) => {
+                const content = (
+                  <>
+                    <View className="flex-row items-center flex-1">
+                      <IconSymbol 
+                        name={item.type === 'toggle' && (item as ToggleSettingItem).value && (item as ToggleSettingItem).iconDark 
+                          ? (item as ToggleSettingItem).iconDark! 
+                          : item.icon} 
+                        size={24} 
+                        color={isDarkMode ? '#60A5FA' : '#2563EB'} 
+                      />
+                      <View className="ml-4 flex-1">
+                        <Text className="text-base font-medium text-black dark:text-white">
+                          {item.title}
                         </Text>
-                      )}
+                        {item.description && (
+                          <Text className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                            {item.description}
+                          </Text>
+                        )}
+                      </View>
                     </View>
-                  </View>
-                  
-                  {item.type === 'toggle' && (
-                    <Switch
-                      value={(item as ToggleSettingItem).value}
-                      onValueChange={(item as ToggleSettingItem).onValueChange}
-                      trackColor={{ false: '#767577', true: isDarkMode ? '#60A5FA' : '#2563EB' }}
-                      thumbColor={Platform.OS === 'ios' ? undefined : (item as ToggleSettingItem).value ? '#fff' : '#f4f3f4'}
-                      ios_backgroundColor="#3e3e3e"
-                    />
-                  )}
-                  
-                  {item.type === 'link' && (
-                    <TouchableOpacity onPress={(item as LinkSettingItem).onPress}>
+                    
+                    {item.type === 'toggle' && (
+                      <Switch
+                        value={(item as ToggleSettingItem).value}
+                        onValueChange={(item as ToggleSettingItem).onValueChange}
+                        trackColor={{ false: '#767577', true: isDarkMode ? '#60A5FA' : '#2563EB' }}
+                        thumbColor={Platform.OS === 'ios' ? undefined : (item as ToggleSettingItem).value ? '#fff' : '#f4f3f4'}
+                        ios_backgroundColor="#3e3e3e"
+                      />
+                    )}
+                    
+                    {item.type === 'link' && (
                       <IconSymbol 
                         name="chevron.right" 
                         size={20} 
                         color={isDarkMode ? '#9CA3AF' : '#6B7280'} 
                       />
+                    )}
+                  </>
+                );
+
+                if (item.type === 'link') {
+                  return (
+                    <TouchableOpacity
+                      key={`item-${sectionIndex}-${itemIndex}`}
+                      onPress={(item as LinkSettingItem).onPress}
+                      className={`flex-row items-center justify-between py-4 px-4 ${itemIndex < section.items.length - 1 ? 'border-b border-gray-200 dark:border-gray-700' : ''}`}
+                      activeOpacity={0.7}
+                    >
+                      {content}
                     </TouchableOpacity>
-                  )}
-                </View>
-              ))}
+                  );
+                }
+
+                return (
+                  <View 
+                    key={`item-${sectionIndex}-${itemIndex}`} 
+                    className={`flex-row items-center justify-between py-4 px-4 ${itemIndex < section.items.length - 1 ? 'border-b border-gray-200 dark:border-gray-700' : ''}`}
+                  >
+                    {content}
+                  </View>
+                );
+              })}
             </View>
           </View>
         ))}

@@ -263,6 +263,8 @@ function TotalValueDisplay({ totalValue }: { totalValue: number }) {
         {Intl.NumberFormat('en-US', {
           style: 'currency',
           currency: 'USD',
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
         }).format(totalValue)}
       </Text>
     </View>
@@ -655,6 +657,7 @@ function TokenRow({ token }: { token: Token }) {
           {Intl.NumberFormat('en-US', {
             style: 'currency',
             currency: 'USD',
+            minimumFractionDigits: 2,
             maximumFractionDigits: 2,
           }).format(token.value)}
         </Text>

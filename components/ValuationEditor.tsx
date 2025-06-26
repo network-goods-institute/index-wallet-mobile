@@ -531,8 +531,8 @@ export default function ValuationEditor({ visible, token, onClose, onSave }: Val
                 {adjustment === 0 
                   ? "You will not provide a premium or discount for tokens received for this cause."
                   : adjustment > 0 
-                    ? `For every $10 a user pays in ${token.name}, you will provide a $${Math.min(Math.abs(adjustment), 2).toFixed(2)} discount.`
-                    : `For every $10 a user pays in ${token.name}, you will charge a $${Math.min(Math.abs(adjustment), 2).toFixed(2)} premium.`
+                    ? `For every $10 a user pays in ${token.symbol}, you will provide a $${Math.min(Math.abs(adjustment), 2).toFixed(2)} discount.`
+                    : `For every $10 a user pays in ${token.symbol}, you will charge a $${Math.min(Math.abs(adjustment), 2).toFixed(2)} premium.`
                 }
               </ThemedText>
             </View>

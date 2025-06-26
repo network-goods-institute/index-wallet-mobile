@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, SafeAreaView, Modal, ScrollView } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Shield, Key, AlertTriangle, Copy, CheckCircle } from 'lucide-react-native';
+import { Shield, Key, AlertTriangle, Copy, CheckCircle, X } from 'lucide-react-native';
 
 interface SeedPhraseWarningModalProps {
   visible: boolean;
@@ -50,9 +50,15 @@ export default function SeedPhraseWarningModal({ visible, onContinue, mode = 'wa
         <TouchableOpacity 
           className="flex-1 justify-center items-center px-6"
           activeOpacity={1}
+          onPress={() => {
+            if (mode === 'reveal' && !showSeedPhrase) {
+              handleClose();
+            }
+          }}
         >
-          <View
-            className={`w-full max-w-sm p-8 rounded-3xl ${colorScheme === 'dark' ? 'bg-gray-800' : 'bg-white'}`}
+          <TouchableOpacity
+            activeOpacity={1}
+            className={`w-full max-w-sm rounded-3xl ${colorScheme === 'dark' ? 'bg-gray-800' : 'bg-white'} relative`}
             style={{
               shadowColor: '#000',
               shadowOffset: { width: 0, height: 2 },
@@ -62,6 +68,17 @@ export default function SeedPhraseWarningModal({ visible, onContinue, mode = 'wa
               maxHeight: '90%',
             }}
           >
+            {/* Close button for reveal warning */}
+            {mode === 'reveal' && !showSeedPhrase && (
+              <TouchableOpacity
+                onPress={handleClose}
+                className="absolute top-4 right-4 z-10 p-2"
+              >
+                <X size={24} color={colorScheme === 'dark' ? '#9CA3AF' : '#6B7280'} />
+              </TouchableOpacity>
+            )}
+            
+            <View className="p-8">
             <View className={`w-20 h-20 rounded-full items-center justify-center mx-auto mb-6 ${
               mode === 'reveal' && !showSeedPhrase
                 ? colorScheme === 'dark' ? 'bg-red-900/30' : 'bg-red-100'
@@ -202,7 +219,8 @@ export default function SeedPhraseWarningModal({ visible, onContinue, mode = 'wa
                 {mode === 'reveal' && !showSeedPhrase ? 'Reveal' : mode === 'reveal' && showSeedPhrase ? 'Close' : 'I Understand'}
               </Text>
             </TouchableOpacity>
-          </View>
+            </View>
+          </TouchableOpacity>
         </TouchableOpacity>
       </SafeAreaView>
     </Modal>

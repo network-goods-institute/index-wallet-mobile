@@ -212,6 +212,12 @@ export default function Receive({ onSuccessStateChange }: ReceiveProps) {
                   className="text-5xl font-bold text-center flex-1 text-black dark:text-white"
                   value={amount}
                   onChangeText={setAmount}
+                  onBlur={() => {
+                    // Format to 2 decimal places when user finishes typing
+                    if (amount && !isNaN(parseFloat(amount))) {
+                      setAmount(parseFloat(amount).toFixed(2));
+                    }
+                  }}
                   keyboardType="decimal-pad"
                   placeholder="0.00"
                   placeholderTextColor={colorScheme === 'dark' ? '#6B7280' : '#9CA3AF'}
@@ -310,7 +316,7 @@ export default function Receive({ onSuccessStateChange }: ReceiveProps) {
                       <View className="mb-6">
                         <ThemedText className="text-center text-sm opacity-60 mb-1">Amount to receive</ThemedText>
                         <ThemedText className="text-4xl font-bold text-center" style={{ fontFamily: 'System' }}>
-                          ${amount}
+                          ${parseFloat(amount || '0').toFixed(2)}
                         </ThemedText>
                       </View>
 
@@ -451,13 +457,13 @@ export default function Receive({ onSuccessStateChange }: ReceiveProps) {
                         }`}
                         onPress={() => {
                           setPaymentId(transaction.payment_id);
-                          setAmount(transaction.price_usd.toString());
+                          setAmount(transaction.price_usd.toFixed(2));
                           setQrVisible(true);
                           setShowHistoryModal(false);
                         }}
                       >
                         <View className="flex-1">
-                          <ThemedText className="text-lg font-semibold">${transaction.price_usd}</ThemedText>
+                          <ThemedText className="text-lg font-semibold">${parseFloat(transaction.price_usd).toFixed(2)}</ThemedText>
                           <ThemedText className="text-sm opacity-60">{ageText} • {statusText}</ThemedText>
                         </View>
                         <View className={`${statusColor} w-3 h-3 rounded-full`} />
@@ -494,7 +500,7 @@ export default function Receive({ onSuccessStateChange }: ReceiveProps) {
                         className="p-4 bg-gray-100 dark:bg-gray-800 rounded-xl mb-2 flex-row items-center justify-between opacity-75"
                       >
                         <View className="flex-1">
-                          <ThemedText className="text-lg font-semibold">${transaction.price_usd}</ThemedText>
+                          <ThemedText className="text-lg font-semibold">${parseFloat(transaction.price_usd).toFixed(2)}</ThemedText>
                           <ThemedText className="text-sm opacity-60">{ageText}</ThemedText>
                           {transaction.customer_address && (
                             <ThemedText className="text-xs opacity-50 mt-1">
