@@ -107,11 +107,105 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Add a custom setter for wallet address
   const updateWalletAddress = useCallback((address: string | null) => {
     // console.log('AUTH - Setting wallet address:', address);
-    // console.log('AUTH - Previous wallet address:', walletAddress);
-    // console.log('AUTH - Call stack:', new Error().stack);
     setWalletAddress(address);
-  }, [walletAddress]);
+  }, []);
+  
+  // Helper to save critical data atomically
+  const saveUserData = async (data: { userName?: string | null, walletAddress?: string | null }) => {
+    console.log('SAVE USER DATA: Saving atomically:', data);
+    const promises = [];
+    
+    if (data.userName) {
+      promises.push(AsyncStorage.setItem(USER_NAME_KEY, data.userName));
+      promises.push(SecureStore.setItemAsync(USER_NAME_KEY, data.userName).catch(e => 
+        console.warn('Failed to save username to SecureStore:', e)
+      ));
+    }
+    
+    if (data.walletAddress) {
+      promises.push(AsyncStorage.setItem(WALLET_ADDRESS_KEY, data.walletAddress));
+      promises.push(SecureStore.setItemAsync(WALLET_ADDRESS_KEY, data.walletAddress).catch(e => 
+        console.warn('Failed to save wallet address to SecureStore:', e)
+      ));
+    }
+    
+    try {
+      await Promise.all(promises);
+      console.log('SAVE USER DATA: Successfully saved all data');
+    } catch (error) {
+      console.error('SAVE USER DATA: Error saving user data:', error);
+      throw error;
+    }
+  };
 
+  // Add recovery mechanism for missing data
+  const recoverMissingData = async () => {
+    try {
+      // If we're authenticated but missing username or wallet address, try to recover
+      if (status === 'authenticated' && (!userName || !walletAddress)) {
+        console.log('AUTH RECOVERY: Detected missing data, attempting recovery...');
+        console.log('AUTH RECOVERY: userName:', userName, 'walletAddress:', walletAddress);
+        
+        // Try to get from AsyncStorage first
+        if (!userName) {
+          const storedUserName = await AsyncStorage.getItem(USER_NAME_KEY);
+          if (storedUserName) {
+            console.log('AUTH RECOVERY: Recovered username from storage:', storedUserName);
+            setUserName(storedUserName);
+          }
+        }
+        
+        if (!walletAddress) {
+          const storedWalletAddress = await AsyncStorage.getItem(WALLET_ADDRESS_KEY);
+          if (storedWalletAddress) {
+            console.log('AUTH RECOVERY: Recovered wallet address from storage:', storedWalletAddress);
+            updateWalletAddress(storedWalletAddress);
+          } else if (keyPair?.publicKey) {
+            // Use public key as fallback
+            console.log('AUTH RECOVERY: Using public key as wallet address:', keyPair.publicKey);
+            updateWalletAddress(keyPair.publicKey);
+            await AsyncStorage.setItem(WALLET_ADDRESS_KEY, keyPair.publicKey);
+          }
+        }
+        
+        // If we have a seed phrase but still missing data, try to fetch from backend
+        if (seedPhrase && (!userName || !walletAddress)) {
+          try {
+            const wallet = await validateAndFetchWallet(seedPhrase);
+            if (wallet) {
+              if (!userName && wallet.username) {
+                console.log('AUTH RECOVERY: Recovered username from backend:', wallet.username);
+                setUserName(wallet.username);
+                await AsyncStorage.setItem(USER_NAME_KEY, wallet.username);
+              }
+              if (!walletAddress && wallet.wallet_address) {
+                console.log('AUTH RECOVERY: Recovered wallet address from backend:', wallet.wallet_address);
+                updateWalletAddress(wallet.wallet_address);
+                await AsyncStorage.setItem(WALLET_ADDRESS_KEY, wallet.wallet_address);
+              }
+            }
+          } catch (e) {
+            console.error('AUTH RECOVERY: Failed to fetch from backend:', e);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('AUTH RECOVERY: Error during recovery:', error);
+    }
+  };
+  
+  // Run recovery mechanism when status or key data changes
+  useEffect(() => {
+    if (status === 'authenticated') {
+      // Add a small delay to ensure all state is set
+      const timer = setTimeout(() => {
+        console.log('AUTH: Running recovery check...');
+        recoverMissingData();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [status, userName, walletAddress, seedPhrase, keyPair]);
+  
   // Initialize auth state
   useEffect(() => {
     const detectPlatform = async () => {
@@ -137,26 +231,96 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
     
     const initializeAuth = async () => {
+      console.log('AUTH INIT: Starting initialization...');
+      
+      // Debug: List all AsyncStorage keys
+      try {
+        const allKeys = await AsyncStorage.getAllKeys();
+        console.log('AUTH INIT: All AsyncStorage keys:', allKeys);
+        
+        // Get values for auth-related keys
+        const authKeys = allKeys.filter(key => 
+          key.includes('auth') || 
+          key.includes('user') || 
+          key.includes('wallet') ||
+          key.includes('seed') ||
+          key.includes('key')
+        );
+        
+        for (const key of authKeys) {
+          const value = await AsyncStorage.getItem(key);
+          console.log(`AUTH INIT: ${key} =`, value ? `${value.substring(0, 20)}...` : 'null');
+        }
+      } catch (debugError) {
+        console.error('AUTH INIT: Error during debug logging:', debugError);
+      }
+      
       try {
         // Detect platform first
         await detectPlatform();
         
         // Check if user has completed onboarding
+        console.log('AUTH INIT: Loading from AsyncStorage...');
         const storedStatus = await AsyncStorage.getItem(AUTH_STATUS_KEY);
+        console.log('AUTH INIT: Stored status:', storedStatus);
+        
         const storedHasPasskey = await AsyncStorage.getItem(HAS_PASSKEY_KEY);
         const storedICloudBackup = await AsyncStorage.getItem(ICLOUD_BACKUP_ENABLED_KEY);
         const storedBackupStatus = await AsyncStorage.getItem(BACKUP_STATUS_KEY) as BackupStatus || 'none';
         const storedUserType = await AsyncStorage.getItem(USER_TYPE_KEY) as UserType;
-        const storedUserName = await AsyncStorage.getItem(USER_NAME_KEY);
+        let storedUserName = await AsyncStorage.getItem(USER_NAME_KEY);
+        
+        // If not in AsyncStorage, try SecureStore
+        if (!storedUserName) {
+          try {
+            storedUserName = await SecureStore.getItemAsync(USER_NAME_KEY);
+            if (storedUserName) {
+              console.log('AUTH INIT: Recovered username from SecureStore:', storedUserName);
+              // Restore to AsyncStorage
+              await AsyncStorage.setItem(USER_NAME_KEY, storedUserName);
+            }
+          } catch (e) {
+            console.log('AUTH INIT: No username in SecureStore either');
+          }
+        }
+        console.log('AUTH INIT: Final username from storage:', storedUserName);
         
         // Check if biometrics are available on the device
         const biometricsCheck = await LocalAuthentication.hasHardwareAsync();
         setBiometricsAvailable(biometricsCheck);
         
         if (storedStatus === 'authenticated') {
-          // Load wallet info
-          const walletAddress = await AsyncStorage.getItem(WALLET_ADDRESS_KEY);
-          const publicKey = await AsyncStorage.getItem(PUBLIC_KEY_KEY);
+          // Load wallet info with error handling for each item
+          let walletAddress = null;
+          let publicKey = null;
+          
+          try {
+            walletAddress = await AsyncStorage.getItem(WALLET_ADDRESS_KEY);
+            console.log('AUTH INIT: Loaded wallet address from AsyncStorage:', walletAddress);
+            
+            // If not in AsyncStorage, try SecureStore
+            if (!walletAddress) {
+              try {
+                walletAddress = await SecureStore.getItemAsync(WALLET_ADDRESS_KEY);
+                if (walletAddress) {
+                  console.log('AUTH INIT: Recovered wallet address from SecureStore:', walletAddress);
+                  // Restore to AsyncStorage
+                  await AsyncStorage.setItem(WALLET_ADDRESS_KEY, walletAddress);
+                }
+              } catch (secureError) {
+                console.log('AUTH INIT: No wallet address in SecureStore either');
+              }
+            }
+          } catch (e) {
+            console.error('AUTH INIT: Failed to load wallet address:', e);
+          }
+          
+          try {
+            publicKey = await AsyncStorage.getItem(PUBLIC_KEY_KEY);
+            console.log('AUTH INIT: Loaded public key from storage:', publicKey ? 'exists' : 'null');
+          } catch (e) {
+            console.error('AUTH INIT: Failed to load public key:', e);
+          }
           
           // Load seed phrase and private key from secure storage or AsyncStorage
           let seedPhraseValue = null;
@@ -244,29 +408,71 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             console.warn('- privateKey exists:', !!privateKey);
           }
           
-          // Load user info
-          const userDataStr = await AsyncStorage.getItem(USER_DATA_KEY);
-          const userData = userDataStr ? JSON.parse(userDataStr) : null;
-          const valuationsStr = await AsyncStorage.getItem(VALUATIONS_KEY);
-          const valuations = valuationsStr ? JSON.parse(valuationsStr) : null;
+          // Load user info with error handling
+          let userData = null;
+          let valuations = null;
           
-          // Set state
-          setStatus('authenticated');
+          try {
+            const userDataStr = await AsyncStorage.getItem(USER_DATA_KEY);
+            userData = userDataStr ? JSON.parse(userDataStr) : null;
+          } catch (e) {
+            console.error('Failed to load user data:', e);
+          }
+          
+          try {
+            const valuationsStr = await AsyncStorage.getItem(VALUATIONS_KEY);
+            valuations = valuationsStr ? JSON.parse(valuationsStr) : null;
+          } catch (e) {
+            console.error('Failed to load valuations:', e);
+          }
+          
+          // Set state - IMPORTANT: Set all data BEFORE setting authenticated status
+          console.log('AUTH INIT: Setting all state data...');
+          
+          // Set all the data first
           setHasPasskey(storedHasPasskey === 'true');
           setICloudBackupEnabled(storedICloudBackup === 'true');
           setBackupStatus(storedBackupStatus);
           if (storedUserType) setUserType(storedUserType);
-          if (storedUserName) setUserName(storedUserName);
+          
+          if (storedUserName) {
+            console.log('AUTH INIT: Setting username from storage:', storedUserName);
+            setUserName(storedUserName);
+          } else {
+            console.warn('AUTH INIT: No username found in storage!');
+          }
+          
           if (userData) setExistingWallet(userData);
           if (valuations) setValuations(valuations);
-          if (walletAddress) updateWalletAddress(walletAddress);
+          
+          if (walletAddress) {
+            console.log('AUTH INIT: Setting wallet address from storage:', walletAddress);
+            updateWalletAddress(walletAddress);
+          } else if (publicKey) {
+            // Fallback to public key if wallet address is missing
+            console.log('AUTH INIT: No wallet address found, using public key as fallback:', publicKey);
+            updateWalletAddress(publicKey);
+            // Also save it to AsyncStorage for next time
+            try {
+              await AsyncStorage.setItem(WALLET_ADDRESS_KEY, publicKey);
+            } catch (e) {
+              console.error('Failed to save wallet address fallback:', e);
+            }
+          } else {
+            console.error('AUTH INIT: No wallet address or public key found!');
+          }
+          
+          // Set authenticated status LAST to ensure all data is ready
+          console.log('AUTH INIT: All data set, now setting authenticated status');
+          setStatus('authenticated');
+          console.log('AUTH INIT: Initialization complete');
         } else if (storedStatus === 'onboarding') {
           setStatus('onboarding');
         } else {
           setStatus('unauthenticated');
         }
       } catch (error) {
-        console.error('Error initializing auth:', error);
+        console.error('AUTH INIT: Fatal error during initialization:', error);
         setStatus('unauthenticated');
       }
     };
@@ -381,10 +587,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setStatus('authenticated');
       setBackupStatus('none');
       setICloudBackupEnabled(true);
-      setWalletAddress(keyPair.publicKey);
       
       // Use the full public key as the wallet address
       const walletAddress = keyPair.publicKey;
+      updateWalletAddress(walletAddress);
+      
+      // Save wallet address to both AsyncStorage and SecureStore for redundancy
+      await AsyncStorage.setItem(WALLET_ADDRESS_KEY, walletAddress);
+      try {
+        await SecureStore.setItemAsync(WALLET_ADDRESS_KEY, walletAddress);
+        console.log('ONBOARDING: Saved wallet address to both stores:', walletAddress);
+      } catch (e) {
+        console.warn('ONBOARDING: Failed to store wallet address in SecureStore:', e);
+      }
       
       // Use the user's name if available, otherwise use a default
       const displayName = userName || "Index Wallet User";
@@ -409,10 +624,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           await AsyncStorage.setItem('USER_ID', userData.userId);
         }
         
-        // Store username to AsyncStorage
+        // Store username to both AsyncStorage and SecureStore for redundancy
         if (userName) {
-          console.log('Storing username to AsyncStorage:', userName);
+          console.log('Storing username to AsyncStorage and SecureStore:', userName);
           await AsyncStorage.setItem(USER_NAME_KEY, userName);
+          try {
+            await SecureStore.setItemAsync(USER_NAME_KEY, userName);
+          } catch (e) {
+            console.warn('Failed to store username in SecureStore:', e);
+          }
         }
         
         // Store user type to AsyncStorage
@@ -517,20 +737,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (wallet && wallet.wallet_address) {
         // console.log('LOGIN: Setting wallet address from backend:', wallet.wallet_address);
         await AsyncStorage.setItem(WALLET_ADDRESS_KEY, wallet.wallet_address);
+        try {
+          await SecureStore.setItemAsync(WALLET_ADDRESS_KEY, wallet.wallet_address);
+        } catch (e) {
+          console.warn('LOGIN: Failed to store wallet address in SecureStore:', e);
+        }
         setWalletAddress(wallet.wallet_address);
         
         // Also restore username if available
         if (wallet.username) {
           console.log('LOGIN: Restoring username from backend:', wallet.username);
           await AsyncStorage.setItem(USER_NAME_KEY, wallet.username);
-          setUserName(wallet.username);
-        } else {
-          // If backend doesn't have username, check local storage
-          const localUserName = await AsyncStorage.getItem(USER_NAME_KEY);
-          if (localUserName) {
-            console.log('LOGIN: Backend missing username, using local storage:', localUserName);
-            setUserName(localUserName);
+          try {
+            await SecureStore.setItemAsync(USER_NAME_KEY, wallet.username);
+          } catch (e) {
+            console.warn('LOGIN: Failed to store username in SecureStore:', e);
           }
+          setUserName(wallet.username);
+        }
+        
+        // Always check local storage as well to ensure we don't lose data
+        const localUserName = await AsyncStorage.getItem(USER_NAME_KEY);
+        if (!wallet.username && localUserName) {
+          console.log('LOGIN: Backend missing username, using local storage:', localUserName);
+          setUserName(localUserName);
         }
         
         // Restore user type if available
@@ -542,6 +772,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Fallback to using the public key as the wallet address
         // console.log('LOGIN: Setting wallet address from public key:', derivedKeyPair.publicKey);
         await AsyncStorage.setItem(WALLET_ADDRESS_KEY, derivedKeyPair.publicKey);
+        try {
+          await SecureStore.setItemAsync(WALLET_ADDRESS_KEY, derivedKeyPair.publicKey);
+        } catch (e) {
+          console.warn('LOGIN: Failed to store wallet address in SecureStore:', e);
+        }
         setWalletAddress(derivedKeyPair.publicKey);
       }
       
@@ -619,6 +854,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         await SecureStore.deleteItemAsync(SEED_PHRASE_KEY);
         await SecureStore.deleteItemAsync(PRIVATE_KEY_KEY);
+        await SecureStore.deleteItemAsync(USER_NAME_KEY);
+        await SecureStore.deleteItemAsync(WALLET_ADDRESS_KEY);
       } catch (secureStoreError) {
         console.warn('Error clearing SecureStore:', secureStoreError);
       }

@@ -25,7 +25,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.networkgoods.indexwallets",
-      "buildNumber": "9",
+      "buildNumber": "10",
       "jsEngine": "hermes",
       "config": {
         "usesNonExemptEncryption": false

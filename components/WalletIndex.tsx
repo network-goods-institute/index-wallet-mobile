@@ -130,8 +130,21 @@ function WalletHeader({
   const displayName = userName || 'Wallet';
   
   useEffect(() => {
-    // console.log('HEADER - Wallet address changed to:', walletAddress);
-  }, [walletAddress]);
+    console.log('WALLET HEADER - Mount, userName:', userName, 'walletAddress:', walletAddress);
+    if (!userName || !walletAddress) {
+      console.warn('WALLET HEADER - Missing data detected on mount/update');
+      // Log auth status to see if we're in the right state
+      console.log('WALLET HEADER - Auth status check needed');
+    }
+  }, [userName, walletAddress]);
+  
+  // Add a mount effect to track component lifecycle
+  useEffect(() => {
+    console.log('WALLET HEADER - Component mounted');
+    return () => {
+      console.log('WALLET HEADER - Component unmounted');
+    };
+  }, []);
   
   const handleCopyAddress = async () => {
     if (walletAddress) {
