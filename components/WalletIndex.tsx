@@ -649,7 +649,7 @@ function TokenRow({ token }: { token: Token }) {
         {/* Token Info */}
         <View className="justify-center">
           <Text className="text-lg font-semibold text-black dark:text-white">{token.name}</Text>
-          <Text className="text-sm text-gray-600 dark:text-gray-400">{token.amount} {token.symbol}</Text>
+          <Text className="text-sm text-gray-600 dark:text-gray-400">{parseFloat(token.amount).toFixed(2)} {token.symbol}</Text>
         </View>
       </View>
       <View className="items-end">

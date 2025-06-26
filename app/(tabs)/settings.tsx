@@ -22,6 +22,7 @@ type LinkSettingItem = {
   type: 'link';
   onPress: () => void;
   icon: IconSymbolName;
+  disabled?: boolean;
 };
 
 type InfoSettingItem = {
@@ -111,14 +112,16 @@ export default function SettingsScreen() {
         {
           title: 'Terms of Service',
           type: 'link',
-          onPress: () => console.log('Terms of Service pressed'),
+          onPress: () => {},
           icon: 'doc.text.fill',
+          disabled: true,
         },
         {
           title: 'Privacy Policy',
           type: 'link',
-          onPress: () => console.log('Privacy Policy pressed'),
+          onPress: () => {},
           icon: 'shield.fill',
+          disabled: true,
         },
       ],
     },
@@ -147,10 +150,13 @@ export default function SettingsScreen() {
                           ? (item as ToggleSettingItem).iconDark! 
                           : item.icon} 
                         size={24} 
-                        color={isDarkMode ? '#60A5FA' : '#2563EB'} 
+                        color={(item.type === 'link' && (item as LinkSettingItem).disabled) 
+                          ? (isDarkMode ? '#4B5563' : '#9CA3AF')
+                          : (isDarkMode ? '#60A5FA' : '#2563EB')
+                        } 
                       />
                       <View className="ml-4 flex-1">
-                        <Text className="text-base font-medium text-black dark:text-white">
+                        <Text className={`text-base font-medium ${(item.type === 'link' && (item as LinkSettingItem).disabled) ? 'text-gray-500 dark:text-gray-600' : 'text-black dark:text-white'}`}>
                           {item.title}
                         </Text>
                         {item.description && (
@@ -175,19 +181,24 @@ export default function SettingsScreen() {
                       <IconSymbol 
                         name="chevron.right" 
                         size={20} 
-                        color={isDarkMode ? '#9CA3AF' : '#6B7280'} 
+                        color={(item as LinkSettingItem).disabled 
+                          ? (isDarkMode ? '#374151' : '#D1D5DB')
+                          : (isDarkMode ? '#9CA3AF' : '#6B7280')
+                        } 
                       />
                     )}
                   </>
                 );
 
                 if (item.type === 'link') {
+                  const linkItem = item as LinkSettingItem;
                   return (
                     <TouchableOpacity
                       key={`item-${sectionIndex}-${itemIndex}`}
-                      onPress={(item as LinkSettingItem).onPress}
-                      className={`flex-row items-center justify-between py-4 px-4 ${itemIndex < section.items.length - 1 ? 'border-b border-gray-200 dark:border-gray-700' : ''}`}
-                      activeOpacity={0.7}
+                      onPress={linkItem.disabled ? undefined : linkItem.onPress}
+                      className={`flex-row items-center justify-between py-4 px-4 ${itemIndex < section.items.length - 1 ? 'border-b border-gray-200 dark:border-gray-700' : ''} ${linkItem.disabled ? 'opacity-50' : ''}`}
+                      activeOpacity={linkItem.disabled ? 1 : 0.7}
+                      disabled={linkItem.disabled}
                     >
                       {content}
                     </TouchableOpacity>
