@@ -263,7 +263,7 @@ const TransactionSuccess: React.FC<TransactionSuccessProps> = ({ transaction, on
                           {item.symbol}
                         </ThemedText>
                         <ThemedText className="text-xs opacity-60">
-                          {item.amount_to_pay.toFixed(6)}
+                          {item.amount_to_pay.toFixed(2)}
                         </ThemedText>
                       </View>
                     </View>

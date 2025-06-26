@@ -7,28 +7,34 @@ const isDevelopment = __DEV__;
 
 // Dynamic API URL detection for development
 const getLocalApiUrl = () => {
-  // Use platform-specific localhost URLs for development
+  // Check for environment variable first
+  if (process.env.EXPO_PUBLIC_LOCAL_API_URL) {
+    return process.env.EXPO_PUBLIC_LOCAL_API_URL;
+  }
+  
+  // Fallback to platform-specific localhost URLs for development
   return Platform.select({
-    ios: 'https://1470-207-38-194-26.ngrok-free.app',
-    android: 'http://10.0.2.2:8080', // Android emulator localhost
+    ios: process.env.EXPO_PUBLIC_IOS_LOCAL_API_URL || 'http://localhost:8080',
+    android: process.env.EXPO_PUBLIC_ANDROID_LOCAL_API_URL || 'http://10.0.2.2:8080', // Android emulator localhost
     default: 'http://localhost:8080'
   }) || 'http://localhost:8080';
 };
 
 // API URLs
 export const LOCAL_BACKEND_SERVER_URL = getLocalApiUrl();
-export const PRODUCTION_API_URL = Constants.expoConfig?.extra?.apiUrl || process.env.EXPO_PUBLIC_API_URL || 'https://index-wallets-backend-production.up.railway.app';
+export const PRODUCTION_API_URL = process.env.EXPO_PUBLIC_PRODUCTION_API_URL || Constants.expoConfig?.extra?.apiUrl || 'https://api.indexwallets.com';
 
 // Use environment variable if available, otherwise use local in dev or production URL
 export const API_URL = process.env.EXPO_PUBLIC_API_URL || (isDevelopment ? LOCAL_BACKEND_SERVER_URL : PRODUCTION_API_URL);
 
-// Log the API URL for debugging
-// console.log('🌐 API Configuration:');
-// console.log('  - Environment:', isDevelopment ? 'Development' : 'Production');
-// console.log('  - Platform:', Platform.OS);
-// console.log('  - App Ownership:', Constants.appOwnership);
 
-console.log('  - API URL:', API_URL);
+
+// Only log in development
+if (isDevelopment) {
+  console.log('API Configuration:');
+  console.log('  - Environment:', isDevelopment ? 'development' : 'production');
+  console.log('  - API URL:', API_URL);
+}
 
 // App configuration from app.json
 export const APP_CONFIG = Constants.expoConfig || {};

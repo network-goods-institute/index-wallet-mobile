@@ -174,7 +174,11 @@ const Valuations = ({ tokens, onUpdateValuation, isLoading, onRefresh, onEditTok
       <View className="pt-20 pb-5 px-5">
         <Text className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-black'}`}>Preferences</Text>
         
-        {/* Legend with gap and switched order */}
+        {/* Explainer Text:  */}
+        <ThemedText className="text-base opacity-60 my-4">
+         Select the cause you want to create a preference for. Adjusting this value changes the amount of discounts or premiums users get for paying in these cause tokens. 
+        </ThemedText>
+        {/* Legend */}
         <View className="flex-row items-center gap-6 mt-4">
           <View className="flex-row items-center">
             <View className="w-3 h-3 rounded-full bg-yellow-500 mr-2" />

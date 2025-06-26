@@ -126,21 +126,20 @@ export default function Pay({ onSuccessStateChange }: PayProps) {
     }
   }, [showModal]);
 
-  // Handle payment code submission
   const handlePaymentCodeSubmit = async (code?: string) => {
-    const codeToUse = code || paymentCode;
-    if (!codeToUse.trim() || processing || isLoading) return;
+    // Sanitize the payment code: trim whitespace and convert to uppercase
+    const rawCode = code || paymentCode;
+    const codeToUse = rawCode.trim().toUpperCase();
+    
+    if (!codeToUse || processing || isLoading) return;
     
     setProcessing(true);
-    console.log('==========================================');
-    // console.log(`PAYMENT CODE SUBMITTED: ${codeToUse}`);
-    console.log('==========================================');
     
     try {
       // Refresh balances to ensure we have the latest data
       await refreshBalances();
       
-      // Initiate payment to get payment details
+      // Initiate payment to get payment details with sanitized code
       await initiatePayment(codeToUse);
       
       // Clear the input

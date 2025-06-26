@@ -59,8 +59,6 @@ interface TransactionContextType {
   error: string | null;
 }
 
-// API base URL - pointing to our local mock server
-const API_BASE_URL = 'http://localhost:3000/api';
 
 // Create context with default values
 export const TransactionContext = createContext<TransactionContextType>({ createTransaction: async () => '', pollTransactionStatus: () => {},
