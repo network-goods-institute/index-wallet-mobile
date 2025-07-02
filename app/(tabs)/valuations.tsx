@@ -226,7 +226,7 @@ const TokenRow = ({ token, onEditToken }: { token: Token; onEditToken: (token: T
     <TouchableOpacity
       onPress={() => onEditToken(token)}
       disabled={token.symbol === 'USD'}
-      className={`mx-4 mb-3 ${isDark ? 'bg-gray-800/50' : 'bg-white'} rounded-2xl overflow-hidden`}
+      className={`mx-4 mb-3 ${isDark ? 'bg-gray-800/50' : 'bg-white'} rounded-2xl overflow-hidden ${token.symbol === 'USD' ? 'opacity-90' : ''}`}
       style={{
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
@@ -269,7 +269,15 @@ const TokenRow = ({ token, onEditToken }: { token: Token; onEditToken: (token: T
             </View>
           </View>
           
-          {token.adjustment !== 0 && (
+          {token.symbol === 'USD' ? (
+            <View className="items-end">
+              <View className={`px-3 py-1 rounded-full ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>
+                <ThemedText className="text-sm font-medium opacity-60">
+                  1:1
+                </ThemedText>
+              </View>
+            </View>
+          ) : token.adjustment !== 0 && (
             <View className="items-end">
               <ThemedText className={`text-lg font-bold ${
                 token.adjustment > 0 ? 'text-green-500' : 'text-yellow-500'
@@ -287,6 +295,15 @@ const TokenRow = ({ token, onEditToken }: { token: Token; onEditToken: (token: T
         {token.symbol !== 'USD' && (
           <View className="mt-2">
             <TokenValuationBar adjustment={token.adjustment} colorScheme={colorScheme} />
+          </View>
+        )}
+        
+        {/* USD locked indicator */}
+        {token.symbol === 'USD' && (
+          <View className="mt-2">
+            <View className={`h-2 rounded-full ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>
+              <View className={`h-full w-full rounded-full ${isDark ? 'bg-gray-600' : 'bg-gray-300'}`} />
+            </View>
           </View>
         )}
       </View>
@@ -415,8 +432,15 @@ export default function ValuationsScreen() {
         };
       });
       
-      console.log('Transformed tokens:', JSON.stringify(transformedTokens, null, 2));
-      setTokens(transformedTokens);
+      // Sort tokens to ensure USD is always first, then sort others alphabetically
+      const sortedTokens = transformedTokens.sort((a, b) => {
+        if (a.symbol === 'USD') return -1;
+        if (b.symbol === 'USD') return 1;
+        return a.name.localeCompare(b.name);
+      });
+      
+      console.log('Transformed tokens:', JSON.stringify(sortedTokens, null, 2));
+      setTokens(sortedTokens);
       setError(null);
     } catch (err: any) {
       console.error('Error loading token valuations:', err);
@@ -490,6 +514,7 @@ export default function ValuationsScreen() {
   
   // Handle token edit
   const handleEditToken = (token: Token) => {
+    console.log('handleEditToken called for token:', token.symbol);
     setSelectedToken(token);
     setShowEditor(true);
   };
@@ -558,14 +583,16 @@ export default function ValuationsScreen() {
   }
   
   return (
-    <ThemedView className="flex-1">
-      <Valuations 
-        tokens={tokens}
-        onUpdateValuation={updateTokenValuation}
-        isLoading={isLoading}
-        onRefresh={loadTokenValuations}
-        onEditToken={handleEditToken}
-      />
+    <>
+      <ThemedView className="flex-1">
+        <Valuations 
+          tokens={tokens}
+          onUpdateValuation={updateTokenValuation}
+          isLoading={isLoading}
+          onRefresh={loadTokenValuations}
+          onEditToken={handleEditToken}
+        />
+      </ThemedView>
       <ValuationEditor
         visible={showEditor}
         token={selectedToken}
@@ -575,7 +602,7 @@ export default function ValuationsScreen() {
         }}
         onSave={handleSaveValuation}
       />
-    </ThemedView>
+    </>
   );
 }
 

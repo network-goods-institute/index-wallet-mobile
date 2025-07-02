@@ -408,7 +408,7 @@ function LoadWalletModal({ visible, onClose }: { visible: boolean; onClose: () =
               Choose how you'd like to add value to your wallet
             </Text>
             
-            {/* Add USD with Stripe */}
+            {/* Add with USD - Opens explainer */}
             <TouchableOpacity 
               className="py-4 px-5 rounded-2xl mb-4 flex-row items-center"
               style={{ 
@@ -427,8 +427,8 @@ function LoadWalletModal({ visible, onClose }: { visible: boolean; onClose: () =
                 <Wallet size={24} color="#FFFFFF" />
               </View>
               <View className="flex-1">
-                <Text className="text-white font-semibold text-base">Add USD</Text>
-                <Text className="text-blue-100 text-sm opacity-90">Load money with Stripe</Text>
+                <Text className="text-white font-semibold text-base">Add with USD</Text>
+                <Text className="text-blue-100 text-sm opacity-90">Buy USD Index tokens</Text>
               </View>
               <ArrowRight size={20} color="#FFFFFF" />
             </TouchableOpacity>

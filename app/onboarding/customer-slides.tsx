@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Dimensions, SafeAreaView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, SafeAreaView, TouchableOpacity, Platform } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import { OnboardingIndicator } from '@/components/onboarding';
 import Animated, { FadeInRight, FadeOutLeft } from 'react-native-reanimated';
@@ -9,6 +9,7 @@ import { X } from 'lucide-react-native';
 import LottieView from 'lottie-react-native';
 
 const { width } = Dimensions.get('window');
+const isWeb = Platform.OS === 'web';
 
 const slides = [
   {
@@ -90,13 +91,31 @@ export default function CustomerSlides() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    ...(isWeb && {
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: '#f5f5f5',
+    }),
   },
   safeArea: {
     flex: 1,
+    ...(isWeb && {
+      maxWidth: 480,
+      width: '100%',
+      maxHeight: 800,
+      backgroundColor: 'white',
+      borderRadius: 20,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+      elevation: 5,
+      margin: 20,
+    }),
   },
   exitButton: {
     position: 'absolute',
-    top: 60,
+    top: isWeb ? 20 : 60,
     right: 20,
     zIndex: 1,
     padding: 10,
@@ -105,31 +124,38 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: isWeb ? 40 : 20,
   },
   slide: {
-    width: width - 40,
+    width: isWeb ? '100%' : width - 40,
     alignItems: 'center',
     justifyContent: 'center',
   },
   animation: {
-    width: 200,
-    height: 200,
-    marginBottom: 24,
+    width: isWeb ? 280 : 200,
+    height: isWeb ? 280 : 200,
+    marginBottom: isWeb ? 32 : 24,
   },
   title: {
-    fontSize: 32,
+    fontSize: isWeb ? 28 : 32,
     fontWeight: 'bold',
     marginBottom: 16,
     textAlign: 'center',
+    ...(isWeb && {
+      maxWidth: 400,
+    }),
   },
   description: {
-    fontSize: 18,
+    fontSize: isWeb ? 16 : 18,
     textAlign: 'center',
     marginBottom: 24,
+    ...(isWeb && {
+      maxWidth: 360,
+      lineHeight: 24,
+    }),
   },
   footer: {
-    paddingHorizontal: 20,
+    paddingHorizontal: isWeb ? 40 : 20,
     paddingBottom: 40,
   },
 });
