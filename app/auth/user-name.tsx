@@ -64,7 +64,7 @@ export default function UserNameScreen() {
 
               {/* Input field */}
               <TextInput
-                className="dark:text-white light:text-black text-2xl font-medium py-3"
+                className="dark:text-white light:text-black text-2xl font-medium py-3 focus:outline-none"
                 placeholder={isVendor ? "Enter business name" : "Enter your name"}
                 placeholderTextColor="#666"
                 value={name}
@@ -75,6 +75,7 @@ export default function UserNameScreen() {
                 autoFocus
                 autoCapitalize="words"
                 selectionColor={isVendor ? '#2196F3' : '#9C27B0'}
+                style={Platform.OS === 'web' ? { outline: 'none' } : {}}
               />
 
               {error ? (

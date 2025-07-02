@@ -39,25 +39,13 @@ export function OnboardingIndicator({
             }
           }}>
           {selectedIndex === data.length - 1 ? (
-            <Animated.View
+            <Animated.Text
+              style={{ color: "white", fontWeight: "600" }}
               entering={FADE_IN}
               exiting={FADE_OUT}
-              style={{
-                flexDirection: "row",
-                gap: SPACING / 2,
-                alignItems: "center",
-              }}>
-              <Animated.View
-                entering={ZoomIn.delay(100)
-                  .springify()
-                  .damping(18)
-                  .stiffness(200)}>
-                <CircleCheck color="white" size={18} />
-              </Animated.View>
-              <Text style={{ color: "white", fontWeight: "600" }}>
-                Continue
-              </Text>
-            </Animated.View>
+              layout={LAYOUT}>
+              Next
+            </Animated.Text>
           ) : (
             <Animated.Text
               style={{ color: "white", fontWeight: "600" }}

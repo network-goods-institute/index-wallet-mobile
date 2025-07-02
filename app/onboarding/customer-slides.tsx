@@ -13,11 +13,6 @@ const isWeb = Platform.OS === 'web';
 
 const slides = [
   {
-    title: 'Welcome to Index Wallets',
-    description: 'Your gateway to values-aligned commerce',
-    animation: require('@/assets/animations/1.json'),
-  },
-  {
     title: 'Donate to Causes You Care About',
     description: 'Support causes like reforestation or community projects and receive digital donation receipts in your Index Wallets.',
     animation: require('@/assets/animations/2.json'),
