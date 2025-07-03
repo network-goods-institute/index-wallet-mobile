@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { ArrowLeft, MapPin, Globe, FileText } from 'lucide-react-native';
 
 export default function VendorDetailsScreen() {
-  const { setOnboardingStep, setVendorDescription, setVendorGoogleMapsLink, setVendorWebsiteLink } = useAuth();
+  const { setOnboardingStep, setVendorInfo } = useAuth();
   const [description, setDescription] = useState('');
   const [googleMapsLink, setGoogleMapsLink] = useState('');
   const [websiteLink, setWebsiteLink] = useState('');
@@ -43,14 +43,21 @@ export default function VendorDetailsScreen() {
     if (!validateForm()) return;
     
     // Save vendor information if provided
+    const vendorData: Partial<{ description: string; googleMapsLink: string; websiteLink: string }> = {};
+    
     if (description.trim()) {
-      setVendorDescription(description.trim());
+      vendorData.description = description.trim();
     }
     if (googleMapsLink.trim()) {
-      setVendorGoogleMapsLink(googleMapsLink.trim());
+      vendorData.googleMapsLink = googleMapsLink.trim();
     }
     if (websiteLink.trim()) {
-      setVendorWebsiteLink(websiteLink.trim());
+      vendorData.websiteLink = websiteLink.trim();
+    }
+    
+    // Update all vendor info at once
+    if (Object.keys(vendorData).length > 0) {
+      setVendorInfo(vendorData);
     }
     
     setOnboardingStep('create-seed');

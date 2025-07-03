@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, Switch, TouchableOpacity, ScrollView, Platform, Alert, Modal, SafeAreaView, Linking } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'expo-router';
 import SeedPhraseWarningModal from '@/components/SeedPhraseWarningModal';
 import { Wallet, Store, ArrowRight, X, AlertTriangle } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -49,7 +48,6 @@ import { Colors } from '@/constants/Colors';
 export default function SettingsScreen() {
   const { colorScheme } = useTheme();
   const { status, logout, hasPasskey, seedPhrase } = useAuth();
-  const router = useRouter();
   const isDarkMode = colorScheme === 'dark';
   
   // These would be connected to actual functionality in a real implementation
@@ -69,7 +67,7 @@ export default function SettingsScreen() {
   const performLogout = async () => {
     try {
       await logout();
-      router.replace('/auth/welcome');
+      // Don't navigate - let the auth state change handle the routing
     } catch (error) {
       console.error('Error during logout:', error);
     }

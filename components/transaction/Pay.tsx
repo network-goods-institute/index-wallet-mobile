@@ -241,7 +241,7 @@ export default function Pay({ onSuccessStateChange }: PayProps) {
         setShowSuccess(true);
         setShowModal(false);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error completing payment - full error:', error);
       console.error('Error stack:', error.stack);
       

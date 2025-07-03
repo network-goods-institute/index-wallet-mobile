@@ -15,7 +15,7 @@ export default function UserTypeScreen() {
   const { colorScheme } = useTheme();
 
   const handleContinue = () => {
-    setUserType('payee');
+    setUserType('customer');
     setOnboardingStep('customer-slides');
   };
 

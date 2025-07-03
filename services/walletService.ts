@@ -32,7 +32,7 @@ interface WalletData {
   username?: string;
   name?: string;
   email?: string;
-  user_type?: 'vendor' | 'payee';
+  user_type?: 'vendor' | 'customer';
   valuations?: any;
 }
 
@@ -54,17 +54,13 @@ export const validateAndFetchWallet = async (seedPhrase: string): Promise<Wallet
     const keyPair = await createKeyPairFromSeedPhrase(seedPhrase);
     const walletAddress = keyPair.publicKey;
     
-    console.log(`Checking if wallet exists for address: ${walletAddress}`);
-    
     try {
       // Try to fetch the wallet by address
       const response = await api.get(`/api/users/${walletAddress}`);
-      console.log('Wallet found:', response.data);
       return response.data;
     } catch (error: any) {
       // If we get a 404, the wallet doesn't exist yet
       if (error.response && error.response.status === 404) {
-        console.log('Wallet not found, will need to be created');
         return null;
       }
       
@@ -72,7 +68,6 @@ export const validateAndFetchWallet = async (seedPhrase: string): Promise<Wallet
       throw error;
     }
   } catch (error: any) {
-    console.error('Error validating and fetching wallet:', error.response?.data || error.message);
     throw error;
   }
 };
@@ -100,12 +95,10 @@ export const createWallet = async (walletData: {
       has_biometrics: walletData.hasBiometrics
     };
     
-    console.log('Creating new wallet:', backendData);
     
     const response = await api.post('/users', backendData);
     return response.data;
   } catch (error: any) {
-    console.error('Error creating wallet:', error.response?.data || error.message);
     throw error;
   }
 };

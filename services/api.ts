@@ -30,7 +30,7 @@ export const UserAPI = {
    */
   // registerUser: async (userData: {
   //   walletAddress: string;
-  //   userType: 'vendor' | 'payee';
+  //   userType: 'vendor' | 'customer';
   //   deviceId: string;
   //   publicKey?: string;
   //   platformData?: {
