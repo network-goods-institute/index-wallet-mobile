@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, SafeAreaView, ScrollView } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
-import { ThemedView } from '@/components/ThemedView';
+import { ThemedView } from '@/components/core/ThemedView';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { ArrowLeft, Copy, CheckCircle, ArrowRight } from 'lucide-react-native';
-import SeedPhraseWarningModal from '@/components/SeedPhraseWarningModal';
+import SeedPhraseWarningModal from '@/components/modals/SeedPhraseWarningModal';
 
 export default function CreateWalletScreen() {
   const { setOnboardingStep, generateSeedPhrase, setSeedPhraseForOnboarding } = useAuth();

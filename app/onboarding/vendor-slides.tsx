@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Dimensions, SafeAreaView, TouchableOpacity, Platform } from 'react-native';
-import { ThemedView } from '@/components/ThemedView';
+import { ThemedView } from '@/components/core/ThemedView';
 import { OnboardingIndicator } from '@/components/onboarding';
 import Animated, { FadeInRight, FadeOutLeft } from 'react-native-reanimated';
 import { useAuth } from '@/contexts/AuthContext';

@@ -18,7 +18,7 @@ import { TransactionHistoryStoreProvider } from '@/contexts/TransactionHistorySt
 import '../global.css';
 
 import WelcomeScreen from '../app/auth/welcome';
-import OnboardingFlow from '@/components/OnboardingFlow';
+import OnboardingFlow from '@/components/onboarding/OnboardingFlow';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();

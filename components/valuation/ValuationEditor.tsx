@@ -21,8 +21,8 @@ import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/contexts/ThemeContext';
 import { X, TrendingUp, TrendingDown, Edit3 } from 'lucide-react-native';
-import { ThemedView } from './ThemedView';
-import { ThemedText } from './ThemedText';
+import { ThemedView } from '@/components/core/ThemedView';
+import { ThemedText } from '@/components/core/ThemedText';
 import { GestureHandlerRootView, ScrollView as GHScrollView } from 'react-native-gesture-handler';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text, TextProps, StyleSheet } from 'react-native';
-import { typography, fontWeight, fontFamily, fontSize } from '../utils/typography';
+import { typography, fontWeight, fontFamily, fontSize } from '@/utils/typography';
 
 interface StyledTextProps extends TextProps {
   variant?: keyof typeof typography;

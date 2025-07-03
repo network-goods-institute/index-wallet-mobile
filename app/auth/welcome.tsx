@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Image, TouchableOpacity, SafeAreaView, Text, View, StyleSheet, Dimensions, Animated } from 'react-native';
-import { ThemedView } from '@/components/ThemedView';
-import { StyledText } from '@/components/StyledText';
+import { ThemedView } from '@/components/core/ThemedView';
+import { StyledText } from '@/components/core/StyledText';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import Svg, { Path } from 'react-native-svg';

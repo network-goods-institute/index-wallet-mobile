@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, SafeAreaView, TextInput, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
-import { ThemedView } from '@/components/ThemedView';
+import { ThemedView } from '@/components/core/ThemedView';
 import { useAuth } from '@/contexts/AuthContext';
 import { ArrowLeft, MapPin, Globe, FileText } from 'lucide-react-native';
 

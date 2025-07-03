@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
 import { Platform, View } from 'react-native';
-import FloatingTabBar from '@/components/FloatingTabBar';
+import FloatingTabBar from '@/components/layout/FloatingTabBar';
 
 export default function TabLayout() {
   return (

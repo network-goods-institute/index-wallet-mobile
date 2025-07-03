@@ -8,7 +8,7 @@ import {
   LayoutChangeEvent,
   Dimensions
 } from 'react-native';
-import { ThemedView } from './ThemedView';
+import { ThemedView } from '@/components/core/ThemedView';
 
 interface ValuationSliderProps {
   tokenName: string;

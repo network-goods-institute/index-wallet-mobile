@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
-import { createKeyPairFromSeedPhrase, signMessage } from '../utils/cryptoUtils';
-import { signAndSendTransaction } from '../services/transactionSigningService';
+import { createKeyPairFromSeedPhrase, signMessage } from '@/utils/cryptoUtils';
+import { signAndSendTransaction } from '@/services/transactionSigningService';
 
 export const WalletDebugger = () => {
   const { walletAddress, status, keyPair, seedPhrase, login } = useAuth();

@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { View, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl, Modal, Text, Image, SafeAreaView } from 'react-native';
-import { ThemedText } from './ThemedText';
-import { ThemedView } from './ThemedView';
+import { ThemedText } from '@/components/core/ThemedText';
+import { ThemedView } from '@/components/core/ThemedView';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { PaymentAPI } from '@/services/api';
 import { ArrowUpRight, ArrowDownLeft, Clock, CheckCircle, XCircle, X, Banknote } from 'lucide-react-native';
-import { BlurView } from 'expo-blur';
 
 // Base activity interface
 interface BaseActivity {
@@ -502,7 +501,7 @@ export default function TransactionHistory({ limit = 10, showTitle = true }: Tra
                         <View className="flex-row items-center">
                           {(selectedActivity as DepositActivity).token_image_url && (
                             <Image 
-                              source={{ uri: (selectedActivity as DepositActivity).token_image_url }}
+                              source={{ uri: (selectedActivity as DepositActivity).token_image_url || '' }}
                               className="w-8 h-8 rounded-full mr-2"
                               style={{ width: 32, height: 32 }}
                             />

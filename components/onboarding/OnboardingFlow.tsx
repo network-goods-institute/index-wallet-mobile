@@ -1,15 +1,15 @@
 import React from 'react';
 import { OnboardingStep } from '@/contexts/AuthContext';
 
-import WelcomeScreen from '../app/auth/welcome';
-import CreateWalletScreen from '../app/auth/create-wallet';
-import ImportWalletScreen from '../app/auth/import-wallet';
-import VerifySeedScreen from '../app/auth/verify-seed';
-import UserTypeScreen from '../app/auth/user-type';
-import UserNameScreen from '../app/auth/user-name';
-import VendorDetailsScreen from '../app/auth/vendor-details';
-import VendorSlides from '../app/onboarding/vendor-slides';
-import CustomerSlides from '../app/onboarding/customer-slides';
+import WelcomeScreen from '@/app/auth/welcome';
+import CreateWalletScreen from '@/app/auth/create-wallet';
+import ImportWalletScreen from '@/app/auth/import-wallet';
+import VerifySeedScreen from '@/app/auth/verify-seed';
+import UserTypeScreen from '@/app/auth/user-type';
+import UserNameScreen from '@/app/auth/user-name';
+import VendorDetailsScreen from '@/app/auth/vendor-details';
+import VendorSlides from '@/app/onboarding/vendor-slides';
+import CustomerSlides from '@/app/onboarding/customer-slides';
 
 /**
  * Component that handles the different screens in the onboarding flow

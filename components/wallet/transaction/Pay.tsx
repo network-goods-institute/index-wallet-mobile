@@ -15,7 +15,7 @@ import {
   Animated,
   StatusBar
 } from 'react-native';
-import { ThemedText } from '@/components/ThemedText';
+import { ThemedText } from '@/components/core/ThemedText';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useActiveTransaction } from '@/contexts/ActiveTransactionContext';
 import { useAuth } from '@/contexts/AuthContext';

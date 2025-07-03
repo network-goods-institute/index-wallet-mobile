@@ -1,10 +1,10 @@
 import React from 'react';
 import { SafeAreaView, TouchableOpacity, View } from 'react-native';
 import { Stack, router } from 'expo-router';
-import { ThemedView } from '@/components/ThemedView';
-import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/core/ThemedView';
+import { ThemedText } from '@/components/core/ThemedText';
 import { useTheme } from '@/contexts/ThemeContext';
-import TransactionHistory from '@/components/TransactionHistory';
+import TransactionHistory from '@/components/wallet/TransactionHistory';
 import { ArrowLeft } from 'lucide-react-native';
 
 export default function HistoryScreen() {

@@ -9,8 +9,8 @@ import {
   Dimensions,
   Image
 } from 'react-native';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+import { ThemedText } from '@/components/core/ThemedText';
+import { ThemedView } from '@/components/core/ThemedView';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useBalance } from '@/contexts/BalanceContext';
 import { CheckCircle, Copy, ExternalLink } from 'lucide-react-native';

@@ -1,38 +1,39 @@
 import React, { useState } from 'react';
-import { View, TouchableOpacity, SafeAreaView } from 'react-native';
-import { ThemedView } from '@/components/ThemedView';
-import { ThemedText } from '@/components/ThemedText';
-import Pay from '@/components/transaction/Pay';
-import Receive from '@/components/transaction/Receive';
-import Animated, { 
-  useAnimatedStyle, 
-  withSpring,
-  useSharedValue,
-  interpolate
-} from 'react-native-reanimated';
-import { ActiveTransactionProvider, useActiveTransaction } from '@/contexts/ActiveTransactionContext';
-import { useTheme } from '@/contexts/ThemeContext';
+import { View, TouchableOpacity } from 'react-native';
+import { ThemedText } from '@/components/core/ThemedText';
+import Pay from '@/components/wallet/transaction/Pay';
+import Receive from '@/components/wallet/transaction/Receive';
+import { ActiveTransactionProvider } from '@/contexts/ActiveTransactionContext';
+
+// Toggle button component
+function ToggleButton({ 
+  type, 
+  isActive, 
+  onPress 
+}: { 
+  type: 'pay' | 'receive';
+  isActive: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity 
+      onPress={onPress}
+      className={`px-8 py-3 rounded-full ${isActive ? 'bg-white' : ''}`}
+    >
+      <ThemedText className={`text-base font-semibold ${isActive ? 'text-gray-900' : 'text-gray-600'}`}>
+        {type === 'pay' ? 'Pay' : 'Receive'}
+      </ThemedText>
+    </TouchableOpacity>
+  );
+}
 
 // Inner component that can access transaction context
 function TransactContent() {
-  const { colorScheme } = useTheme();
-  const { clearActivePayment, clearActiveRequest, activePayment, activeRequest } = useActiveTransaction();
   const [transactionType, setTransactionType] = useState<'pay' | 'receive'>('pay');
   const [hideToggle, setHideToggle] = useState(false);
-  const progress = useSharedValue(0); // 0 = pay, 1 = receive
-
-  const payTextStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(progress.value, [0, 1], [1, 0.3])
-  }));
-
-  const receiveTextStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(progress.value, [0, 1], [0.3, 1])
-  }));
 
   const switchView = (type: 'pay' | 'receive') => {
     if (type !== transactionType) {
-      // Just switch view without clearing states
-      progress.value = withSpring(type === 'pay' ? 0 : 1);
       setTransactionType(type);
     }
   };
@@ -42,58 +43,30 @@ function TransactContent() {
     setHideToggle(isSuccess);
   };
 
-  // For Pay view, render fullscreen without SafeAreaView
-  if (transactionType === 'pay') {
-    return (
-      <View style={{ flex: 1 }}>
-        <Pay onSuccessStateChange={handleSuccessStateChange} />
-        {!hideToggle && (
-          <View 
-            className="absolute left-0 right-0 flex-row justify-center items-center"
-            style={{ zIndex: 10, bottom: 120 }}
-          >
-            <View className="flex-row bg-white/90 rounded-full p-1 shadow-lg">
-              <TouchableOpacity 
-                onPress={() => switchView('pay')}
-                className={`px-8 py-3 rounded-full ${transactionType === 'pay' ? 'bg-gray-200' : ''}`}
-              >
-                <ThemedText className={`text-base font-semibold ${transactionType === 'pay' ? 'text-gray-900' : 'text-gray-600'}`}>Pay</ThemedText>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                onPress={() => switchView('receive')}
-                className={`px-8 py-3 rounded-full ${transactionType === 'receive' ? 'bg-gray-200' : ''}`}
-              >
-                <ThemedText className={`text-base font-semibold ${transactionType === 'receive' ? 'text-gray-900' : 'text-gray-600'}`}>Receive</ThemedText>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-      </View>
-    );
-  }
-
-  // For Receive view, match Pay layout structure
   return (
     <View style={{ flex: 1 }}>
-      <Receive onSuccessStateChange={handleSuccessStateChange} />
+      {transactionType === 'pay' ? (
+        <Pay onSuccessStateChange={handleSuccessStateChange} />
+      ) : (
+        <Receive onSuccessStateChange={handleSuccessStateChange} />
+      )}
+      
       {!hideToggle && (
         <View 
           className="absolute left-0 right-0 flex-row justify-center items-center"
           style={{ zIndex: 10, bottom: 120 }}
         >
-          <View className={`flex-row ${colorScheme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'} rounded-full p-1 shadow-lg`}>
-            <TouchableOpacity 
+          <View className="flex-row bg-gray-100 rounded-full p-1 shadow-lg">
+            <ToggleButton 
+              type="pay"
+              isActive={transactionType === 'pay'}
               onPress={() => switchView('pay')}
-              className={`px-8 py-3 rounded-full ${transactionType === 'pay' ? (colorScheme === 'dark' ? 'bg-gray-700' : 'bg-white') : ''}`}
-            >
-              <ThemedText className={`text-base font-semibold ${transactionType === 'pay' ? '' : 'opacity-60'}`}>Pay</ThemedText>
-            </TouchableOpacity>
-            <TouchableOpacity 
+            />
+            <ToggleButton 
+              type="receive"
+              isActive={transactionType === 'receive'}
               onPress={() => switchView('receive')}
-              className={`px-8 py-3 rounded-full ${transactionType === 'receive' ? (colorScheme === 'dark' ? 'bg-gray-700' : 'bg-white') : ''}`}
-            >
-              <ThemedText className={`text-base font-semibold ${transactionType === 'receive' ? '' : 'opacity-60'}`}>Receive</ThemedText>
-            </TouchableOpacity>
+            />
           </View>
         </View>
       )}

@@ -1,16 +1,13 @@
-import { StyleSheet, View, Alert, AppState, TouchableOpacity, Text } from 'react-native';
-import { WalletIndex } from '@/components/WalletIndex';
-import { ThemedView } from '@/components/ThemedView';
-import { TokenBalance, useBalance } from '@/contexts/BalanceContext';
+import { StyleSheet, Alert, AppState } from 'react-native';
+import { WalletIndex } from '@/components/wallet/WalletIndex';
+import { ThemedView } from '@/components/core/ThemedView';
+import { useBalance } from '@/contexts/BalanceContext';
 import { useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import * as Clipboard from 'expo-clipboard';
 
 export default function HomeScreen() {
-  const { balances, totalValueUSD, isLoading, error, refreshBalances, lastUpdated } = useBalance();
+  const { balances, totalValueUSD, refreshBalances } = useBalance();
   const [refreshing, setRefreshing] = useState(false);
   const [showCheckmark, setShowCheckmark] = useState(false);
-  const { keyPair } = useAuth();
 
   useEffect(() => {
     // Initial fetch
@@ -29,18 +26,6 @@ export default function HomeScreen() {
     };
   }, []);
 
-  // Action handlers
-  const handleBuy = () => {
-    Alert.alert('Buy', 'Trigger Stripe flow');
-  }; 
-
-  const handleSwap = () => {
-    return;
-  };
-
-  const handleCopy = async () => {
-    // This is now handled internally by WalletIndex
-  };
 
   // Handle pull-to-refresh
   const handleRefresh = async () => {
@@ -64,9 +49,6 @@ export default function HomeScreen() {
       <WalletIndex 
         totalValue={totalValueUSD}
         tokens={transformedTokens}
-        onBuyPress={handleBuy}
-        onSwapPress={handleSwap}
-        onCopyPress={handleCopy}
         showCopyCheckmark={showCheckmark}
         isRefreshing={refreshing}
         onRefresh={handleRefresh}

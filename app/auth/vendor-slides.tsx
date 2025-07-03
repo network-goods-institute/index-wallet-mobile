@@ -1,9 +1,9 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, TouchableOpacity, FlatList, Dimensions, SafeAreaView } from 'react-native';
-import { ThemedView } from '@/components/ThemedView';
+import { ThemedView } from '@/components/core/ThemedView';
 import { useAuth } from '@/contexts/AuthContext';
 import { ArrowLeft, ArrowRight, Store, CreditCard, ShieldCheck } from 'lucide-react-native';
-import EducationalSlide from '@/components/EducationalSlide';
+import EducationalSlide from '@/components/onboarding/EducationalSlide';
 
 const { width } = Dimensions.get('window');
 

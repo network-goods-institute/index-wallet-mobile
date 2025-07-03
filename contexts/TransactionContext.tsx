@@ -133,6 +133,7 @@ export const TransactionProvider: React.FC<{ children: ReactNode }> = ({ childre
       return transaction.payment_id;
     } catch (err) {
       handleError(err, 'Failed to create transaction');
+      throw err; // Re-throw to propagate the error after handling it
     } finally {
       setIsLoading(false);
     }
@@ -275,6 +276,7 @@ export const TransactionProvider: React.FC<{ children: ReactNode }> = ({ childre
       return transaction;
     } catch (err) {
       handleError(err, 'Failed to scan transaction');
+      throw err; // Re-throw to propagate the error after handling it
     } finally {
       setIsLoading(false);
     }
@@ -311,6 +313,7 @@ export const TransactionProvider: React.FC<{ children: ReactNode }> = ({ childre
       return transaction;
     } catch (err) {
       handleError(err, 'Failed to supplement transaction');
+      throw err; // Re-throw to propagate the error after handling it
     } finally {
       setIsLoading(false);
     }
@@ -342,6 +345,7 @@ export const TransactionProvider: React.FC<{ children: ReactNode }> = ({ childre
       return true;
     } catch (err) {
       handleError(err, 'Failed to complete transaction');
+      return false;
     } finally {
       setIsLoading(false);
     }

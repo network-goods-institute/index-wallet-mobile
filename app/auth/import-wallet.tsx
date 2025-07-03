@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, TouchableOpacity, TextInput, ScrollView, SafeAreaView, ActivityIndicator, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
-import { ThemedView } from '@/components/ThemedView';
+import { ThemedView } from '@/components/core/ThemedView';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { ArrowLeft, Copy, X } from 'lucide-react-native';

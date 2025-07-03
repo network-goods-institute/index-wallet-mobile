@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, TextInput, TouchableOpacity, ActivityIndicator, Alert, ScrollView, SafeAreaView, Modal } from 'react-native';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+import { ThemedText } from '@/components/core/ThemedText';
+import { ThemedView } from '@/components/core/ThemedView';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useActiveTransaction } from '@/contexts/ActiveTransactionContext';
 import { usePendingTransactionManager } from '@/contexts/PendingTransactionManager';
@@ -9,7 +9,7 @@ import { useTransactionHistory } from '@/contexts/TransactionHistoryStore';
 import { useAuth } from '@/contexts/AuthContext';
 import QRCode from 'react-native-qrcode-svg';
 import { QrCode, Copy, Check, ArrowLeft, Clock, X } from 'lucide-react-native';
-import TransactionSuccess from '@/components/transaction/TransactionSuccess';
+import TransactionSuccess from '@/components/wallet/transaction/TransactionSuccess';
 import * as Clipboard from 'expo-clipboard';
 
 interface ReceiveProps {

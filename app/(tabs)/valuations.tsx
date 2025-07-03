@@ -1,29 +1,21 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { useTheme } from '@/contexts/ThemeContext';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Text,
-  Animated,
-  Dimensions,
-  StyleSheet,
   View,
   Image,
-  NativeSyntheticEvent,
-  NativeScrollEvent,
   ScrollView,
   ActivityIndicator,
   TouchableOpacity,
   Alert,
   RefreshControl,
-  SafeAreaView
 } from 'react-native';
-import { ThemedView } from '@/components/ThemedView';
-import { ThemedText } from '@/components/ThemedText';
-import { fetchTokenValuations, updateTokenValuation as updateTokenValuationApi, TokenValuation } from '@/services/valuationService';
-import ValuationEditor from '@/components/ValuationEditor';
-import { Edit3, TrendingUp, TrendingDown } from 'lucide-react-native';
+import { ThemedView } from '@/components/core/ThemedView';
+import { ThemedText } from '@/components/core/ThemedText';
+import { fetchTokenValuations, updateTokenValuation as updateTokenValuationApi } from '@/services/valuationService';
+import ValuationEditor from '@/components/valuation/ValuationEditor';
+import ErrorModal from '@/components/modals/ErrorModal';
 
-const { width } = Dimensions.get('window');
 
 // Token type definition
 interface Token {
@@ -31,11 +23,11 @@ interface Token {
   symbol: string;
   amount: string;
   value: number;
-  adjustment: number; // Dollar amount adjustment (positive for premium, negative for discount)
+  adjustment: number;
   change: number;
   iconUrl?: string;
-  has_set: boolean; // Whether the valuation was set by the user or is default
-  isUpdating?: boolean; // Whether the token valuation is currently being updated
+  has_set: boolean;
+  isUpdating?: boolean;
 }
 
 interface ValuationsProps {
@@ -45,28 +37,16 @@ interface ValuationsProps {
   onRefresh: () => Promise<void>;
 }
 
-// Component to display token valuation bar
-const TokenValuationBar = ({ adjustment, colorScheme }: { adjustment: number; colorScheme: 'light' | 'dark' }) => {
-  const isDark = colorScheme === 'dark';
-  // Dynamic max based on actual values
+const TokenValuationBar = ({ adjustment }: { adjustment: number }) => {
   const maxAdjustment = Math.max(50, Math.ceil(Math.abs(adjustment) / 50) * 50);
-  const percentage = Math.min(Math.abs(adjustment) / maxAdjustment, 1) * 50; // Max 50% of bar
+  const percentage = Math.min(Math.abs(adjustment) / maxAdjustment, 1) * 50;
   const isPositive = adjustment > 0;
-  const isExtreme = Math.abs(adjustment) > 100; // Show indicator for extreme values
+  const isExtreme = Math.abs(adjustment) > 100;
   
   return (
     <View className="w-full h-2 relative">
-      {/* Background track */}
-      <View className={`absolute inset-0 rounded-full ${
-        isDark ? 'bg-gray-700' : 'bg-gray-200'
-      }`} />
-      
-      {/* Center marker */}
-      <View className={`absolute top-0 bottom-0 w-0.5 left-1/2 -translate-x-0.5 ${
-        isDark ? 'bg-gray-600' : 'bg-gray-300'
-      }`} />
-      
-      {/* Colored fill - extends from center to value */}
+      <View className="absolute inset-0 rounded-full bg-gray-200" />
+      <View className="absolute top-0 bottom-0 w-0.5 left-1/2 -translate-x-0.5 bg-gray-300" />
       {adjustment !== 0 && (
         <View
           className={`absolute top-0 bottom-0 rounded-full ${
@@ -79,7 +59,6 @@ const TokenValuationBar = ({ adjustment, colorScheme }: { adjustment: number; co
         />
       )}
       
-      {/* Value indicator dot */}
       <View
         className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-2 border-white ${
           adjustment === 0 ? 'bg-gray-400' : (isPositive ? 'bg-green-500' : 'bg-yellow-500')
@@ -95,7 +74,6 @@ const TokenValuationBar = ({ adjustment, colorScheme }: { adjustment: number; co
         }}
       />
       
-      {/* Extreme value indicator */}
       {isExtreme && (
         <View className={`absolute -top-2 ${isPositive ? 'right-0' : 'left-0'}`}>
           <View className={`w-1 h-1 rounded-full ${isPositive ? 'bg-green-500' : 'bg-yellow-500'}`} />
@@ -107,8 +85,6 @@ const TokenValuationBar = ({ adjustment, colorScheme }: { adjustment: number; co
 
 const Valuations = ({ tokens, onUpdateValuation, isLoading, onRefresh, onEditToken }: ValuationsProps & { onEditToken: (token: Token) => void }) => {
   const [refreshing, setRefreshing] = useState(false);
-  const { colorScheme } = useTheme();
-  const isDark = colorScheme === 'dark';
   
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -119,7 +95,7 @@ const Valuations = ({ tokens, onUpdateValuation, isLoading, onRefresh, onEditTok
   if (isLoading && !refreshing) {
     return (
       <View className="flex-1 items-center justify-center">
-        <ActivityIndicator size="large" color={isDark ? '#60A5FA' : '#3B82F6'} />
+        <ActivityIndicator size="large" color="#3B82F6" />
         <ThemedText className="mt-4 text-base opacity-60">Loading valuations...</ThemedText>
       </View>
     );
@@ -128,18 +104,16 @@ const Valuations = ({ tokens, onUpdateValuation, isLoading, onRefresh, onEditTok
   if (tokens.length === 0 && !isLoading) {
     return (
       <View className="flex-1 items-center justify-center px-6">
-        <View className={`w-full max-w-sm p-8 rounded-3xl ${isDark ? 'bg-gray-800/50' : 'bg-white'}`}
+        <View className="w-full max-w-sm p-8 rounded-3xl bg-white"
           style={{
             shadowColor: '#000',
             shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: isDark ? 0.3 : 0.08,
+            shadowOpacity: 0.08,
             shadowRadius: 8,
             elevation: 4,
           }}
         >
-          <View className={`w-20 h-20 rounded-full items-center justify-center mx-auto mb-6 ${
-            isDark ? 'bg-gray-700' : 'bg-gray-100'
-          }`}>
+          <View className="w-20 h-20 rounded-full items-center justify-center mx-auto mb-6 bg-gray-100">
             <ThemedText className="text-3xl">🪙</ThemedText>
           </View>
           
@@ -149,9 +123,7 @@ const Valuations = ({ tokens, onUpdateValuation, isLoading, onRefresh, onEditTok
           </ThemedText>
           
           <TouchableOpacity 
-            className={`py-4 px-8 rounded-2xl items-center ${
-              isDark ? 'bg-blue-600' : 'bg-blue-500'
-            }`}
+            className="py-4 px-8 rounded-2xl items-center bg-blue-500"
             onPress={onRefresh}
             style={{
               shadowColor: '#3B82F6',
@@ -170,15 +142,12 @@ const Valuations = ({ tokens, onUpdateValuation, isLoading, onRefresh, onEditTok
   
   return (
     <View className="flex-1">
-      {/* Header section with proper padding */}
       <View className="pt-20 pb-5 px-5">
-        <Text className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-black'}`}>Preferences</Text>
+        <Text className="text-3xl font-bold text-black">Preferences</Text>
         
-        {/* Explainer Text:  */}
         <ThemedText className="text-base opacity-60 my-4">
          Select the cause you want to create a preference for. Adjusting this value changes the amount of discounts or premiums users get for paying in these cause tokens. 
         </ThemedText>
-        {/* Legend */}
         <View className="flex-row items-center gap-6 mt-4">
           <View className="flex-row items-center">
             <View className="w-3 h-3 rounded-full bg-yellow-500 mr-2" />
@@ -191,15 +160,14 @@ const Valuations = ({ tokens, onUpdateValuation, isLoading, onRefresh, onEditTok
         </View>
       </View>
       
-      {/* Scrollable content */}
       <ScrollView 
-        className={`flex-1 ${isDark ? 'bg-black' : 'bg-gray-50'}`}
+        className="flex-1 bg-gray-50"
         contentContainerStyle={{ paddingBottom: 80 }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor={isDark ? '#60A5FA' : '#3B82F6'}
+            tintColor="#3B82F6"
           />
         }
         showsVerticalScrollIndicator={false}
@@ -219,18 +187,16 @@ const Valuations = ({ tokens, onUpdateValuation, isLoading, onRefresh, onEditTok
 }
 
 const TokenRow = ({ token, onEditToken }: { token: Token; onEditToken: (token: Token) => void }) => {
-  const { colorScheme } = useTheme();
-  const isDark = colorScheme === 'dark';
   
   return (
     <TouchableOpacity
       onPress={() => onEditToken(token)}
       disabled={token.symbol === 'USD'}
-      className={`mx-4 mb-3 ${isDark ? 'bg-gray-800/50' : 'bg-white'} rounded-2xl overflow-hidden ${token.symbol === 'USD' ? 'opacity-90' : ''}`}
+      className={`mx-4 mb-3 bg-white rounded-2xl overflow-hidden ${token.symbol === 'USD' ? 'opacity-90' : ''}`}
       style={{
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: isDark ? 0.3 : 0.08,
+        shadowOpacity: 0.08,
         shadowRadius: 8,
         elevation: 4,
       }}
@@ -245,13 +211,11 @@ const TokenRow = ({ token, onEditToken }: { token: Token; onEditToken: (token: T
                   className="w-12 h-12 rounded-full"
                   style={{
                     borderWidth: 1,
-                    borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'
+                    borderColor: 'rgba(0,0,0,0.05)'
                   }}
                 />
               ) : (
-                <View className={`w-12 h-12 rounded-full items-center justify-center ${
-                  isDark ? 'bg-gray-700' : 'bg-gray-100'
-                }`}>
+                <View className="w-12 h-12 rounded-full items-center justify-center bg-gray-100">
                   <ThemedText className="text-lg font-bold">
                     {token.symbol.charAt(0)}
                   </ThemedText>
@@ -271,7 +235,7 @@ const TokenRow = ({ token, onEditToken }: { token: Token; onEditToken: (token: T
           
           {token.symbol === 'USD' ? (
             <View className="items-end">
-              <View className={`px-3 py-1 rounded-full ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>
+              <View className="px-3 py-1 rounded-full bg-gray-200">
                 <ThemedText className="text-sm font-medium opacity-60">
                   1:1
                 </ThemedText>
@@ -291,18 +255,16 @@ const TokenRow = ({ token, onEditToken }: { token: Token; onEditToken: (token: T
           )}
         </View>
         
-        {/* Valuation bar for non-USD tokens */}
         {token.symbol !== 'USD' && (
           <View className="mt-2">
-            <TokenValuationBar adjustment={token.adjustment} colorScheme={colorScheme} />
+            <TokenValuationBar adjustment={token.adjustment} />
           </View>
         )}
         
-        {/* USD locked indicator */}
         {token.symbol === 'USD' && (
           <View className="mt-2">
-            <View className={`h-2 rounded-full ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>
-              <View className={`h-full w-full rounded-full ${isDark ? 'bg-gray-600' : 'bg-gray-300'}`} />
+            <View className="h-2 rounded-full bg-gray-200">
+              <View className="h-full w-full rounded-full bg-gray-300" />
             </View>
           </View>
         )}
@@ -311,66 +273,6 @@ const TokenRow = ({ token, onEditToken }: { token: Token; onEditToken: (token: T
   );
 }
 
-// Screen component
-
-// Initial mock data
-const mockTokens = [
-
-  {
-    name: 'Tree',
-    symbol: 'TREE',
-    amount: '30',
-    value: 40.55,
-    adjustment: 0,  // $4 premium as shown in the image
-    change: 0,
-    iconUrl: 'https://cdn-icons-png.flaticon.com/512/189/189503.png',
-  },
-  {
-    name: 'Fountain',
-    symbol: 'FOUNTAIN',
-    amount: '5',
-    value: 8.37,
-    adjustment: 0,  // $4 premium as shown in the image
-    change: 0,
-    iconUrl: 'https://cdn-icons-png.flaticon.com/512/3464/3464446.png',
-  },
-  {
-    name: 'River Cleanup',
-    symbol: 'RIVER',
-    amount: '1',
-    value: 1.09,
-    adjustment: 0,
-    change: 0,
-    iconUrl: 'https://cdn-icons-png.flaticon.com/512/119/119573.png',
-  },
-  {
-    name: 'Solar Panel',
-    symbol: 'SOLAR',
-    amount: '12',
-    value: 18.75,
-    adjustment: 0,  // $2 discount
-    change: 0,
-    iconUrl: 'https://cdn-icons-png.flaticon.com/512/196/196695.png',
-  },
-  {
-    name: 'Wind Farm',
-    symbol: 'WIND',
-    amount: '3',
-    value: 6.50,
-    adjustment: 0,  // $1 premium
-    change: 0,
-    iconUrl: 'https://cdn1.iconfinder.com/data/icons/environment-and-ecology-icons/137/Ecology_24-18-512.png',
-  },
-  {
-    name: 'Ocean Cleanup',
-    symbol: 'OCEAN',
-    amount: '15',
-    value: 22.50,
-    adjustment: 0,  // $3 discount
-    change: 0,
-    iconUrl: 'https://cdn4.iconfinder.com/data/icons/marine-3/64/C_Sea-512.png',
-  },
-];
 
 export default function ValuationsScreen() {
   const [tokens, setTokens] = useState<Token[]>([]);
@@ -379,40 +281,29 @@ export default function ValuationsScreen() {
   const [selectedToken, setSelectedToken] = useState<Token | null>(null);
   const [showEditor, setShowEditor] = useState(false);
   const { walletAddress } = useAuth();
-  const { colorScheme } = useTheme();
   
-  // Load token valuations when the component mounts
   useEffect(() => {
     loadTokenValuations();
   }, []);
   
-  // Function to load token valuations from the API
   const loadTokenValuations = async () => {
     if (!walletAddress) {
-      console.log('No wallet address found');
       setError('No wallet address found');
       setIsLoading(false);
       return;
     }
     
-    console.log('Loading valuations for wallet:', walletAddress);
-    
     try {
       setIsLoading(true);
       
-      // This will either return an array of valuations or an adapted array from the object format
       const valuations = await fetchTokenValuations(walletAddress);
       
-      console.log('API Response after processing:', JSON.stringify(valuations, null, 2));
-      
       if (!valuations || valuations.length === 0) {
-        console.log('No valuations returned from API');
         setError('No token valuations found');
         setTokens([]);
         return;
       }
       
-      // Transform the API response to match our Token interface
       const transformedTokens: Token[] = valuations.map(valuation => {
         const tokenName = valuation.token_name;
         const tokenSymbol = valuation.token_symbol || tokenName.toUpperCase();
@@ -424,161 +315,86 @@ export default function ValuationsScreen() {
           name: tokenName,
           symbol: tokenSymbol,
           amount: '10',
-          value: 0, // Not used
-          adjustment: adjustment, // The valuation from API is the adjustment itself
+          value: 0,
+          adjustment: adjustment,
           change: 0,
           has_set: valuation.has_set || false,
-          iconUrl: valuation.token_image_url || getTokenIconUrl(tokenSymbol)
+          iconUrl: valuation.token_image_url || '' 
         };
       });
       
-      // Sort tokens to ensure USD is always first, then sort others alphabetically
       const sortedTokens = transformedTokens.sort((a, b) => {
         if (a.symbol === 'USD') return -1;
         if (b.symbol === 'USD') return 1;
         return a.name.localeCompare(b.name);
       });
       
-      console.log('Transformed tokens:', JSON.stringify(sortedTokens, null, 2));
       setTokens(sortedTokens);
       setError(null);
     } catch (err: any) {
-      console.error('Error loading token valuations:', err);
-      console.error('Error details:', err.message);
-      if (err.response) {
-        console.error('Response status:', err.response.status);
-        console.error('Response data:', JSON.stringify(err.response.data, null, 2));
-      }
-      
       setError(`API Error: ${err.message}`);
-      setTokens([]); // Don't fall back to mock tokens so we can see the real error
+      setTokens([]);
     } finally {
       setIsLoading(false);
     }
   };
   
-  // Function to update a token's valuation
   const updateTokenValuation = async (symbol: string, newAdjustment: number): Promise<void> => {
     if (!walletAddress) {
       Alert.alert('Error', 'No wallet address found');
       return;
     }
     
-    console.log(`Updating valuation for ${symbol} to ${newAdjustment} for wallet ${walletAddress}`);
-    
     try {
-      // Update the local state optimistically
       setTokens(prevTokens => 
         prevTokens.map(token => {
           if (token.symbol === symbol) {
-            // Don't allow changing USD valuation
             if (symbol === 'USD') return token;
             
             return {
               ...token,
               adjustment: newAdjustment,
-              has_set: true // Mark as custom valuation
+              has_set: true
             };
           }
           return token;
         })
       );
       
-      // Find the token name from the symbol
       const token = tokens.find(t => t.symbol === symbol);
       if (!token) {
-        console.error(`Token with symbol ${symbol} not found`);
         Alert.alert('Error', `Token with symbol ${symbol} not found`);
         return;
       }
       
-      // Call the API to update the valuation
-      console.log(`Calling API with token symbol: ${symbol}, value: ${newAdjustment}`);
-      const result = await updateTokenValuationApi(walletAddress, symbol, newAdjustment);
-      console.log(`API response:`, result);
-      console.log(`Successfully updated valuation for ${symbol} to ${newAdjustment}`);
+      await updateTokenValuationApi(walletAddress, symbol, newAdjustment);
     } catch (err: any) {
-      console.error('Error updating token valuation:', err);
-      console.error('Error details:', err.message);
-      if (err.response) {
-        console.error('Response status:', err.response.status);
-        console.error('Response data:', JSON.stringify(err.response.data, null, 2));
-      }
-      
       Alert.alert('Error', `Failed to update valuation: ${err.message}`);
-      // Revert the optimistic update on error
       loadTokenValuations();
-      throw err; // Re-throw to be handled by the caller
+      throw err;
     }
   };
   
-  // Handle token edit
   const handleEditToken = (token: Token) => {
-    console.log('handleEditToken called for token:', token.symbol);
     setSelectedToken(token);
     setShowEditor(true);
   };
   
-  // Handle save from editor
   const handleSaveValuation = async (symbol: string, adjustment: number) => {
     await updateTokenValuation(symbol, adjustment);
   };
   
-  // Helper function to get a token icon URL (in a real app, this would be provided by the API)
-  const getTokenIconUrl = (symbol: string): string => {
-    const iconMap: Record<string, string> = {
-      'TREE': 'https://cdn-icons-png.flaticon.com/512/189/189503.png',
-      'FOUNTAIN': 'https://cdn-icons-png.flaticon.com/512/3464/3464446.png',
-      'RIVER': 'https://cdn-icons-png.flaticon.com/512/119/119573.png',
-      'SOLAR': 'https://cdn-icons-png.flaticon.com/512/196/196695.png',
-      'WIND': 'https://cdn1.iconfinder.com/data/icons/environment-and-ecology-icons/137/Ecology_24-18-512.png',
-      'OCEAN': 'https://cdn4.iconfinder.com/data/icons/marine-3/64/C_Sea-512.png',
-    };
-    
-    return iconMap[symbol] || '';
-  };
-  
-  // If there's an error, show an error message
   if (error) {
     return (
-      <ThemedView className="flex-1">
-        <View className="flex-1 items-center justify-center px-6">
-          <View className={`w-full max-w-sm p-8 rounded-3xl ${colorScheme === 'dark' ? 'bg-gray-800/50' : 'bg-white'}`}
-            style={{
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: colorScheme === 'dark' ? 0.3 : 0.08,
-              shadowRadius: 8,
-              elevation: 4,
-            }}
-          >
-            <View className={`w-20 h-20 rounded-full items-center justify-center mx-auto mb-6 ${
-              colorScheme === 'dark' ? 'bg-red-900/20' : 'bg-red-50'
-            }`}>
-              <ThemedText className="text-3xl">⚠️</ThemedText>
-            </View>
-            
-            <ThemedText className="text-center text-2xl font-bold mb-2">Connection Error</ThemedText>
-            <ThemedText className="text-center text-base opacity-60 mb-8">{error}</ThemedText>
-            
-            <TouchableOpacity 
-              className={`py-4 px-8 rounded-2xl items-center ${
-                colorScheme === 'dark' ? 'bg-blue-600' : 'bg-blue-500'
-              }`}
-              onPress={loadTokenValuations}
-              style={{
-                shadowColor: '#3B82F6',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.3,
-                shadowRadius: 8,
-                elevation: 5,
-              }}
-            >
-              <Text className="text-white font-semibold text-lg">Try Again</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </ThemedView>
+      <>
+        <ThemedView className="flex-1" />
+        <ErrorModal
+          visible={true}
+          onClose={() => setError(null)}
+          onRetry={loadTokenValuations}
+          message={error}
+        />
+      </>
     );
   }
   

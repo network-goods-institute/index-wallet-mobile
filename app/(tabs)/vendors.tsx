@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, FlatList, TouchableOpacity, ScrollView, SafeAreaView, Text, ActivityIndicator, Linking } from 'react-native';
-import { ThemedView } from '@/components/ThemedView';
-import { ThemedText } from '@/components/ThemedText';
+import { View, TouchableOpacity, ScrollView, Text, ActivityIndicator, Linking } from 'react-native';
+import { ThemedView } from '@/components/core/ThemedView';
 import { useTheme } from '@/contexts/ThemeContext';
-import { ArrowLeft, ExternalLink, MapPin, Store } from 'lucide-react-native';
-import { router } from 'expo-router';
+import { ExternalLink, MapPin, Store } from 'lucide-react-native';
 import { VendorAPI } from '@/services/api';
 
 // Define vendor interface matching API response
@@ -16,14 +14,6 @@ interface PartneredVendor {
   website_link?: string;
 }
 
-// Mock vendor for styling purposes
-const mockVendor: PartneredVendor = {
-  _id: 'mock-1',
-  name: "Joe's Coffee Shop",
-  description: 'Family-owned coffee shop serving organic fair-trade coffee since 1995',
-  google_maps_link: 'https://maps.google.com/?q=Joe\'s+Coffee+Shop+NYC',
-  website_link: 'https://joescoffeeshop.com',
-};
 
 export default function VendorsScreen() {
   const { colorScheme } = useTheme();
@@ -160,5 +150,3 @@ export default function VendorsScreen() {
     </ThemedView>
   );
 }
-
-const styles = StyleSheet.create({});

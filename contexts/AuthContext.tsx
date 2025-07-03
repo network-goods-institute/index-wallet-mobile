@@ -10,6 +10,7 @@ import {
 } from '@/utils/cryptoUtils';
 import { registerUser } from '@/services/registerUser';
 import { validateAndFetchWallet } from '@/services/walletService';
+import type { WalletData, Valuation, AuthData, WalletStorageData, UserStorageData, RegistrationData, ApiError } from '@/types/auth';
 
 
 // Define types
@@ -28,8 +29,8 @@ interface AuthContextType {
   userType: UserType;
   userName: string | null;
   walletAddress: string | null;
-  existingWallet: any | null;
-  valuations: any | null;
+  existingWallet: WalletData | null;
+  valuations: Valuation[] | null;
   isVerified: boolean;
   vendorInfo: {
     description: string | null;
@@ -40,7 +41,7 @@ interface AuthContextType {
   setUserType: (type: UserType) => void;
   setUserName: (name: string) => void;
   setVendorInfo: (info: Partial<{ description: string; googleMapsLink: string; websiteLink: string }>) => void;
-  validateSeedAndCheckWallet: (seedPhrase: string) => Promise<any | null>;
+  validateSeedAndCheckWallet: (seedPhrase: string) => Promise<WalletData | null>;
   
   // Authentication methods
   login: (seedPhrase: string, usePasskey?: boolean) => Promise<boolean>;
@@ -69,8 +70,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [platformOS, setPlatformOS] = useState<PlatformOS>('unknown');
   const [userType, setUserType] = useState<UserType>(null);
   const [userName, setUserName] = useState<string | null>(null);
-  const [existingWallet, setExistingWallet] = useState<any | null>(null);
-  const [valuations, setValuations] = useState<any | null>(null);
+  const [existingWallet, setExistingWallet] = useState<WalletData | null>(null);
+  const [valuations, setValuations] = useState<Valuation[] | null>(null);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [isVerified, setIsVerified] = useState<boolean>(false);
   const [vendorInfo, setVendorInfo] = useState<{
@@ -257,7 +258,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
     
     // Helper function to apply all loaded state
-    const applyLoadedState = (authData: any, walletData: any, userData: any) => {
+    const applyLoadedState = (authData: AuthData, walletData: WalletStorageData, userData: UserStorageData) => {
       // Set basic auth state
       setHasPasskey(authData.hasPasskey);
       if (authData.userType) setUserType(authData.userType);
@@ -381,7 +382,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Register user with backend
       try {
         // Register the user account
-        const registrationData: any = {
+        const registrationData: RegistrationData = {
           walletAddress,
           username: displayName,
           userType: userType || 'customer',
@@ -435,7 +436,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             await storage.setItem(VENDOR_KEYS.WEBSITE_LINK, vendorInfo.websiteLink);
           }
         }
-      } catch (apiError: any) {
+      } catch (apiError) {
         
         // Clean up any stored data since registration failed
         try {
@@ -572,7 +573,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
   // Validate seed phrase and check if wallet exists
-  const validateSeedAndCheckWallet = async (phrase: string): Promise<any | null> => {
+  const validateSeedAndCheckWallet = async (phrase: string): Promise<WalletData | null> => {
     try {
       // First validate the seed phrase format
       if (!validateSeedPhrase(phrase)) {
