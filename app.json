@@ -25,7 +25,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.networkgoods.indexwallets",
-      "buildNumber": "10",
+      "buildNumber": "11",
       "jsEngine": "hermes",
       "config": {
         "usesNonExemptEncryption": false
@@ -48,6 +48,7 @@
     },
     "android": {
       "package": "com.indexwallets.mobile",
+      "versionCode": 11,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
