@@ -154,12 +154,6 @@ export const sendSignedTransaction = async (
   payerAddress: string
 ) => {
   try {
-    // console.log('Sending signed transaction to backend...');
-    // console.log('Payment ID:', paymentId);
-    // console.log('Signed transaction:', JSON.stringify(signedTransaction, null, 2));
-    // console.log('Transaction details:', JSON.stringify(transactionDetails, null, 2));
-    // console.log('Payer address:', payerAddress);
-    
     // Format the request according to the backend's ProcessSignedTransactionRequest struct
     // The signed_transaction should be an array containing the signed transaction
     const requestBody = {
@@ -172,18 +166,14 @@ export const sendSignedTransaction = async (
       payer_address: payerAddress
     };
     
-    // console.log('Final request body:', JSON.stringify(requestBody, null, 2));
-    
     // Send to the correct backend endpoint: /payments/{payment_id}/sign
     const apiUrl = `${API_BASE_URL}/api/payments/${paymentId}/sign`;
-    // console.log('Posting to API URL:', apiUrl);
     
     const response = await axios.post(apiUrl, requestBody, {
       headers: {
         'Content-Type': 'application/json'
       }
     });
-    // console.log('Success with /payments/{payment_id}/sign endpoint:', response.data);
     return response.data;
   } catch (error) {
     console.error('Error sending signed transaction:', error);
@@ -222,7 +212,6 @@ export const signAndSendTransaction = async (
     let privateKey = privateKeyOverride;
     
     if (!privateKey) {
-      // console.log('No private key override, retrieving from storage...');
       privateKey = await getPrivateKey();
     }
     
@@ -230,10 +219,7 @@ export const signAndSendTransaction = async (
       throw new Error('No private key available for signing');
     }
     
-    // console.log('Private key available for signing');
-    // console.log('Private key type:', typeof privateKey);
-    // console.log('Private key length:', privateKey.length);
-    // console.log('Private key preview:', privateKey.substring(0, 10) + '...');
+    
     
     // 2. Validate transaction data
     if (!transactionData) {
@@ -241,11 +227,9 @@ export const signAndSendTransaction = async (
     }
     
     if (typeof transactionData === 'string') {
-      // console.log('Transaction data is string, parsing...');
       transactionData = JSON.parse(transactionData);
     }
     
-    // Handle case where transaction data comes as an array (extract first element)
     if (Array.isArray(transactionData)) {
       // console.log('Transaction data is an array, extracting first element...');
       transactionData = transactionData[0];
