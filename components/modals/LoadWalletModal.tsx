@@ -19,7 +19,7 @@ export default function LoadWalletModal({ visible, onClose }: LoadWalletModalPro
       setIsLoading(true);
       
       // Direct Stripe checkout link with client reference ID
-      const stripeBaseUrl = process.env.EXPO_PUBLIC_STRIPE_USD_ID || 'https://buy.stripe.com/test_6oE6pt3uO3gH1tS5kk';
+      const stripeBaseUrl = process.env.EXPO_PUBLIC_STRIPE_USD_ID || process.env.TEST_STRIPE_USD_ID;
       const stripeUrl = `${stripeBaseUrl}?client_reference_id=${walletAddress}`;
       
       // Open the Stripe checkout page in browser

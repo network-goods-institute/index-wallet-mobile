@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, SafeAreaView, Dimensions, StyleSheet, Pla
 import { ThemedView } from '@/components/core/ThemedView';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import { X } from 'lucide-react-native';
+import { X, Building2 } from 'lucide-react-native';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import LottieView from 'lottie-react-native';
 
@@ -82,10 +82,22 @@ export default function UserTypeScreen() {
 
           <TouchableOpacity
             onPress={handleBusinessSignup}
-            style={styles.businessLink}
+            className="bg-blue-500 dark:bg-blue-600 py-4 px-6 rounded-xl items-center w-full flex-row justify-center"
+            style={{
+              shadowColor: '#3B82F6',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.25,
+              shadowRadius: 3.84,
+              elevation: 5,
+            }}
+            activeOpacity={0.8}
           >
-            <Text style={styles.businessText} className="text-gray-500 dark:text-gray-400">
-              I am signing up for a business
+            <Building2 size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+            <Text 
+              className="text-base font-semibold text-white"
+              style={{ fontFamily: 'SF-Pro-Rounded-Bold' }}
+            >
+              Sign up for Business
             </Text>
           </TouchableOpacity>
         </View>
@@ -164,12 +176,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: isWeb ? 40 : 20,
     paddingBottom: 40,
     alignItems: 'center',
-  },
-  businessLink: {
-    paddingVertical: 10,
-  },
-  businessText: {
-    fontSize: 16,
-    textDecorationLine: 'underline',
   },
 });
