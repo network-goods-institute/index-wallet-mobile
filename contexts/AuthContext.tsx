@@ -1,19 +1,15 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
 import * as Crypto from 'expo-crypto';
 import * as Device from 'expo-device';
-import api from '../services/api';
-import { Platform, Alert } from 'react-native';
 import { 
   generateSeedPhrase as generateSeedPhraseUtil, 
   validateSeedPhrase as validateSeedPhraseUtil, 
   createKeyPairFromSeedPhrase,
 } from '@/utils/cryptoUtils';
 import { registerUser, registerWallet } from '@/services/registerUser';
-import { validateAndFetchWallet, createWallet } from '@/services/walletService';
-import { UserAPI } from '@/services/api';
+import { validateAndFetchWallet } from '@/services/walletService';
 
 
 // Define types
@@ -313,6 +309,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Load wallet info with error handling for each item
           let walletAddress = null;
           let publicKey = null;
+          let privateKey = null;
           
           try {
             walletAddress = await AsyncStorage.getItem(WALLET_ADDRESS_KEY);
@@ -344,66 +341,60 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
           // Load seed phrase and private key from secure storage or AsyncStorage
           let seedPhraseValue = null;
-          let privateKey = null;
           
           try {
             // Try to get seed phrase from SecureStore first
-            const encryptedSeedPhrase = await SecureStore.getItemAsync(SEED_PHRASE_KEY);
-            // console.log('SecureStore seed phrase check:', encryptedSeedPhrase ? 'FOUND' : 'NOT FOUND');
-            if (encryptedSeedPhrase) {
-              // console.log('Encrypted seed phrase from SecureStore found');
-              seedPhraseValue = await decryptData(encryptedSeedPhrase);
-              // console.log('Decrypted seed phrase words count:', seedPhraseValue.split(' ').length);
-            } else {
+            try {
+              const encryptedSeedPhrase = await SecureStore.getItemAsync(SEED_PHRASE_KEY);
+              if (encryptedSeedPhrase) {
+                seedPhraseValue = await decryptData(encryptedSeedPhrase);
+              }
+            } catch (secureStoreError) {
+              // SecureStore not available (likely on web)
+            }
+            
+            if (!seedPhraseValue) {
               // If not in SecureStore, try AsyncStorage
               const asyncStorageSeedPhrase = await AsyncStorage.getItem(SEED_PHRASE_KEY);
-              // console.log('AsyncStorage seed phrase check:', asyncStorageSeedPhrase ? 'FOUND' : 'NOT FOUND');
               if (asyncStorageSeedPhrase) {
-                // console.log('Encrypted seed phrase from AsyncStorage found');
                 seedPhraseValue = await decryptData(asyncStorageSeedPhrase);
-                // console.log('Decrypted seed phrase words count:', seedPhraseValue.split(' ').length);
               }
             }
             
             // Try to get private key from SecureStore first
-            const encryptedPrivateKey = await SecureStore.getItemAsync(PRIVATE_KEY_KEY);
-            // console.log('SecureStore private key check:', encryptedPrivateKey ? 'FOUND' : 'NOT FOUND');
-            if (encryptedPrivateKey) {
-              // console.log('Encrypted private key from SecureStore:', encryptedPrivateKey.substring(0, 20) + '...');
-              privateKey = await decryptData(encryptedPrivateKey);
-              // console.log('Decrypted private key length:', privateKey.length);
-            } else {
+            try {
+              const encryptedPrivateKey = await SecureStore.getItemAsync(PRIVATE_KEY_KEY);
+              if (encryptedPrivateKey) {
+                privateKey = await decryptData(encryptedPrivateKey);
+              }
+            } catch (secureStoreError) {
+              // SecureStore not available (likely on web)
+            }
+            
+            if (!privateKey) {
               // If not in SecureStore, try AsyncStorage
               const asyncStoragePrivateKey = await AsyncStorage.getItem(PRIVATE_KEY_KEY);
-              // console.log('AsyncStorage private key check:', asyncStoragePrivateKey ? 'FOUND' : 'NOT FOUND');
               if (asyncStoragePrivateKey) {
-                // console.log('Encrypted private key from AsyncStorage:', asyncStoragePrivateKey.substring(0, 20) + '...');
                 privateKey = await decryptData(asyncStoragePrivateKey);
-                // console.log('Decrypted private key length:', privateKey.length);
               }
             }
             
-            // If still no private key, use test key for development
-            if (!privateKey) {
-              // console.log('No private key found in storage, using test key for development');
-              const testKey = '5JeqVC5myFajNwvqba1QNZLdWMNTnMkz5oSN5W1yJWhUr1TDQoP';
-              privateKey = testKey;
-              
-              // Store the test key for future use
-              const encryptedTestKey = await encryptData(testKey);
+            // If still no private key, try to regenerate from seed phrase
+            if (!privateKey && seedPhraseValue) {
               try {
-                await SecureStore.setItemAsync(PRIVATE_KEY_KEY, encryptedTestKey);
-                // console.log('Stored test key in SecureStore');
-              } catch (e) {
-                await AsyncStorage.setItem(PRIVATE_KEY_KEY, encryptedTestKey);
-                // console.log('Stored test key in AsyncStorage');
+                const keyPair = await createKeyPairFromSeedPhrase(seedPhraseValue);
+                privateKey = keyPair.privateKey;
+                publicKey = keyPair.publicKey;
+                
+                // Store the regenerated private key
+                const encryptedKey = await encryptData(privateKey);
+                await AsyncStorage.setItem(PRIVATE_KEY_KEY, encryptedKey);
+              } catch (error) {
+                console.error('Failed to regenerate keys from seed phrase:', error);
               }
             }
           } catch (error) {
-            console.error('Error loading private key:', error);
-            // Use test key as fallback
-            privateKey = '5JeqVC5myFajNwvqba1QNZLdWMNTnMkz5oSN5W1yJWhUr1TDQoP';
-            // console.log('Using fallback test key due to error');
+            console.error('Error loading keys:', error);
           }
           
           // Set seed phrase in context if available
@@ -417,15 +408,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
           // Set keyPair if we have both keys
           if (publicKey && privateKey) {
-            // console.log('Setting keyPair in context with:');
-            // console.log('- publicKey length:', publicKey.length);
-            // console.log('- privateKey length:', privateKey.length);
             setKeyPair({ privateKey, publicKey });
-            // console.log('Loaded key pair during initialization');
-          } else {
-            console.warn('Missing keys for keyPair:');
-            console.warn('- publicKey exists:', !!publicKey);
-            console.warn('- privateKey exists:', !!privateKey);
           }
           
           // Load user info with error handling
@@ -778,18 +761,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
       
-      // Generate key pair from seed phrase
-      // console.log('LOGIN: Deriving key pair from seed phrase...');
       const derivedKeyPair = await createKeyPairFromSeedPhrase(inputSeedPhrase);
-      
-      // Log the derived keys for debugging
-      // console.log('LOGIN: Derived key pair successfully');
-      // console.log('LOGIN: Private key type:', typeof derivedKeyPair.privateKey);
-      // console.log('LOGIN: Private key length:', derivedKeyPair.privateKey.length);
-      // console.log('LOGIN: Public key type:', typeof derivedKeyPair.publicKey);
-      // console.log('LOGIN: Public key length:', derivedKeyPair.publicKey.length);
-      // console.log('LOGIN: Private key (first 20 chars):', derivedKeyPair.privateKey.substring(0, 20) + '...');
-      // console.log('LOGIN: Public key (first 20 chars):', derivedKeyPair.publicKey.substring(0, 20) + '...');
       
       // Check if a wallet with this seed phrase exists
       const wallet = await validateAndFetchWallet(inputSeedPhrase);
@@ -799,7 +771,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Set the wallet address if available from the backend
       if (wallet && wallet.wallet_address) {
-        // console.log('LOGIN: Setting wallet address from backend:', wallet.wallet_address);
         await AsyncStorage.setItem(WALLET_ADDRESS_KEY, wallet.wallet_address);
         try {
           await SecureStore.setItemAsync(WALLET_ADDRESS_KEY, wallet.wallet_address);
@@ -810,7 +781,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         // Also restore username if available
         if (wallet.username) {
-          console.log('LOGIN: Restoring username from backend:', wallet.username);
           await AsyncStorage.setItem(USER_NAME_KEY, wallet.username);
           try {
             await SecureStore.setItemAsync(USER_NAME_KEY, wallet.username);
@@ -823,7 +793,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Always check local storage as well to ensure we don't lose data
         const localUserName = await AsyncStorage.getItem(USER_NAME_KEY);
         if (!wallet.username && localUserName) {
-          console.log('LOGIN: Backend missing username, using local storage:', localUserName);
           setUserName(localUserName);
         }
         

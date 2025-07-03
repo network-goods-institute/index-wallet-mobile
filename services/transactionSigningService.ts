@@ -19,7 +19,6 @@ const PRIVATE_KEY_KEY = 'encrypted-private-key';
 export const getPrivateKey = async (providedPrivateKey?: string): Promise<string | null> => {
   // If a private key is provided directly, use it
   if (providedPrivateKey) {
-    console.log('Using provided private key, length:', providedPrivateKey.length);
     // Check if it needs decryption
     if (providedPrivateKey.startsWith('encrypted:')) {
       return await decryptPrivateKey(providedPrivateKey);
@@ -30,21 +29,16 @@ export const getPrivateKey = async (providedPrivateKey?: string): Promise<string
   try {
     // Try to get the key from SecureStore first
     let encryptedKey = await SecureStore.getItemAsync(PRIVATE_KEY_KEY);
-    console.log('SecureStore result:', encryptedKey ? 'Found' : 'Not found');
     
     // If not found in SecureStore, try AsyncStorage as fallback
     if (!encryptedKey) {
-      console.log('Key not found in SecureStore, trying AsyncStorage');
       encryptedKey = await AsyncStorage.getItem(PRIVATE_KEY_KEY);
-      console.log('AsyncStorage result:', encryptedKey ? 'Found' : 'Not found');
     }
     
     if (!encryptedKey) {
-      console.log('No private key found in storage');
       return null;
     }
     
-    console.log('Found encrypted key, decrypting...');
     return await decryptPrivateKey(encryptedKey);
   } catch (error) {
     console.error('Error retrieving encrypted private key:', error);
@@ -57,8 +51,6 @@ export const getPrivateKey = async (providedPrivateKey?: string): Promise<string
  * Matches the AuthContext's decryptData implementation
  */
 export const decryptPrivateKey = async (encryptedKey: string): Promise<string> => {
-  // console.log('Decrypting key:', encryptedKey.substring(0, 20) + '...');
-  
   // Match the AuthContext's decryption implementation exactly
   // Mock encryption mechanism for MVP: 
   if (encryptedKey.startsWith('encrypted:')) {
@@ -82,8 +74,22 @@ export const decryptPrivateKey = async (encryptedKey: string): Promise<string> =
 export const signTransaction = async (transactionData: any, privateKey: string) => {
   try {
     // Decode the private key from base58
-    const privateKeyBytes = bs58.decode(privateKey);
-    // console.log('Private key bytes length:', privateKeyBytes.length);
+    let privateKeyBytes = bs58.decode(privateKey);
+    
+    // Check if we need to extract the actual private key from a larger format
+    if (privateKeyBytes.length === 37) {
+      // Common formats:
+      // - WIF: 1 byte version + 32 bytes key + 4 bytes checksum = 37 bytes
+      // - Some formats: 1 byte prefix + 32 bytes key + 4 bytes suffix = 37 bytes
+      
+      // Try extracting the 32-byte key (skip first byte, take next 32)
+      privateKeyBytes = privateKeyBytes.slice(1, 33);
+    } else if (privateKeyBytes.length === 64) {
+      // Take first 32 bytes as private key
+      privateKeyBytes = privateKeyBytes.slice(0, 32);
+    } else if (privateKeyBytes.length !== 32) {
+      throw new Error(`Invalid private key length: expected 32, got ${privateKeyBytes.length}`);
+    }
     
     try {
       // Sign the transaction using the all-in-one approach
