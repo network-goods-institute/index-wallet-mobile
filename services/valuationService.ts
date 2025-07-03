@@ -23,15 +23,8 @@ export const fetchTokenValuations = async (walletAddress: string): Promise<Token
     console.log(`Fetching valuations from: ${API_BASE_URL}/wallet/${walletAddress}/valuations`);
     const response = await axios.get(`${API_BASE_URL}/wallet/${walletAddress}/valuations`);
     
-    // Log detailed information about the response
-    console.log('Response status:', response.status);
-    console.log('Response headers:', JSON.stringify(response.headers, null, 2));
-    console.log('Raw API response type:', typeof response.data);
-    console.log('Raw API response:', JSON.stringify(response.data, null, 2));
-    
     // Check if response.data is an array directly
     if (Array.isArray(response.data)) {
-      console.log('Response is an array with length:', response.data.length);
       return response.data as TokenValuation[];
     }
     

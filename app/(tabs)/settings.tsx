@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, Switch, TouchableOpacity, ScrollView, Platform, Alert, Modal, SafeAreaView, Linking } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'expo-router';
 import SeedPhraseWarningModal from '@/components/SeedPhraseWarningModal';
 import { Wallet, Store, ArrowRight, X, AlertTriangle } from 'lucide-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 
 // Define types for settings items
 type ToggleSettingItem = {
@@ -57,6 +59,8 @@ export default function SettingsScreen() {
   const [showSeedPhraseModal, setShowSeedPhraseModal] = useState(false);
   const [showLoadWalletModal, setShowLoadWalletModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [loadedSeedPhrase, setLoadedSeedPhrase] = useState<string | null>(null);
+  const [isLoadingSeedPhrase, setIsLoadingSeedPhrase] = useState(false);
   
   const handleLogout = () => {
     setShowLogoutModal(true);
@@ -71,8 +75,61 @@ export default function SettingsScreen() {
     }
   };
   
-  const handleViewSeedPhrase = () => {
-    setShowSeedPhraseModal(true);
+  const handleViewSeedPhrase = async () => {
+    console.log('handleViewSeedPhrase called, seedPhrase from context:', !!seedPhrase);
+    
+    // If we have the seed phrase from context, use it
+    if (seedPhrase) {
+      setShowSeedPhraseModal(true);
+      return;
+    }
+    
+    // Set loading state
+    setIsLoadingSeedPhrase(true);
+    
+    // Otherwise, try to load it from storage (web fallback)
+    console.log('Attempting to load seed phrase from storage...');
+    try {
+      // Try AsyncStorage directly (since SecureStore doesn't work on web)
+      const encryptedSeed = await AsyncStorage.getItem('encrypted-seed-phrase');
+      console.log('Encrypted seed from storage:', encryptedSeed ? 'Found' : 'Not found');
+      
+      if (encryptedSeed) {
+        // Simple decryption - remove the "encrypted:" prefix
+        let decrypted = encryptedSeed;
+        if (encryptedSeed.startsWith('encrypted:')) {
+          decrypted = encryptedSeed.substring(10);
+        }
+        
+        console.log('Decrypted seed phrase words:', decrypted ? decrypted.split(' ').length : 0);
+        
+        if (decrypted && decrypted.split(' ').length >= 12) {
+          setLoadedSeedPhrase(decrypted);
+          setShowSeedPhraseModal(true);
+          return;
+        }
+      }
+      
+      // Also try without encryption prefix (in case it's stored differently)
+      const plainSeed = await AsyncStorage.getItem('seedPhrase');
+      if (plainSeed) {
+        console.log('Found plain seed phrase');
+        setLoadedSeedPhrase(plainSeed);
+        setShowSeedPhraseModal(true);
+        return;
+      }
+    } catch (error) {
+      console.error('Error loading seed phrase:', error);
+    } finally {
+      setIsLoadingSeedPhrase(false);
+    }
+    
+    // If we still don't have it, show error
+    Alert.alert(
+      'Seed Phrase Not Available',
+      'Your seed phrase could not be loaded. Please log out and log back in to view your seed phrase.',
+      [{ text: 'OK' }]
+    );
   };
   
   const handleLoadWallet = () => {
@@ -93,11 +150,12 @@ export default function SettingsScreen() {
           customIcon: <Wallet size={24} />,
         },
         {
-          title: 'View Seed Phrase',
+          title: isLoadingSeedPhrase ? 'Loading...' : 'View Seed Phrase',
           description: 'View your wallet recovery phrase',
           type: 'link',
           onPress: handleViewSeedPhrase,
           icon: 'key.fill',
+          disabled: isLoadingSeedPhrase,
         },
         {
           title: 'Sign Out',
@@ -239,9 +297,12 @@ export default function SettingsScreen() {
       
       <SeedPhraseWarningModal
         visible={showSeedPhraseModal}
-        onContinue={() => setShowSeedPhraseModal(false)}
+        onContinue={() => {
+          setShowSeedPhraseModal(false);
+          setLoadedSeedPhrase(null); // Clear loaded seed phrase
+        }}
         mode="reveal"
-        seedPhrase={seedPhrase || ''}
+        seedPhrase={seedPhrase || loadedSeedPhrase || ''}
       />
       
       <LoadWalletModal

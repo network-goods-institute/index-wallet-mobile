@@ -15,30 +15,49 @@ const api = axios.create({
   timeout: 10000,
 });
 
-type Valuation = { [currency: string]: number };
 // User registration API
 export const registerUser = async (userData: {
   walletAddress: string;
-  username: string; 
-  valuations: Valuation;
+  username: string;
+  userType?: 'vendor' | 'customer';
+  preferences?: any;
+  isVerified?: boolean;
+  vendorDescription?: string;
+  vendorGoogleMapsLink?: string;
+  vendorWebsiteLink?: string;
 } = {
   walletAddress: '',
   username: '',
-  valuations: {},
+  userType: 'customer',
+  isVerified: true,
 }) => {
   try {
     // Convert camelCase to snake_case for the Rust backend
-    const backendData = {
+    const backendData: any = {
       wallet_address: userData.walletAddress,
       username: userData.username,
-      valuations: userData.valuations
+      user_type: userData.userType || 'customer',
+      is_verified: userData.isVerified || true,
     };
-    
-    console.log('Sending user registration data:', backendData);
-    
-    // Try with the /api prefix for Rust backend
-    // Log the full URL for debugging
-    console.log(`Sending request to: ${API_URL}/api/users`);
+
+    // Add optional fields if provided
+    if (userData.preferences !== undefined) {
+      backendData.preferences = userData.preferences;
+    }
+
+    // Add vendor-specific fields only if user type is vendor
+    if (userData.userType === 'vendor') {
+      if (userData.vendorDescription !== undefined) {
+        backendData.vendor_description = userData.vendorDescription;
+      }
+      if (userData.vendorGoogleMapsLink !== undefined) {
+        backendData.vendor_google_maps_link = userData.vendorGoogleMapsLink;
+      }
+      if (userData.vendorWebsiteLink !== undefined) {
+        backendData.vendor_website_link = userData.vendorWebsiteLink;
+      }
+    }
+
     const response = await api.post('/api/users', backendData);
     return response.data;
   } catch (error: any) {
@@ -46,6 +65,7 @@ export const registerUser = async (userData: {
     throw error;
   }
 };
+
 
 // Wallet API functions
 export const registerWallet = async (walletData: {
@@ -65,10 +85,6 @@ export const registerWallet = async (walletData: {
       has_biometrics: walletData.hasBiometrics
     };
     
-    console.log('Sending wallet registration data:', backendData);
-    
-    // Try with the /api prefix
-    console.log(`Sending request to: ${API_URL}/api/wallets`);
     const response = await api.post('/api/wallets', backendData);
     return response.data;
   } catch (error: any) {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, FlatList, Image, TouchableOpacity, ScrollView, SafeAreaView, Text, ActivityIndicator, Linking } from 'react-native';
+import { StyleSheet, View, FlatList, TouchableOpacity, ScrollView, SafeAreaView, Text, ActivityIndicator, Linking } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -12,9 +12,8 @@ interface PartneredVendor {
   _id: string;
   name: string;
   description: string;
-  google_maps_link: string;
-  website_link: string;
-  image_url: string;
+  google_maps_link?: string;
+  website_link?: string;
 }
 
 // Mock vendor for styling purposes
@@ -24,7 +23,6 @@ const mockVendor: PartneredVendor = {
   description: 'Family-owned coffee shop serving organic fair-trade coffee since 1995',
   google_maps_link: 'https://maps.google.com/?q=Joe\'s+Coffee+Shop+NYC',
   website_link: 'https://joescoffeeshop.com',
-  image_url: 'https://placehold.co/200x200/8B4513/white?text=JC',
 };
 
 export default function VendorsScreen() {
@@ -122,18 +120,7 @@ export default function VendorsScreen() {
                   }}
                 >
                   <View className="p-4">
-                    <View className="flex-row items-center">
-                      <View 
-                        className="w-14 h-14 rounded-xl overflow-hidden items-center justify-center"
-                        style={{ backgroundColor: isDark ? '#374151' : '#F3F4F6' }}
-                      >
-                        <Image 
-                          source={{ uri: vendor.image_url }} 
-                          className="w-14 h-14"
-                          resizeMode="cover"
-                        />
-                      </View>
-                      <View className="ml-4 flex-1">
+                    <View className="flex-1">
                         <Text className="text-lg font-semibold text-gray-900 dark:text-white">
                           {vendor.name}
                         </Text>
@@ -141,24 +128,27 @@ export default function VendorsScreen() {
                           {vendor.description}
                         </Text>
                         <View className="flex-row mt-3 gap-4">
-                          <TouchableOpacity 
-                            onPress={() => openLink(vendor.google_maps_link)}
-                            activeOpacity={0.7}
-                            className="flex-row items-center bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-lg"
-                          >
-                            <MapPin size={14} color={isDark ? '#60A5FA' : '#3B82F6'} />
-                            <Text className="text-xs font-medium text-blue-600 dark:text-blue-400 ml-1.5">Directions</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity 
-                            onPress={() => openLink(vendor.website_link)}
-                            activeOpacity={0.7}
-                            className="flex-row items-center bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-lg"
-                          >
-                            <ExternalLink size={14} color={isDark ? '#60A5FA' : '#3B82F6'} />
-                            <Text className="text-xs font-medium text-blue-600 dark:text-blue-400 ml-1.5">Website</Text>
-                          </TouchableOpacity>
+                          {vendor.google_maps_link && (
+                            <TouchableOpacity 
+                              onPress={() => openLink(vendor.google_maps_link)}
+                              activeOpacity={0.7}
+                              className="flex-row items-center bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-lg"
+                            >
+                              <MapPin size={14} color={isDark ? '#60A5FA' : '#3B82F6'} />
+                              <Text className="text-xs font-medium text-blue-600 dark:text-blue-400 ml-1.5">Directions</Text>
+                            </TouchableOpacity>
+                          )}
+                          {vendor.website_link && (
+                            <TouchableOpacity 
+                              onPress={() => openLink(vendor.website_link)}
+                              activeOpacity={0.7}
+                              className="flex-row items-center bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-lg"
+                            >
+                              <ExternalLink size={14} color={isDark ? '#60A5FA' : '#3B82F6'} />
+                              <Text className="text-xs font-medium text-blue-600 dark:text-blue-400 ml-1.5">Website</Text>
+                            </TouchableOpacity>
+                          )}
                         </View>
-                      </View>
                     </View>
                   </View>
                 </View>

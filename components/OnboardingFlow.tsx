@@ -7,6 +7,7 @@ import ImportWalletScreen from '../app/auth/import-wallet';
 import VerifySeedScreen from '../app/auth/verify-seed';
 import UserTypeScreen from '../app/auth/user-type';
 import UserNameScreen from '../app/auth/user-name';
+import VendorDetailsScreen from '../app/auth/vendor-details';
 import VendorSlides from '../app/onboarding/vendor-slides';
 import CustomerSlides from '../app/onboarding/customer-slides';
 
@@ -20,6 +21,8 @@ export default function OnboardingFlow({ step }: { step: OnboardingStep }) {
       return <UserTypeScreen />;
     case 'user-name':
       return <UserNameScreen />;
+    case 'vendor-details':
+      return <VendorDetailsScreen />;
     case 'vendor-slides':
       return <VendorSlides />;
     case 'customer-slides':

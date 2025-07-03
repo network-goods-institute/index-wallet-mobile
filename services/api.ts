@@ -192,17 +192,16 @@ export const PaymentAPI = {
     payer_address: string;
     payer_username?: string;
     payer_balances: Array<{
-      token_key: string;     // "address,chainId"
+      token_key: string;     // "address,shard"
       symbol: string;
       name: string;
       balance: number;
       average_valuation: number;
+      token_image_url?: string | null;
     }>;
   }) => {
     try {
-      // console.log(`Supplementing payment ${paymentId} with data:`, supplementData);
       const response = await api.post(`/api/payments/${paymentId}/supplement`, supplementData);
-      // console.log('Payment supplemented response:', response.data);
       return response.data;
     } catch (error: any) {
       console.error('Error supplementing payment:', error);

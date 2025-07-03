@@ -26,11 +26,17 @@ export default function UserNameScreen() {
     }
     
     setUserName(name.trim());
-    setOnboardingStep('create-seed');
+    
+    // Navigate to vendor-details for vendors, create-seed for customers
+    if (isVendor) {
+      setOnboardingStep('vendor-details');
+    } else {
+      setOnboardingStep('create-seed');
+    }
   };
 
   return (
-    <ThemedView className="flex-1 bg-black">
+    <ThemedView className="flex-1 bg-white">
       <SafeAreaView className="flex-1">
         <KeyboardAvoidingView 
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -44,9 +50,9 @@ export default function UserNameScreen() {
                 <ArrowLeft size={32} color={isVendor ? '#2196F3' : '#9C27B0'} />
               </TouchableOpacity>
 
-              <Text className="text-4xl font-bold text-white leading-tight mb-6">
+              <Text className="text-4xl font-bold text-gray-900 leading-tight mb-6">
                 {isVendor 
-                  ? "What is your\nvendor name?"
+                  ? "What is your\nbusiness name?"
                   : "What is your\nname?"
                 }
               </Text>
@@ -64,9 +70,9 @@ export default function UserNameScreen() {
 
               {/* Input field */}
               <TextInput
-                className="dark:text-white light:text-black text-2xl font-medium py-3 focus:outline-none"
+                className="text-gray-900 text-2xl font-medium py-3 focus:outline-none"
                 placeholder={isVendor ? "Enter business name" : "Enter your name"}
-                placeholderTextColor="#666"
+                placeholderTextColor="#9CA3AF"
                 value={name}
                 onChangeText={(text) => {
                   setName(text);

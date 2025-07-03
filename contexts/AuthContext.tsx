@@ -18,11 +18,11 @@ import { UserAPI } from '@/services/api';
 
 // Define types
 export type AuthStatus = 'loading' | 'unauthenticated' | 'authenticated' | 'onboarding';
-export type OnboardingStep = 'welcome' | 'user-type' | 'user-name' | 'vendor-slides' | 'customer-slides' | 'create-seed' | 'verify-seed' | 'security-settings' | 'import-seed' | 'create-passkey' | 'complete' | 'sign-in';
+export type OnboardingStep = 'welcome' | 'user-type' | 'user-name' | 'vendor-slides' | 'vendor-details' | 'customer-slides' | 'create-seed' | 'verify-seed' | 'security-settings' | 'import-seed' | 'create-passkey' | 'complete' | 'sign-in';
 export type BackupStatus = 'none' | 'pending' | 'completed' | 'failed';
 export type PlatformOS = 'ios' | 'android' | 'web' | 'unknown';
 export type BackupProvider = 'iCloud' | 'Google Drive' | 'None' | 'Local';
-export type UserType = 'vendor' | 'payee' | null;
+export type UserType = 'vendor' | 'customer' | null;
 
 interface AuthContextType {
   status: AuthStatus;
@@ -32,7 +32,6 @@ interface AuthContextType {
   hasPasskey: boolean;
   iCloudBackupEnabled: boolean;
   backupStatus: BackupStatus;
-  biometricsAvailable: boolean;
   platformOS: PlatformOS;
   backupProvider: BackupProvider;
   userType: UserType;
@@ -40,16 +39,22 @@ interface AuthContextType {
   walletAddress: string | null;
   existingWallet: any | null;
   valuations: any | null;
+  isVerified: boolean;
+  vendorDescription: string | null;
+  vendorGoogleMapsLink: string | null;
+  vendorWebsiteLink: string | null;
   setSeedPhraseForOnboarding: (seedPhrase: string) => Promise<void>;
   setUserType: (type: UserType) => void;
   setUserName: (name: string) => void;
+  setVendorDescription: (description: string) => void;
+  setVendorGoogleMapsLink: (link: string) => void;
+  setVendorWebsiteLink: (link: string) => void;
   validateSeedAndCheckWallet: (seedPhrase: string) => Promise<any | null>;
   
   // Authentication methods
   login: (seedPhrase: string, usePasskey?: boolean) => Promise<boolean>;
   logout: () => Promise<void>;
   authenticateWithPasskey: () => Promise<boolean>;
-  authenticateWithBiometrics: () => Promise<boolean>;
   
   // Seed phrase methods
   generateSeedPhrase: () => string;
@@ -81,6 +86,10 @@ const USER_NAME_KEY = 'user-name';
 const WALLET_ADDRESS_KEY = 'wallet-address';
 const USER_DATA_KEY = 'user-data';  // For storing complete user object
 const VALUATIONS_KEY = 'valuations';
+const IS_VERIFIED_KEY = 'is-verified';
+const VENDOR_DESCRIPTION_KEY = 'vendor-description';
+const VENDOR_GOOGLE_MAPS_LINK_KEY = 'vendor-google-maps-link';
+const VENDOR_WEBSITE_LINK_KEY = 'vendor-website-link';
 
 
 // Create context
@@ -95,7 +104,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [hasPasskey, setHasPasskey] = useState<boolean>(false);
   const [iCloudBackupEnabled, setICloudBackupEnabled] = useState<boolean>(false);
   const [backupStatus, setBackupStatus] = useState<BackupStatus>('none');
-  const [biometricsAvailable, setBiometricsAvailable] = useState<boolean>(false);
   const [platformOS, setPlatformOS] = useState<PlatformOS>('unknown');
   const [backupProvider, setBackupProvider] = useState<BackupProvider>('None');
   const [userType, setUserType] = useState<UserType>(null);
@@ -103,6 +111,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [existingWallet, setExistingWallet] = useState<any | null>(null);
   const [valuations, setValuations] = useState<any | null>(null);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [isVerified, setIsVerified] = useState<boolean>(false);
+  const [vendorDescription, setVendorDescription] = useState<string | null>(null);
+  const [vendorGoogleMapsLink, setVendorGoogleMapsLink] = useState<string | null>(null);
+  const [vendorWebsiteLink, setVendorWebsiteLink] = useState<string | null>(null);
   
   // Add a custom setter for wallet address
   const updateWalletAddress = useCallback((address: string | null) => {
@@ -269,6 +281,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const storedBackupStatus = await AsyncStorage.getItem(BACKUP_STATUS_KEY) as BackupStatus || 'none';
         const storedUserType = await AsyncStorage.getItem(USER_TYPE_KEY) as UserType;
         let storedUserName = await AsyncStorage.getItem(USER_NAME_KEY);
+        const storedIsVerified = await AsyncStorage.getItem(IS_VERIFIED_KEY);
+        
+        // Load vendor-specific data if user type is vendor
+        let storedVendorDescription = null;
+        let storedVendorGoogleMapsLink = null;
+        let storedVendorWebsiteLink = null;
+        
+        if (storedUserType === 'vendor') {
+          storedVendorDescription = await AsyncStorage.getItem(VENDOR_DESCRIPTION_KEY);
+          storedVendorGoogleMapsLink = await AsyncStorage.getItem(VENDOR_GOOGLE_MAPS_LINK_KEY);
+          storedVendorWebsiteLink = await AsyncStorage.getItem(VENDOR_WEBSITE_LINK_KEY);
+        }
         
         // If not in AsyncStorage, try SecureStore
         if (!storedUserName) {
@@ -284,10 +308,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         }
         console.log('AUTH INIT: Final username from storage:', storedUserName);
-        
-        // Check if biometrics are available on the device
-        const biometricsCheck = await LocalAuthentication.hasHardwareAsync();
-        setBiometricsAvailable(biometricsCheck);
         
         if (storedStatus === 'authenticated') {
           // Load wallet info with error handling for each item
@@ -441,6 +461,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           } else {
             console.warn('AUTH INIT: No username found in storage!');
           }
+          
+          // Set isVerified status
+          if (storedIsVerified) {
+            setIsVerified(storedIsVerified === 'true');
+          }
+          
+          // Set vendor-specific data if loaded
+          if (storedVendorDescription) setVendorDescription(storedVendorDescription);
+          if (storedVendorGoogleMapsLink) setVendorGoogleMapsLink(storedVendorGoogleMapsLink);
+          if (storedVendorWebsiteLink) setVendorWebsiteLink(storedVendorWebsiteLink);
           
           if (userData) setExistingWallet(userData);
           if (valuations) setValuations(valuations);
@@ -610,11 +640,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Register user with backend
       try {
         // Register the user account
-        const userData = await registerUser({
+        const registrationData: any = {
           walletAddress,
-          username: displayName, 
-          valuations: {}
-        });
+          username: displayName,
+          userType: userType || 'customer',
+          isVerified: false
+        };
+
+        // Add vendor-specific fields if user type is vendor
+        if (userType === 'vendor') {
+          if (vendorDescription) {
+            registrationData.vendorDescription = vendorDescription;
+          }
+          if (vendorGoogleMapsLink) {
+            registrationData.vendorGoogleMapsLink = vendorGoogleMapsLink;
+          }
+          if (vendorWebsiteLink) {
+            registrationData.vendorWebsiteLink = vendorWebsiteLink;
+          }
+        }
+
+        const userData = await registerUser(registrationData);
         
         // console.log('User registered successfully:', userData);
         
@@ -638,6 +684,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Store user type to AsyncStorage
         if (userType) {
           await AsyncStorage.setItem(USER_TYPE_KEY, userType);
+        }
+        
+        // Store isVerified status
+        const verifiedStatus = registrationData.isVerified || false;
+        setIsVerified(verifiedStatus);
+        await AsyncStorage.setItem(IS_VERIFIED_KEY, verifiedStatus.toString());
+        
+        // Store vendor-specific data if user is a vendor
+        if (userType === 'vendor') {
+          if (vendorDescription) {
+            await AsyncStorage.setItem(VENDOR_DESCRIPTION_KEY, vendorDescription);
+          }
+          if (vendorGoogleMapsLink) {
+            await AsyncStorage.setItem(VENDOR_GOOGLE_MAPS_LINK_KEY, vendorGoogleMapsLink);
+          }
+          if (vendorWebsiteLink) {
+            await AsyncStorage.setItem(VENDOR_WEBSITE_LINK_KEY, vendorWebsiteLink);
+          }
         }
       } catch (apiError: any) {
         // Log error and fail onboarding - we need a successful registration
@@ -839,6 +903,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         VALUATIONS_KEY,
         USER_TYPE_KEY,
         USER_NAME_KEY,
+        IS_VERIFIED_KEY,
+        VENDOR_DESCRIPTION_KEY,
+        VENDOR_GOOGLE_MAPS_LINK_KEY,
+        VENDOR_WEBSITE_LINK_KEY,
         HAS_PASSKEY_KEY,
         ICLOUD_BACKUP_ENABLED_KEY,
         BACKUP_STATUS_KEY,
@@ -868,6 +936,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setExistingWallet(null);
       setUserType(null);
       setUserName(null);
+      setIsVerified(false);
+      setVendorDescription(null);
+      setVendorGoogleMapsLink(null);
+      setVendorWebsiteLink(null);
       setHasPasskey(false);
       setICloudBackupEnabled(false);
       setBackupStatus('none');
@@ -922,65 +994,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
   
-  // Authenticate with biometrics
-  const authenticateWithBiometrics = async (): Promise<boolean> => {
-    try {
-      // Check if biometrics are available
-      const compatible = await LocalAuthentication.hasHardwareAsync();
-      if (!compatible) {
-        // console.log('Biometric authentication not available on this device');
-        return false;
-      }
-      
-      // Check if the device has biometrics enrolled
-      const enrolled = await LocalAuthentication.isEnrolledAsync();
-      if (!enrolled) {
-        // console.log('No biometrics enrolled on this device');
-        return false;
-      }
-      
-      // Authenticate with biometrics
-      const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Authenticate to access your wallet',
-        fallbackLabel: 'Use passcode',
-      });
-      
-      if (result.success) {
-        // Try to retrieve from SecureStore first, then fall back to AsyncStorage
-        let storedSeedPhrase, storedPrivateKey;
-        try {
-          storedSeedPhrase = await SecureStore.getItemAsync(SEED_PHRASE_KEY);
-          storedPrivateKey = await SecureStore.getItemAsync(PRIVATE_KEY_KEY);
-        } catch (secureStoreError) {
-          console.warn('Secure storage retrieval failed, trying AsyncStorage:', secureStoreError);
-          storedSeedPhrase = await AsyncStorage.getItem(SEED_PHRASE_KEY);
-          storedPrivateKey = await AsyncStorage.getItem(PRIVATE_KEY_KEY);
-        }
-        
-        // Public key is always in AsyncStorage
-        const storedPublicKey = await AsyncStorage.getItem(PUBLIC_KEY_KEY);
-        
-        if (storedSeedPhrase && storedPrivateKey && storedPublicKey) {
-          const decryptedSeedPhrase = await decryptData(storedSeedPhrase);
-          const decryptedPrivateKey = await decryptData(storedPrivateKey);
-          
-          setSeedPhrase(decryptedSeedPhrase);
-          setKeyPair({
-            privateKey: decryptedPrivateKey,
-            publicKey: storedPublicKey
-          });
-          setStatus('authenticated');
-          return true;
-        }
-      }
-      
-      return false;
-    } catch (error) {
-      console.error('Error authenticating with biometrics:', error);
-      return false;
-    }
-  };
-
   // Enable or disable cloud backup (platform-specific)
   const enableiCloudBackup = async (enabled: boolean): Promise<boolean> => {
     try {
@@ -1169,7 +1182,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     hasPasskey,
     iCloudBackupEnabled,
     backupStatus,
-    biometricsAvailable,
     platformOS,
     walletAddress,
     backupProvider,
@@ -1184,10 +1196,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUserName(name);
       AsyncStorage.setItem(USER_NAME_KEY, name);
     },
+    isVerified,
+    vendorDescription,
+    vendorGoogleMapsLink,
+    vendorWebsiteLink,
+    setVendorDescription: (description: string) => {
+      setVendorDescription(description);
+      AsyncStorage.setItem(VENDOR_DESCRIPTION_KEY, description);
+    },
+    setVendorGoogleMapsLink: (link: string) => {
+      setVendorGoogleMapsLink(link);
+      AsyncStorage.setItem(VENDOR_GOOGLE_MAPS_LINK_KEY, link);
+    },
+    setVendorWebsiteLink: (link: string) => {
+      setVendorWebsiteLink(link);
+      AsyncStorage.setItem(VENDOR_WEBSITE_LINK_KEY, link);
+    },
     login,
     logout,
     authenticateWithPasskey,
-    authenticateWithBiometrics,
     generateSeedPhrase,
     validateSeedPhrase,
     startOnboarding,

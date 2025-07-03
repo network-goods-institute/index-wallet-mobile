@@ -19,25 +19,32 @@ const PRIVATE_KEY_KEY = 'encrypted-private-key';
 export const getPrivateKey = async (providedPrivateKey?: string): Promise<string | null> => {
   // If a private key is provided directly, use it
   if (providedPrivateKey) {
-    // console.log('Using provided private key');
+    console.log('Using provided private key, length:', providedPrivateKey.length);
+    // Check if it needs decryption
+    if (providedPrivateKey.startsWith('encrypted:')) {
+      return await decryptPrivateKey(providedPrivateKey);
+    }
     return providedPrivateKey;
   }
   
   try {
     // Try to get the key from SecureStore first
     let encryptedKey = await SecureStore.getItemAsync(PRIVATE_KEY_KEY);
+    console.log('SecureStore result:', encryptedKey ? 'Found' : 'Not found');
     
     // If not found in SecureStore, try AsyncStorage as fallback
     if (!encryptedKey) {
-      // console.log('Key not found in SecureStore, trying AsyncStorage');
+      console.log('Key not found in SecureStore, trying AsyncStorage');
       encryptedKey = await AsyncStorage.getItem(PRIVATE_KEY_KEY);
+      console.log('AsyncStorage result:', encryptedKey ? 'Found' : 'Not found');
     }
     
     if (!encryptedKey) {
-      // console.log('No private key found in storage');
+      console.log('No private key found in storage');
       return null;
     }
     
+    console.log('Found encrypted key, decrypting...');
     return await decryptPrivateKey(encryptedKey);
   } catch (error) {
     console.error('Error retrieving encrypted private key:', error);
@@ -53,18 +60,16 @@ export const decryptPrivateKey = async (encryptedKey: string): Promise<string> =
   // console.log('Decrypting key:', encryptedKey.substring(0, 20) + '...');
   
   // Match the AuthContext's decryption implementation exactly
+  // Mock encryption mechanism for MVP: 
   if (encryptedKey.startsWith('encrypted:')) {
-    // console.log('Found encrypted: prefix, extracting data');
     return encryptedKey.substring(10);
   }
   
   // Try other possible formats
   if (encryptedKey.includes(':')) {
-    // console.log('Found other prefix format, extracting after colon');
     return encryptedKey.substring(encryptedKey.indexOf(':') + 1);
   }
   
-  // console.log('No encryption prefix found, returning as is');
   return encryptedKey;
 };
 

@@ -261,15 +261,22 @@ export const ActiveTransactionProvider: React.FC<{ children: React.ReactNode }> 
         name: token.tokenName,
         balance: token.amount,
         average_valuation: token.valueUSD / token.amount,
-        token_image_url: token.logoUrl
+        token_image_url: token.tokenImageUrl || null
       }));
       
-      // Directly supplement the transaction with payer info
-      const transaction = await PaymentAPI.getFinalizedTransaction(paymentCode, {
+      // Build supplement data
+      const supplementData: any = {
         payer_address: auth.walletAddress,
-        payer_username: auth.userName || undefined,
         payer_balances: payerBalances
-      });
+      };
+      
+      // Only add payer_username if it exists
+      if (auth.userName) {
+        supplementData.payer_username = auth.userName;
+      }
+      
+      // Supplement the transaction with payer info
+      const transaction = await PaymentAPI.getFinalizedTransaction(paymentCode, supplementData);
       
       setActivePayment(transaction);
       
@@ -370,7 +377,8 @@ export const ActiveTransactionProvider: React.FC<{ children: React.ReactNode }> 
         vendor_address: auth.walletAddress,
         vendor_name: auth.userName || 'Unknown Vendor',
         price_usd: amount,
-        vendor_valuations: auth.valuations
+        vendor_valuations: auth.valuations,
+        is_verified: auth.isVerified || false
       };
       
       const response = await PaymentAPI.createPayment(paymentData);
