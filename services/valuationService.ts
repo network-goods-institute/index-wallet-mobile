@@ -20,7 +20,7 @@ export interface ValuationsResponse {
  */
 export const fetchTokenValuations = async (walletAddress: string): Promise<TokenValuation[]> => {
   try {
-    console.log(`Fetching valuations from: ${API_BASE_URL}/wallet/${walletAddress}/valuations`);
+    // console.log(`Fetching valuations from: ${API_BASE_URL}/wallet/${walletAddress}/valuations`);
     const response = await axios.get(`${API_BASE_URL}/wallet/${walletAddress}/valuations`);
     
     // Check if response.data is an array directly
@@ -30,20 +30,20 @@ export const fetchTokenValuations = async (walletAddress: string): Promise<Token
     
     // Check if response.data has a valuations property
     if (response.data && response.data.valuations && Array.isArray(response.data.valuations)) {
-      console.log('Response has valuations array with length:', response.data.valuations.length);
+      // console.log('Response has valuations array with length:', response.data.valuations.length);
       return response.data.valuations;
     }
     
     // If we get here, the response format is unexpected
-    console.error('Invalid response format. Expected valuations array or direct array.');
-    console.error('Response structure:', Object.keys(response.data || {}));
+    // console.error('Invalid response format. Expected valuations array or direct array.');
+    // console.error('Response structure:', Object.keys(response.data || {}));
     
     // Try to adapt to whatever format we received
     if (response.data && typeof response.data === 'object') {
       // Maybe it's an object with token valuations as properties
       const keys = Object.keys(response.data);
       if (keys.length > 0) {
-        console.log('Attempting to convert object to array...');
+        // console.log('Attempting to convert object to array...');
         const adaptedData = keys.map(key => {
           const item = response.data[key];
           return {
@@ -54,21 +54,21 @@ export const fetchTokenValuations = async (walletAddress: string): Promise<Token
             token_image_url: item.token_image_url
           };
         });
-        console.log('Adapted data:', JSON.stringify(adaptedData, null, 2));
+        // console.log('Adapted data:', JSON.stringify(adaptedData, null, 2));
         return adaptedData;
       }
     }
     
     return [];
   } catch (error: any) {
-    console.error('Error fetching token valuations:', error.message);
+    // console.error('Error fetching token valuations:', error.message);
     if (error.response) {
-      console.error('Response status:', error.response.status);
-      console.error('Response data:', JSON.stringify(error.response.data, null, 2));
+      // console.error('Response status:', error.response.status);
+      // console.error('Response data:', JSON.stringify(error.response.data, null, 2));
     } else if (error.request) {
-      console.error('No response received:', error.request);
+      // console.error('No response received:', error.request);
     } else {
-      console.error('Error details:', error);
+      // console.error('Error details:', error);
     }
     throw error;
   }
@@ -87,21 +87,21 @@ export const updateTokenValuation = async (
   valuation: number
 ): Promise<any> => {
   try {
-    console.log(`Updating valuation at: ${API_BASE_URL}/wallet/${walletAddress}/valuations`);
-    console.log('Request payload:', { symbol: tokenSymbol, valuation });
+    // console.log(`Updating valuation at: ${API_BASE_URL}/wallet/${walletAddress}/valuations`);
+    // console.log('Request payload:', { symbol: tokenSymbol, valuation });
     
     const response = await axios.post(`${API_BASE_URL}/wallet/${walletAddress}/valuations`, {
       symbol: tokenSymbol,
       valuation: valuation
     });
     
-    console.log('Update response:', JSON.stringify(response.data, null, 2));
+    // console.log('Update response:', JSON.stringify(response.data, null, 2));
     return response.data;
   } catch (error: any) {
-    console.error('Error updating token valuation:', error.message);
+    // console.error('Error updating token valuation:', error.message);
     if (error.response) {
-      console.error('Response status:', error.response.status);
-      console.error('Response data:', JSON.stringify(error.response.data, null, 2));
+      // console.error('Response status:', error.response.status);
+      // console.error('Response data:', JSON.stringify(error.response.data, null, 2));
     }
     throw error;
   }
@@ -117,7 +117,7 @@ export const fetchWalletBalances = async (walletAddress: string): Promise<any> =
     const response = await axios.get(`${API_BASE_URL}/wallet/${walletAddress}/balances`);
     return response.data;
   } catch (error) {
-    console.error('Error fetching wallet balances:', error);
+    // console.error('Error fetching wallet balances:', error);
     throw error;
   }
 };
@@ -132,7 +132,7 @@ export const fetchWalletDetails = async (walletAddress: string): Promise<any> =>
     const response = await axios.get(`${API_BASE_URL}/wallet/${walletAddress}`);
     return response.data;
   } catch (error) {
-    console.error('Error fetching wallet details:', error);
+    // console.error('Error fetching wallet details:', error);
     throw error;
   }
 };

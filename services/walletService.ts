@@ -34,6 +34,7 @@ interface WalletData {
   email?: string;
   user_type?: 'vendor' | 'customer';
   valuations?: any;
+  is_verified?: boolean;
 }
 
 /**

@@ -98,7 +98,7 @@ export const PendingTransactionManagerProvider: React.FC<{ children: React.React
         setLastSyncTime(parseInt(cachedLastSync, 10));
       }
     } catch (error) {
-      console.error('Failed to load cached data:', error);
+      // console.error('Failed to load cached data:', error);
       setPendingTransactions([]);
     }
   };
@@ -119,7 +119,7 @@ export const PendingTransactionManagerProvider: React.FC<{ children: React.React
       ]);
       // console.log('Cache saved successfully');
     } catch (error) {
-      console.error('Failed to save to cache:', error);
+      // console.error('Failed to save to cache:', error);
     }
   };
 
@@ -177,10 +177,10 @@ export const PendingTransactionManagerProvider: React.FC<{ children: React.React
         const response = await PaymentAPI.getTransactionHistory(auth.walletAddress);
         
         if (response && response.transactions) {
-          console.log('All transactions from backend:', response.transactions.map((t: Transaction) => ({
-            id: t.payment_id,
-            status: t.status
-          })));
+          // console.log('All transactions from backend:', response.transactions.map((t: Transaction) => ({
+          //   id: t.payment_id,
+          //   status: t.status
+          // })));
           
           // Filter for pending transactions
           const pendingStatuses = ['pending', 'created', 'assigned', 'Pending', 'Created', 'Assigned'];
@@ -188,11 +188,11 @@ export const PendingTransactionManagerProvider: React.FC<{ children: React.React
             pendingStatuses.includes(tx.status)
           );
           
-          console.log(`Found ${pendingTxs.length} pending transactions from ${response.transactions.length} total`);
-          console.log('Pending transactions:', pendingTxs.map(t => ({
-            id: t.payment_id,
-            status: t.status
-          })));
+          // console.log(`Found ${pendingTxs.length} pending transactions from ${response.transactions.length} total`);
+          // console.log('Pending transactions:', pendingTxs.map(t => ({
+          //   id: t.payment_id,
+          //   status: t.status
+          // })));
           
           // Update state with new pending transactions
           setPendingTransactions(pendingTxs);
@@ -216,7 +216,7 @@ export const PendingTransactionManagerProvider: React.FC<{ children: React.React
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Sync failed';
         setError(errorMessage);
-        console.error('Transaction sync error:', err);
+        // console.error('Transaction sync error:', err);
         
         // Fall back to cached data on error
         if (pendingTransactions.length === 0) {
@@ -294,7 +294,7 @@ export const PendingTransactionManagerProvider: React.FC<{ children: React.React
     
     try {
       const storageKeys = getStorageKeys(auth.walletAddress);
-      console.log('Clearing all transaction caches...');
+      // console.log('Clearing all transaction caches...');
       
       // Clear AsyncStorage
       await AsyncStorage.multiRemove([
@@ -306,11 +306,11 @@ export const PendingTransactionManagerProvider: React.FC<{ children: React.React
       setPendingTransactions([]);
       setLastSyncTime(null);
       
-      console.log('Caches cleared, forcing sync...');
+      // console.log('Caches cleared, forcing sync...');
       // Force immediate sync
       await syncTransactions();
     } catch (error) {
-      console.error('Failed to clear caches:', error);
+      // console.error('Failed to clear caches:', error);
     }
   }, [auth?.walletAddress, syncTransactions]);
 

@@ -36,7 +36,7 @@ export const StripeAPI = {
    */
   createPaymentLink: async (paymentData: StripePaymentLinkRequest): Promise<StripePaymentLinkResponse> => {
     try {
-      console.log('Creating Stripe payment link with data:', paymentData);
+      // console.log('Creating Stripe payment link with data:', paymentData);
       
       // Ensure amount is provided and is a number
       if (!paymentData.amount || typeof paymentData.amount !== 'number' || paymentData.amount <= 0) {
@@ -50,11 +50,11 @@ export const StripeAPI = {
       
       // Create the payment link
       const response = await stripeApi.post('/api/stripe/payment-link', paymentData);
-      console.log('Payment link created:', response.data);
+      // console.log('Payment link created:', response.data);
       
       return response.data;
     } catch (error) {
-      console.error('Error creating Stripe payment link:', error);
+      // console.error('Error creating Stripe payment link:', error);
       throw error;
     }
   },
@@ -69,7 +69,7 @@ export const StripeAPI = {
       const response = await stripeApi.get(`/api/stripe/payment-link/${linkId}`);
       return response.data;
     } catch (error) {
-      console.error('Error retrieving payment link:', error);
+      // console.error('Error retrieving payment link:', error);
       throw error;
     }
   },
@@ -84,7 +84,7 @@ export const StripeAPI = {
       const response = await stripeApi.get(`/api/stripe/payment-status/${paymentId}`);
       return response.data;
     } catch (error) {
-      console.error('Error checking payment status:', error);
+      // console.error('Error checking payment status:', error);
       throw error;
     }
   }
@@ -112,23 +112,23 @@ stripeApi.interceptors.response.use(
                           data?.message || 
                           'An error occurred with the payment service';
       
-      console.error(`Stripe API Error (${status}):`, errorMessage);
+      // console.error(`Stripe API Error (${status}):`, errorMessage);
       
       // You can handle specific error codes here
       if (status === 400) {
         // Bad request - invalid parameters
-        console.error('Invalid payment parameters');
+        // console.error('Invalid payment parameters');
       } else if (status === 401) {
         // Unauthorized - API key issues
-        console.error('API authentication error');
+        // console.error('API authentication error');
       } else if (status === 404) {
         // Not found
-        console.error('Payment resource not found');
+        // console.error('Payment resource not found');
       }
     } else if (error.request) {
-      console.error('No response received from Stripe API');
+      // console.error('No response received from Stripe API');
     } else {
-      console.error('Error setting up Stripe request:', error.message);
+      // console.error('Error setting up Stripe request:', error.message);
     }
     
     return Promise.reject(error);

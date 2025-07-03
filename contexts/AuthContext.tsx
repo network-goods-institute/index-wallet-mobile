@@ -386,7 +386,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           walletAddress,
           username: displayName,
           userType: userType || 'customer',
-          isVerified: false
+          isVerified: true
         };
 
         // Add vendor-specific fields if user type is vendor
@@ -419,8 +419,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           await storage.setItem(USER_KEYS.USER_TYPE, userType);
         }
         
-        // Store isVerified status
-        const verifiedStatus = registrationData.isVerified || false;
+        // Store isVerified status - check API response first, then fallback to registration data
+        const verifiedStatus = userData.is_verified ?? userData.isVerified ?? registrationData.isVerified ?? false;
         setIsVerified(verifiedStatus);
         await storage.setItem(USER_KEYS.IS_VERIFIED, verifiedStatus.toString());
         
@@ -495,6 +495,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (wallet.user_type) {
           await storage.setItem(USER_KEYS.USER_TYPE, wallet.user_type);
           setUserType(wallet.user_type);
+        }
+        
+        // Restore verified status if available
+        if (wallet.is_verified !== undefined) {
+          setIsVerified(wallet.is_verified);
+          await storage.setItem(USER_KEYS.IS_VERIFIED, wallet.is_verified.toString());
         }
       } else {
         // Fallback to using the public key as the wallet address

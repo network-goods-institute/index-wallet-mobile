@@ -41,7 +41,6 @@ export const getPrivateKey = async (providedPrivateKey?: string): Promise<string
     
     return await decryptPrivateKey(encryptedKey);
   } catch (error) {
-    console.error('Error retrieving encrypted private key:', error);
     return null;
   }
 };
@@ -93,9 +92,7 @@ export const signTransaction = async (transactionData: any, privateKey: string) 
     
     try {
       // Sign the transaction using the all-in-one approach
-      // console.log('Using sign.signedDebitAllowance...');
       const signedMessage = sign.signedDebitAllowance(transactionData, privateKeyBytes);
-      // console.log('Successfully signed transaction');
       
       // Format the signed transaction as expected by the API
       return {
@@ -108,10 +105,7 @@ export const signTransaction = async (transactionData: any, privateKey: string) 
         }
       };
     } catch (signError) {
-      console.error('Error with signedDebitAllowance:', signError);
-      
       // Fall back to manual signing approach
-      // console.log('Falling back to manual signing approach...');
       
       // Parse the debit allowance
       const parsedDebitAllowance = parse.debitAllowance(transactionData);
@@ -134,7 +128,6 @@ export const signTransaction = async (transactionData: any, privateKey: string) 
       };
     }
   } catch (error) {
-    console.error('Error signing transaction:', error);
     throw error;
   }
 };
@@ -176,11 +169,6 @@ export const sendSignedTransaction = async (
     });
     return response.data;
   } catch (error) {
-    console.error('Error sending signed transaction:', error);
-    if (error.response) {
-      console.error('Error response status:', error.response.status);
-      console.error('Error response data:', error.response.data);
-    }
     throw error;
   }
 };
@@ -202,11 +190,6 @@ export const signAndSendTransaction = async (
   privateKeyOverride?: string
 ) => {
   try {
-    // console.log('=== Starting signAndSendTransaction ===');
-    // console.log('Payment ID:', paymentId);
-    // console.log('Transaction data:', JSON.stringify(transactionData, null, 2));
-    // console.log('Payer address:', payerAddress);
-    // console.log('Private key override provided:', !!privateKeyOverride);
     
     // 1. Get the private key (either from override or storage)
     let privateKey = privateKeyOverride;
@@ -231,38 +214,22 @@ export const signAndSendTransaction = async (
     }
     
     if (Array.isArray(transactionData)) {
-      // console.log('Transaction data is an array, extracting first element...');
       transactionData = transactionData[0];
     }
     
-    // console.log('Parsed transaction data:', JSON.stringify(transactionData, null, 2));
-    
     // 3. Sign the transaction
-    // console.log('Signing transaction...');
     const signedTransaction = await signTransaction(transactionData, privateKey);
-    // console.log('Transaction signed successfully');
-    // console.log('Signed transaction:', JSON.stringify(signedTransaction, null, 2));
     
     // 4. Send the signed transaction to the backend
-    // console.log('Sending signed transaction to backend...');
     const response = await sendSignedTransaction(
       paymentId, 
       signedTransaction, 
       completeTransactionDetails, 
       payerAddress
     );
-    // console.log('Transaction sent successfully');
-    // console.log('Backend response:', JSON.stringify(response, null, 2));
     
     return response;
   } catch (error) {
-    // console.error('=== Error in signAndSendTransaction ===');
-    console.error('Error:', error);
-    console.error('Error message:', error.message);
-    if (error.response) {
-      console.error('Response status:', error.response.status);
-      console.error('Response data:', error.response.data);
-    }
     throw error;
   }
 };

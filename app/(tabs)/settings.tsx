@@ -66,12 +66,12 @@ export default function SettingsScreen() {
       await logout();
       // Don't navigate - let the auth state change handle the routing
     } catch (error) {
-      console.error('Error during logout:', error);
+      // console.error('Error during logout:', error);
     }
   };
   
   const handleViewSeedPhrase = async () => {
-    console.log('handleViewSeedPhrase called, seedPhrase from context:', !!seedPhrase);
+    // console.log('handleViewSeedPhrase called, seedPhrase from context:', !!seedPhrase);
     
     // If we have the seed phrase from context, use it
     if (seedPhrase) {
@@ -83,11 +83,11 @@ export default function SettingsScreen() {
     setIsLoadingSeedPhrase(true);
     
     // Otherwise, try to load it from storage (web fallback)
-    console.log('Attempting to load seed phrase from storage...');
+    // console.log('Attempting to load seed phrase from storage...');
     try {
       // Try AsyncStorage directly (since SecureStore doesn't work on web)
       const encryptedSeed = await AsyncStorage.getItem('encrypted-seed-phrase');
-      console.log('Encrypted seed from storage:', encryptedSeed ? 'Found' : 'Not found');
+      // console.log('Encrypted seed from storage:', encryptedSeed ? 'Found' : 'Not found');
       
       if (encryptedSeed) {
         // Simple decryption - remove the "encrypted:" prefix
@@ -96,7 +96,7 @@ export default function SettingsScreen() {
           decrypted = encryptedSeed.substring(10);
         }
         
-        console.log('Decrypted seed phrase words:', decrypted ? decrypted.split(' ').length : 0);
+        // console.log('Decrypted seed phrase words:', decrypted ? decrypted.split(' ').length : 0);
         
         if (decrypted && decrypted.split(' ').length >= 12) {
           setLoadedSeedPhrase(decrypted);
@@ -108,13 +108,13 @@ export default function SettingsScreen() {
       // Also try without encryption prefix (in case it's stored differently)
       const plainSeed = await AsyncStorage.getItem('seedPhrase');
       if (plainSeed) {
-        console.log('Found plain seed phrase');
+        // console.log('Found plain seed phrase');
         setLoadedSeedPhrase(plainSeed);
         setShowSeedPhraseModal(true);
         return;
       }
     } catch (error) {
-      console.error('Error loading seed phrase:', error);
+      // console.error('Error loading seed phrase:', error);
     } finally {
       setIsLoadingSeedPhrase(false);
     }

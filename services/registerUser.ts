@@ -61,7 +61,7 @@ export const registerUser = async (userData: {
     const response = await api.post('/api/users', backendData);
     return response.data;
   } catch (error: any) {
-    console.error('Error registering user:', error.response?.data || error.message);
+    // console.error('Error registering user:', error.response?.data || error.message);
     throw error;
   }
 };
@@ -88,7 +88,7 @@ export const registerWallet = async (walletData: {
     const response = await api.post('/api/wallets', backendData);
     return response.data;
   } catch (error: any) {
-    console.error('Error registering wallet:', error.response?.data || error.message);
+    // console.error('Error registering wallet:', error.response?.data || error.message);
     throw error;
   }
 };
@@ -111,13 +111,13 @@ export const createTransaction = async (transactionData: {
       signature: transactionData.signature
     };
     
-    console.log('Sending transaction data:', backendData);
+    // console.log('Sending transaction data:', backendData);
     
     // Try without the /api prefix
     const response = await api.post('/transactions', backendData);
     return response.data;
   } catch (error: any) {
-    console.error('Error creating transaction:', error.response?.data || error.message);
+    // console.error('Error creating transaction:', error.response?.data || error.message);
     throw error;
   }
 };
@@ -127,11 +127,11 @@ api.interceptors.response.use(
   (response: any) => response,
   (error: any) => {
     if (error.response) {
-      console.log('API Error:', error.response.status, error.response.data);
+      // console.log('API Error:', error.response.status, error.response.data);
     } else if (error.request) {
-      console.log('Network Error:', error.request);
+      // console.log('Network Error:', error.request);
     } else {
-      console.log('Error:', error.message);
+      // console.log('Error:', error.message);
     }
     return Promise.reject(error);
   }

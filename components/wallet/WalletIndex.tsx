@@ -125,7 +125,7 @@ function WalletHeader({
   
   useEffect(() => {
     if (!userName || !walletAddress) {
-      console.warn('WALLET HEADER - Missing data detected on mount/update');
+      // console.warn('WALLET HEADER - Missing data detected on mount/update');
     }
   }, [userName, walletAddress]);
   

@@ -178,10 +178,6 @@ export default function Pay({ onSuccessStateChange }: PayProps) {
 
   // Handle complete payment
   const handleCompletePayment = async () => {
-    console.log('handleCompletePayment called');
-    console.log('activePayment:', activePayment);
-    console.log('processing:', processing);
-    console.log('isLoading:', isLoading);
     
     if (!activePayment || processing || isLoading) return;
     
@@ -191,9 +187,6 @@ export default function Pay({ onSuccessStateChange }: PayProps) {
       const transactionData = activePayment?.unsigned_transaction ? 
         JSON.parse(activePayment.unsigned_transaction) : undefined;
       
-      console.log('paymentId:', paymentId);
-      console.log('transactionData:', transactionData);
-      console.log('unsigned_transaction:', activePayment?.unsigned_transaction);
       
       if (!paymentId || !transactionData) {
         throw new Error('Missing payment ID or unsigned transaction data');
@@ -206,8 +199,6 @@ export default function Pay({ onSuccessStateChange }: PayProps) {
       
       // Get the private key from auth context - it's already encrypted
       const privateKey = auth?.keyPair?.privateKey;
-      console.log('privateKey from auth:', privateKey);
-      console.log('About to call signAndSendTransaction');
       
       const response = await signAndSendTransaction(
         paymentId, 
@@ -217,33 +208,26 @@ export default function Pay({ onSuccessStateChange }: PayProps) {
         privateKey // Pass it - getPrivateKey will decrypt it if needed
       );
       
-      console.log('signAndSendTransaction response:', response);
       
       if (response && response.status) {
         const successStatuses = ['completed', 'success', 'confirmed', 'Completed', 'Success', 'Confirmed'];
         const isSuccess = successStatuses.includes(response.status);
-        console.log('Payment status:', response.status, 'isSuccess:', isSuccess);
         
         if (isSuccess) {
-          console.log('Payment successful, refreshing balances');
           await refreshBalances();
           setCompletedTransaction(response);
           setShowSuccess(true);
           setShowModal(false);
         } else {
-          console.log('Payment not successful, showing alert');
           Alert.alert('Payment Status', `Payment status: ${response.status}. Please check your transaction.`);
         }
       } else {
-        console.log('No response status, using completePayment fallback');
         await refreshBalances();
         await completePayment(paymentId);
         setShowSuccess(true);
         setShowModal(false);
       }
     } catch (error: any) {
-      console.error('Error completing payment - full error:', error);
-      console.error('Error stack:', error.stack);
       
       // Show more detailed error on web
       if (isWeb) {

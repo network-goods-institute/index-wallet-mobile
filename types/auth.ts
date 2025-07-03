@@ -19,6 +19,7 @@ export interface WalletData {
   name?: string;
   email?: string;
   user_type?: 'vendor' | 'customer';
+  is_verified?: boolean;
 }
 
 export interface Valuation {

@@ -42,9 +42,9 @@ export default function ImportWalletScreen(): JSX.Element {
       const pastedWords = clipboardContent.trim().split(/\s+/).filter(word => word.length > 0);
       let newWords: string[] = [];
       
-      console.log('Pasted words:', pastedWords);
-      console.log('Current seed words:', seedWords);
-      console.log('Pasted words length:', pastedWords.length);
+      // console.log('Pasted words:', pastedWords);
+      // console.log('Current seed words:', seedWords);
+      // console.log('Pasted words length:', pastedWords.length);
       
       // Check if pasted content is exactly 12 words (full seed phrase)
       if (pastedWords.length === 12) {
@@ -57,7 +57,7 @@ export default function ImportWalletScreen(): JSX.Element {
             newWords[i] = pastedWords[i].toLowerCase().trim();
           }
         }
-        console.log('Smart paste result:', newWords);
+        // console.log('Smart paste result:', newWords);
         setSeedWords(newWords);
       } else {
         // Not a full seed phrase, just paste normally (overwrite from beginning)
@@ -67,7 +67,7 @@ export default function ImportWalletScreen(): JSX.Element {
             newWords[i] = word.toLowerCase().trim();
           }
         });
-        console.log('Normal paste result:', newWords);
+        // console.log('Normal paste result:', newWords);
         setSeedWords(newWords);
       }
       
@@ -77,7 +77,7 @@ export default function ImportWalletScreen(): JSX.Element {
         inputRefs.current[nextEmptyIndex]?.focus();
       }
     } catch (error) {
-      console.error('Failed to paste from clipboard:', error);
+      // console.error('Failed to paste from clipboard:', error);
       setError('Failed to paste from clipboard');
     }
   };
@@ -116,14 +116,14 @@ export default function ImportWalletScreen(): JSX.Element {
       const wallet = await validateSeedAndCheckWallet(completeSeedPhrase);
       
       if (wallet) {
-        console.log('Existing wallet found:', wallet.wallet_address);
+        // console.log('Existing wallet found:', wallet.wallet_address);
         
         // Now perform the actual login which will derive and store the private keys
-        console.log('Performing login to derive private keys...');
+        // console.log('Performing login to derive private keys...');
         const loginSuccess = await login(completeSeedPhrase, false);
         
         if (loginSuccess) {
-          console.log('Login successful, private keys derived and stored');
+          // console.log('Login successful, private keys derived and stored');
           setOnboardingStep('complete');
         } else {
           setError('Failed to complete login process. Please try again.');
@@ -132,7 +132,7 @@ export default function ImportWalletScreen(): JSX.Element {
         setError('No wallet found with this seed phrase. Please check your seed phrase and try again.');
       }
     } catch (error: any) {
-      console.error('Error during wallet import:', error);
+      // console.error('Error during wallet import:', error);
       setError(error.message || 'Failed to import wallet. Please try again.');
     } finally {
       setIsValidating(false);

@@ -43,11 +43,11 @@ export const UserAPI = {
   //     const response = await api.post('/users/register', userData);
   //     return response.data;
   //   } catch (error: any) {
-  //     console.error('Error registering user:', error);
+  //     // console.error('Error registering user:', error);
       
   //     if (error.response) {
-  //       console.error('Error response data:', error.response.data);
-  //       console.error('Error response status:', error.response.status);
+  //       // console.error('Error response data:', error.response.data);
+  //       // console.error('Error response status:', error.response.status);
         
   //       // Handle specific error codes
   //       if (error.response.status === 409) {
@@ -85,7 +85,7 @@ export const UserAPI = {
       });
       return response.data;
     } catch (error) {
-      console.error('Error verifying wallet:', error);
+      // console.error('Error verifying wallet:', error);
       throw error;
     }
   },
@@ -100,7 +100,7 @@ export const UserAPI = {
       const response = await api.put(`/users/${userId}/profile`, profileData);
       return response.data;
     } catch (error) {
-      console.error('Error updating profile:', error);
+      // console.error('Error updating profile:', error);
       throw error;
     }
   },
@@ -124,7 +124,7 @@ export const WalletAPI = {
       const response = await api.post('/wallets/register', walletData);
       return response.data;
     } catch (error) {
-      console.error('Error registering wallet:', error);
+      // console.error('Error registering wallet:', error);
       throw error;
     }
   },
@@ -138,7 +138,7 @@ export const WalletAPI = {
       const response = await api.get(`/wallets/${walletAddress}/balance`);
       return response.data;
     } catch (error) {
-      console.error('Error getting wallet balance:', error);
+      // console.error('Error getting wallet balance:', error);
       throw error;
     }
   },
@@ -154,17 +154,15 @@ export const PaymentAPI = {
     vendor_address: string;
     vendor_name: string;
     price_usd: number;
-    vendor_valuations: any; 
+    vendor_valuations: any;
+    is_verified?: boolean;
   }) => {
     try {
-      // console.log('Creating payment with data:', paymentData);
-      
       // Send the data as is, with price_usd as a number
       const response = await api.post('/api/payments', paymentData);
-      // console.log('Payment created response:', response.data);
       return response.data;
     } catch (error) {
-      console.error('Error creating payment:', error);
+      // console.error('Error creating payment:', error);
       throw error;
     }
   },
@@ -178,7 +176,7 @@ export const PaymentAPI = {
       const response = await api.get(`/api/payments/${paymentId}`);
       return response.data;
     } catch (error) {
-      console.error('Error getting payment:', error);
+      // console.error('Error getting payment:', error);
       throw error;
     }
   },
@@ -204,7 +202,7 @@ export const PaymentAPI = {
       const response = await api.post(`/api/payments/${paymentId}/supplement`, supplementData);
       return response.data;
     } catch (error: any) {
-      console.error('Error supplementing payment:', error);
+      // console.error('Error supplementing payment:', error);
       
       // Handle specific error cases
       if (error.response) {
@@ -252,7 +250,7 @@ export const PaymentAPI = {
       const response = await api.get(`/api/payments/${paymentId}/status`);
       return response.data;
     } catch (error) {
-      console.error('Error getting payment status:', error);
+      // console.error('Error getting payment status:', error);
       throw error;
     }
   },
@@ -269,7 +267,7 @@ export const PaymentAPI = {
       const response = await api.post(`/api/payments/${paymentId}/complete`, completeData);
       return response.data;
     } catch (error) {
-      console.error('Error completing payment:', error);
+      // console.error('Error completing payment:', error);
       throw error;
     }
   },
@@ -285,7 +283,7 @@ export const PaymentAPI = {
       const response = await api.get(`/api/users/${userAddress}/transactions`);
       return response.data;
     } catch (error) {
-      console.error('Error getting transaction history:', error);
+      // console.error('Error getting transaction history:', error);
       throw error;
     }
   },
@@ -304,7 +302,7 @@ export const PaymentAPI = {
       });
       return response.data;
     } catch (error) {
-      console.error('Error deleting payment:', error);
+      // console.error('Error deleting payment:', error);
       throw error;
     }
   },
@@ -320,7 +318,7 @@ export const PaymentAPI = {
       });
       return response.data;
     } catch (error) {
-      console.error('Error batch checking status:', error);
+      // console.error('Error batch checking status:', error);
       throw error;
     }
   },
@@ -337,7 +335,7 @@ export const VendorAPI = {
       const response = await api.get('/vendors/partnered');
       return response.data;
     } catch (error) {
-      console.error('Error getting partnered vendors:', error);
+      // console.error('Error getting partnered vendors:', error);
       throw error;
     }
   },
@@ -366,7 +364,7 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
-    console.error('❌ Request setup error:', error);
+    // console.error('❌ Request setup error:', error);
     return Promise.reject(error);
   }
 );
@@ -382,22 +380,22 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    console.error('❌ API Error Details:', {
-      message: error.message,
-      code: error.code,
-      request: error.request ? 'Request made' : 'No request',
-      response: error.response ? {
-        status: error.response.status,
-        data: error.response.data,
-        headers: error.response.headers
-      } : 'No response received',
-      config: {
-        method: error.config?.method,
-        url: error.config?.url,
-        baseURL: error.config?.baseURL,
-        fullURL: error.config ? `${error.config.baseURL}${error.config.url}` : 'Unknown URL'
-      }
-    });
+    // console.error('❌ API Error Details:', {
+    //   message: error.message,
+    //   code: error.code,
+    //   request: error.request ? 'Request made' : 'No request',
+    //   response: error.response ? {
+    //     status: error.response.status,
+    //     data: error.response.data,
+    //     headers: error.response.headers
+    //   } : 'No response received',
+    //   config: {
+    //     method: error.config?.method,
+    //     url: error.config?.url,
+    //     baseURL: error.config?.baseURL,
+    //     fullURL: error.config ? `${error.config.baseURL}${error.config.url}` : 'Unknown URL'
+    //   }
+    // });
     
     // Handle global error responses
     if (error.response) {

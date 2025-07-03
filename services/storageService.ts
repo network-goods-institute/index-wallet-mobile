@@ -27,14 +27,14 @@ class StorageService {
           await SecureStore.setItemAsync(key, value);
           return;
         } catch (secureStoreError) {
-          console.warn(`SecureStore failed for key ${key}, falling back to AsyncStorage:`, secureStoreError);
+          // console.warn(`SecureStore failed for key ${key}, falling back to AsyncStorage:`, secureStoreError);
         }
       }
       
       // Use AsyncStorage as default or fallback
       await AsyncStorage.setItem(key, value);
     } catch (error) {
-      console.error(`Error storing item with key ${key}:`, error);
+      // console.error(`Error storing item with key ${key}:`, error);
       throw error;
     }
   }
@@ -61,7 +61,7 @@ class StorageService {
       // Use AsyncStorage as default or fallback
       return await AsyncStorage.getItem(key);
     } catch (error) {
-      console.error(`Error retrieving item with key ${key}:`, error);
+      // console.error(`Error retrieving item with key ${key}:`, error);
       return null;
     }
   }
@@ -85,7 +85,7 @@ class StorageService {
         }
       }
     } catch (error) {
-      console.error(`Error removing item with key ${key}:`, error);
+      // console.error(`Error removing item with key ${key}:`, error);
       throw error;
     }
   }
@@ -109,7 +109,7 @@ class StorageService {
         }
       }
     } catch (error) {
-      console.error('Error removing multiple items:', error);
+      // console.error('Error removing multiple items:', error);
       throw error;
     }
   }
@@ -121,7 +121,7 @@ class StorageService {
     try {
       return await AsyncStorage.getAllKeys();
     } catch (error) {
-      console.error('Error getting all keys:', error);
+      // console.error('Error getting all keys:', error);
       return [];
     }
   }
@@ -133,7 +133,7 @@ class StorageService {
     try {
       await AsyncStorage.clear();
     } catch (error) {
-      console.error('Error clearing storage:', error);
+      // console.error('Error clearing storage:', error);
       throw error;
     }
   }
@@ -146,7 +146,7 @@ class StorageService {
       const jsonString = JSON.stringify(value);
       await this.setItem(key, jsonString, type);
     } catch (error) {
-      console.error(`Error storing JSON with key ${key}:`, error);
+      // console.error(`Error storing JSON with key ${key}:`, error);
       throw error;
     }
   }
@@ -160,7 +160,7 @@ class StorageService {
       if (!jsonString) return null;
       return JSON.parse(jsonString) as T;
     } catch (error) {
-      console.error(`Error retrieving JSON with key ${key}:`, error);
+      // console.error(`Error retrieving JSON with key ${key}:`, error);
       return null;
     }
   }
