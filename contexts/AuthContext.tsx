@@ -73,7 +73,6 @@ interface AuthContextType {
 const AUTH_STATUS_KEY = 'auth-status';
 const SEED_PHRASE_KEY = 'encrypted-seed-phrase';
 const PRIVATE_KEY_KEY = 'encrypted-private-key';
-const PUBLIC_KEY_KEY = 'public-key';
 const HAS_PASSKEY_KEY = 'has-passkey';
 const ICLOUD_BACKUP_ENABLED_KEY = 'icloud-backup-enabled';
 const BACKUP_STATUS_KEY = 'backup-status';
@@ -308,7 +307,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (storedStatus === 'authenticated') {
           // Load wallet info with error handling for each item
           let walletAddress = null;
-          let publicKey = null;
           let privateKey = null;
           
           try {
@@ -330,13 +328,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
           } catch (e) {
             console.error('AUTH INIT: Failed to load wallet address:', e);
-          }
-          
-          try {
-            publicKey = await AsyncStorage.getItem(PUBLIC_KEY_KEY);
-            console.log('AUTH INIT: Loaded public key from storage:', publicKey ? 'exists' : 'null');
-          } catch (e) {
-            console.error('AUTH INIT: Failed to load public key:', e);
           }
           
           // Load seed phrase and private key from secure storage or AsyncStorage
@@ -382,9 +373,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // If still no private key, try to regenerate from seed phrase
             if (!privateKey && seedPhraseValue) {
               try {
-                const keyPair = await createKeyPairFromSeedPhrase(seedPhraseValue);
-                privateKey = keyPair.privateKey;
-                publicKey = keyPair.publicKey;
+                const regeneratedKeyPair = await createKeyPairFromSeedPhrase(seedPhraseValue);
+                privateKey = regeneratedKeyPair.privateKey;
+                
+                // If we don't have a wallet address yet, use the public key
+                if (!walletAddress) {
+                  walletAddress = regeneratedKeyPair.publicKey;
+                  await AsyncStorage.setItem(WALLET_ADDRESS_KEY, walletAddress);
+                }
                 
                 // Store the regenerated private key
                 const encryptedKey = await encryptData(privateKey);
@@ -406,9 +402,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // console.log('INIT: No seed phrase found in storage');
           }
           
-          // Set keyPair if we have both keys
-          if (publicKey && privateKey) {
-            setKeyPair({ privateKey, publicKey });
+          // Set keyPair if we have private key and wallet address (public key)
+          if (walletAddress && privateKey) {
+            setKeyPair({ privateKey, publicKey: walletAddress });
           }
           
           // Load user info with error handling
@@ -461,18 +457,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (walletAddress) {
             console.log('AUTH INIT: Setting wallet address from storage:', walletAddress);
             updateWalletAddress(walletAddress);
-          } else if (publicKey) {
-            // Fallback to public key if wallet address is missing
-            console.log('AUTH INIT: No wallet address found, using public key as fallback:', publicKey);
-            updateWalletAddress(publicKey);
-            // Also save it to AsyncStorage for next time
-            try {
-              await AsyncStorage.setItem(WALLET_ADDRESS_KEY, publicKey);
-            } catch (e) {
-              console.error('Failed to save wallet address fallback:', e);
-            }
           } else {
-            console.error('AUTH INIT: No wallet address or public key found!');
+            console.error('AUTH INIT: No wallet address found!');
           }
           
           // Set authenticated status LAST to ensure all data is ready
@@ -585,8 +571,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await AsyncStorage.setItem(PRIVATE_KEY_KEY, encryptedPrivateKey);
       }
       
-      // Public key doesn't need to be encrypted
-      await AsyncStorage.setItem(PUBLIC_KEY_KEY, keyPair.publicKey);
+      // Public key is stored as wallet address, no need to store separately
       
       await AsyncStorage.setItem(HAS_PASSKEY_KEY, usePasskey ? 'true' : 'false');
       await AsyncStorage.setItem(AUTH_STATUS_KEY, 'authenticated');
@@ -694,8 +679,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           await SecureStore.deleteItemAsync(SEED_PHRASE_KEY);
           await SecureStore.deleteItemAsync(PRIVATE_KEY_KEY);
-          await AsyncStorage.removeItem(PUBLIC_KEY_KEY);
-          await AsyncStorage.removeItem(HAS_PASSKEY_KEY);
+            await AsyncStorage.removeItem(HAS_PASSKEY_KEY);
           await AsyncStorage.removeItem(AUTH_STATUS_KEY);
         } catch (cleanupError) {
           console.error('Error cleaning up after failed registration:', cleanupError);
@@ -832,8 +816,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // console.log('LOGIN: Stored in AsyncStorage as fallback');
       }
       
-      // Public key doesn't need to be encrypted
-      await AsyncStorage.setItem(PUBLIC_KEY_KEY, derivedKeyPair.publicKey);
+      // Public key is stored as wallet address, no need to store separately
       
       await AsyncStorage.setItem(HAS_PASSKEY_KEY, usePasskey ? 'true' : 'false');
       await AsyncStorage.setItem(AUTH_STATUS_KEY, 'authenticated');
@@ -866,7 +849,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         AUTH_STATUS_KEY,
         SEED_PHRASE_KEY,
         PRIVATE_KEY_KEY,
-        PUBLIC_KEY_KEY,
         WALLET_ADDRESS_KEY,
         USER_DATA_KEY,
         VALUATIONS_KEY,
@@ -939,17 +921,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           storedPrivateKey = await AsyncStorage.getItem(PRIVATE_KEY_KEY);
         }
         
-        // Public key is always in AsyncStorage
-        const storedPublicKey = await AsyncStorage.getItem(PUBLIC_KEY_KEY);
+        const storedWalletAddress = await AsyncStorage.getItem(WALLET_ADDRESS_KEY);
         
-        if (storedSeedPhrase && storedPrivateKey && storedPublicKey) {
+        if (storedSeedPhrase && storedPrivateKey && storedWalletAddress) {
           const decryptedSeedPhrase = await decryptData(storedSeedPhrase);
           const decryptedPrivateKey = await decryptData(storedPrivateKey);
           
           setSeedPhrase(decryptedSeedPhrase);
           setKeyPair({
             privateKey: decryptedPrivateKey,
-            publicKey: storedPublicKey
+            publicKey: storedWalletAddress  // wallet address IS the public key
           });
           setStatus('authenticated');
           return true;
@@ -1085,8 +1066,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await AsyncStorage.setItem(PRIVATE_KEY_KEY, encryptedPrivateKey);
       }
       
-      // Public key doesn't need to be encrypted
-      await AsyncStorage.setItem(PUBLIC_KEY_KEY, keyPair.publicKey);
+      // Store wallet address (which is the public key)
+      await AsyncStorage.setItem(WALLET_ADDRESS_KEY, keyPair.publicKey);
+      updateWalletAddress(keyPair.publicKey);
       
       setSeedPhrase(restoredSeedPhrase);
       setKeyPair(keyPair);
