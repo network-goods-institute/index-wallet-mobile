@@ -19,7 +19,7 @@ export default function LoadWalletModal({ visible, onClose }: LoadWalletModalPro
       setIsLoading(true);
       
       // Direct Stripe checkout link with client reference ID
-      const stripeBaseUrl = process.env.EXPO_PUBLIC_STRIPE_USD_ID || process.env.TEST_STRIPE_USD_ID;
+      const stripeBaseUrl = process.env.EXPO_PUBLIC_STRIPE_USD_ID 
       const stripeUrl = `${stripeBaseUrl}?client_reference_id=${walletAddress}`;
       
       // Open the Stripe checkout page in browser
@@ -36,7 +36,7 @@ export default function LoadWalletModal({ visible, onClose }: LoadWalletModalPro
 
   const handleSupportCauses = async () => {
     // Open Index Wallets website in browser
-    await Linking.openURL('https://app.indexwallets.org');
+    await Linking.openURL('https://causes.indexwallets.org');
     onClose();
   };
   
